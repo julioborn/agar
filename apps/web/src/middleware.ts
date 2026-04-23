@@ -12,7 +12,7 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
           // Primero actualiza las cookies del request (para que el resto del middleware las vea)
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
