@@ -1,0 +1,15 @@
+export const CATEGORIAS = [
+  { value: 'fertilizante',   label: 'Fertilizante' },
+  { value: 'semilla',        label: 'Semilla' },
+  { value: 'agroquimico',    label: 'Agroquímico' },
+  { value: 'combustible',    label: 'Combustible' },
+  { value: 'insumo_cosecha', label: 'Insumo cosecha' },
+  { value: 'inoculante',     label: 'Inoculante' },
+  { value: 'otro',           label: 'Otro' },
+] as const;
+
+export const UNIDADES = [
+  { value: 'kg',     label: 'kg' },
+  { value: 'L',      label: 'L (litros)' },
+  { value: 'unidad', label: 'Unidad' },
+] as const;

@@ -1,0 +1,232 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+
+export interface CultivoRow {
+  id: string;
+  lote_id: string;
+  unidad_negocio_id: string;
+  campania_id: string | null;
+  cultivo: string;
+  producto_final: string | null;
+  unidad_produccion: string;
+  fecha_siembra: string;
+  fecha_cosecha_estimada: string | null;
+  fecha_cosecha_real: string | null;
+  estado: 'planificada' | 'en_curso' | 'cosechada' | 'cancelada';
+  observaciones: string | null;
+}
+
+const UNIDADES_PRODUCCION = [
+  { value: 'kg',          label: 'Kilogramos (kg)' },
+  { value: 'tn',          label: 'Toneladas (tn)' },
+  { value: 'm3',          label: 'Metros cúbicos (m³)' },
+  { value: 'bolsa_silaje',label: 'Bolsas de silaje' },
+  { value: 'fardo',       label: 'Fardos' },
+  { value: 'litro',       label: 'Litros (L)' },
+  { value: 'unidad',      label: 'Unidades' },
+];
+
+export interface LoteConCampo {
+  id: string;
+  nombre: string;
+  campo_nombre: string;
+}
+
+export interface UnidadNegocio {
+  id: string;
+  nombre: string;
+}
+
+export interface CampaniaTemporada {
+  id: string;
+  nombre: string;
+}
+
+const ESTADOS = [
+  { value: 'planificada', label: 'Planificada' },
+  { value: 'en_curso',    label: 'En curso' },
+  { value: 'cosechada',   label: 'Cosechada' },
+  { value: 'cancelada',   label: 'Cancelada' },
+] as const;
+
+interface Props {
+  lotes: LoteConCampo[];
+  unidadesNegocio: UnidadNegocio[];
+  campanias: CampaniaTemporada[];
+  cultivoEditando: CultivoRow | null;
+  defaultLoteId?: string;
+  onSuccess: () => void;
+  onCancel: () => void;
+}
+
+export default function CultivoForm({
+  lotes, unidadesNegocio, campanias, cultivoEditando, defaultLoteId, onSuccess, onCancel,
+}: Props) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const [loteId, setLoteId] = useState('');
+  const [unidadNegocioId, setUnidadNegocioId] = useState('');
+  const [campaniaId, setCampaniaId] = useState('');
+  const [cultivo, setCultivo] = useState('');
+  const [productoFinal, setProductoFinal] = useState('');
+  const [unidadProduccion, setUnidadProduccion] = useState('kg');
+  const [fechaSiembra, setFechaSiembra] = useState('');
+  const [fechaCosechaEstimada, setFechaCosechaEstimada] = useState('');
+  const [fechaCosechaReal, setFechaCosechaReal] = useState('');
+  const [estado, setEstado] = useState<CultivoRow['estado']>('planificada');
+  const [observaciones, setObservaciones] = useState('');
+
+  useEffect(() => {
+    if (cultivoEditando) {
+      setLoteId(cultivoEditando.lote_id);
+      setUnidadNegocioId(cultivoEditando.unidad_negocio_id);
+      setCampaniaId(cultivoEditando.campania_id ?? '');
+      setCultivo(cultivoEditando.cultivo);
+      setProductoFinal(cultivoEditando.producto_final ?? '');
+      setUnidadProduccion(cultivoEditando.unidad_produccion ?? 'kg');
+      setFechaSiembra(cultivoEditando.fecha_siembra);
+      setFechaCosechaEstimada(cultivoEditando.fecha_cosecha_estimada ?? '');
+      setFechaCosechaReal(cultivoEditando.fecha_cosecha_real ?? '');
+      setEstado(cultivoEditando.estado);
+      setObservaciones(cultivoEditando.observaciones ?? '');
+    } else {
+      setLoteId(defaultLoteId ?? (lotes[0]?.id ?? ''));
+      setUnidadNegocioId(unidadesNegocio[0]?.id ?? '');
+      setCampaniaId(campanias.find(() => true)?.id ?? '');
+      setCultivo('');
+      setProductoFinal('');
+      setUnidadProduccion('kg');
+      setFechaSiembra('');
+      setFechaCosechaEstimada('');
+      setFechaCosechaReal('');
+      setEstado('planificada');
+      setObservaciones('');
+    }
+    setError('');
+  }, [cultivoEditando, defaultLoteId]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    if (!loteId || !unidadNegocioId || !cultivo.trim() || !fechaSiembra) {
+      setError('Completá lote, unidad de negocio, especie y fecha de siembra.');
+      return;
+    }
+
+    setLoading(true);
+    const supabase = createClient();
+
+    const payload = {
+      lote_id: loteId,
+      unidad_negocio_id: unidadNegocioId,
+      campania_id: campaniaId || null,
+      cultivo: cultivo.trim(),
+      fecha_siembra: fechaSiembra,
+      fecha_cosecha_estimada: fechaCosechaEstimada || null,
+      fecha_cosecha_real: fechaCosechaReal || null,
+      estado,
+      observaciones: observaciones.trim() || null,
+    };
+
+    let err;
+    if (cultivoEditando) {
+      ({ error: err } = await supabase.from('cultivos').update(payload).eq('id', cultivoEditando.id));
+    } else {
+      ({ error: err } = await supabase.from('cultivos').insert(payload));
+    }
+
+    setLoading(false);
+    if (err) { setError(err.message); return; }
+    onSuccess();
+  }
+
+  const titulo = cultivoEditando ? 'Editar cultivo' : 'Nuevo cultivo';
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h3 className="font-semibold text-slate-700">{titulo}</h3>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Lote</label>
+        <select value={loteId} onChange={(e) => setLoteId(e.target.value)}
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500">
+          <option value="">Seleccioná un lote…</option>
+          {lotes.map((l) => (
+            <option key={l.id} value={l.id}>{l.campo_nombre} › {l.nombre}</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Unidad de negocio</label>
+        <select value={unidadNegocioId} onChange={(e) => setUnidadNegocioId(e.target.value)}
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500">
+          <option value="">Seleccioná una unidad…</option>
+          {unidadesNegocio.map((u) => (
+            <option key={u.id} value={u.id}>{u.nombre}</option>
+          ))}
+        </select>
+      </div>
+
+      {campanias.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Campaña (temporada)</label>
+          <select value={campaniaId} onChange={(e) => setCampaniaId(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option value="">Sin asignar</option>
+            {campanias.map((c) => (
+              <option key={c.id} value={c.id}>{c.nombre}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <Input label="Especie / cultivo" value={cultivo} onChange={(e) => setCultivo(e.target.value)}
+        placeholder="Ej: Soja, Maíz, Trigo, Alfalfa…" />
+
+      <Input label="Fecha de siembra" type="date" value={fechaSiembra}
+        onChange={(e) => setFechaSiembra(e.target.value)} />
+
+      <Input label="Fecha cosecha estimada" type="date" value={fechaCosechaEstimada}
+        onChange={(e) => setFechaCosechaEstimada(e.target.value)} />
+
+      <Input label="Fecha cosecha real" type="date" value={fechaCosechaReal}
+        onChange={(e) => setFechaCosechaReal(e.target.value)} />
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+        <select value={estado} onChange={(e) => setEstado(e.target.value as CultivoRow['estado'])}
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500">
+          {ESTADOS.map((s) => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Observaciones</label>
+        <textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)}
+          rows={2} placeholder="Opcional…"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none" />
+      </div>
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
+      <div className="flex gap-2 pt-1">
+        <Button type="submit" disabled={loading} className="flex-1">
+          {loading ? 'Guardando…' : cultivoEditando ? 'Guardar cambios' : 'Crear cultivo'}
+        </Button>
+        {cultivoEditando && (
+          <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>
+        )}
+      </div>
+    </form>
+  );
+}

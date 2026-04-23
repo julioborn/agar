@@ -1,0 +1,45 @@
+-- =============================================================================
+-- Migración 003: Pendiente de implementar
+-- Estas tablas siguen el MISMO PATRÓN que las migraciones 001 y 002:
+-- 1. Crear tabla con empresa_id (directo o indirecto vía FK)
+-- 2. Crear índices en empresa_id, fechas y FKs frecuentes
+-- 3. Crear trigger updated_at si tiene ese campo
+-- 4. ALTER TABLE ... ENABLE ROW LEVEL SECURITY
+-- 5. CREATE POLICY scoped por empresa
+--
+-- Tablas pendientes (del modelo v9):
+--
+-- OPERATIVO:
+-- - campanias (con campos calculados: produccion_total_kg, costo_directo_ars, etc.)
+-- - aplicaciones + aplicaciones_items + devoluciones_stock
+-- - labores + labores_materiales + labores_mano_obra
+-- - maquinarias + mantenimientos
+-- - cosechas + destinos_produccion + precios_referencia
+-- - mermas + consumos_partida
+--
+-- ADMINISTRATIVO:
+-- - gastos_generales
+-- - periodos_contables
+--
+-- PLANIFICACIÓN Y ANÁLISIS:
+-- - planes_campania + planes_campania_items
+-- - presupuestos_siembra
+-- - analisis_sensibilidad
+-- - kpis_snapshots
+--
+-- REPORTES Y NOTIFICACIONES:
+-- - reportes_plantillas + reportes_suscripciones + reportes_generados
+-- - alertas_configuracion + alertas_disparadas
+--
+-- IA:
+-- - conversaciones_ia + mensajes_ia
+--
+-- INFRAESTRUCTURA:
+-- - adjuntos (polimórfica)
+-- - auditoria
+--
+-- El diagrama Mermaid completo está en docs/MODELO_DATOS.mermaid
+-- =============================================================================
+
+-- PLACEHOLDER: esta migración se completará en próximos pasos del desarrollo.
+SELECT 1;

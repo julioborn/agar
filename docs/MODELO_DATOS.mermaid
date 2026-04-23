@@ -1,0 +1,698 @@
+erDiagram
+    EMPRESAS ||--o{ USUARIOS_EMPRESAS : tiene
+    EMPRESAS ||--o{ UNIDADES_NEGOCIO : contiene
+    EMPRESAS ||--o{ CAMPOS : posee
+    EMPRESAS ||--o{ PRODUCTOS : cataloga
+    EMPRESAS ||--o{ PROVEEDORES : registra
+    EMPRESAS ||--o{ CONTRATISTAS : contrata
+    EMPRESAS ||--o{ OPERARIOS : emplea
+    EMPRESAS ||--o{ DEPOSITOS : administra
+    EMPRESAS ||--o{ MAQUINARIAS : posee
+    EMPRESAS ||--o{ COMPRAS : registra
+    EMPRESAS ||--o{ GASTOS_GENERALES : registra
+    EMPRESAS ||--o{ PRECIOS_REFERENCIA : consulta
+    EMPRESAS ||--o{ AUDITORIA : registra
+    EMPRESAS ||--o{ MERMAS : registra
+    EMPRESAS ||--o{ REPORTES_PLANTILLAS : define
+    EMPRESAS ||--o{ ALERTAS_CONFIGURACION : configura
+    EMPRESAS ||--o{ PERIODOS_CONTABLES : cierra
+    EMPRESAS ||--o{ PRESUPUESTOS_SIEMBRA : define
+    EMPRESAS ||--o{ KPIS_SNAPSHOTS : acumula
+
+    USUARIOS ||--o{ USUARIOS_EMPRESAS : pertenece
+    USUARIOS ||--o{ CONVERSACIONES_IA : inicia
+
+    UNIDADES_NEGOCIO ||--o{ CAMPANIAS : produce_en
+    UNIDADES_NEGOCIO ||--o{ DESTINOS_PRODUCCION : recibe
+
+    CAMPOS ||--o{ LOTES : contiene
+    CAMPOS ||--o| DEPOSITOS : tiene_galpon
+    LOTES ||--o{ CAMPANIAS : produce
+    CAMPANIAS ||--o{ APLICACIONES : recibe
+    CAMPANIAS ||--o{ LABORES : recibe
+    CAMPANIAS ||--o{ COSECHAS : registra
+    CAMPANIAS ||--o{ DESTINOS_PRODUCCION : genera
+    CAMPANIAS ||--o{ MERMAS : imputa
+    CAMPANIAS ||--o| PLANES_CAMPANIA : planifica
+    CAMPANIAS ||--o{ ANALISIS_SENSIBILIDAD : simula
+
+    PLANES_CAMPANIA ||--o{ PLANES_CAMPANIA_ITEMS : detalla
+    PRESUPUESTOS_SIEMBRA ||--o{ PLANES_CAMPANIA : inspira
+
+    PRODUCTOS ||--o{ PRESENTACIONES : tiene
+    PRODUCTOS ||--o{ STOCK : almacenado_en
+    PRODUCTOS ||--o{ PARTIDAS_PRODUCTO : tiene
+    DEPOSITOS ||--o{ STOCK : contiene
+    PRODUCTOS ||--o{ MOVIMIENTOS_STOCK : registra
+    DEPOSITOS ||--o{ MOVIMIENTOS_STOCK : origen_destino
+    PRODUCTOS ||--o{ MERMAS : afecta
+    DEPOSITOS ||--o{ MERMAS : origen
+
+    COMPRAS ||--o{ COMPRAS_ITEMS : detalla
+    PROVEEDORES ||--o{ COMPRAS : emite
+    COMPRAS_ITEMS }o--|| PRODUCTOS : refiere
+    COMPRAS_ITEMS }o--|| PRESENTACIONES : usa
+    COMPRAS_ITEMS ||--o{ PARTIDAS_PRODUCTO : origina
+
+    APLICACIONES ||--o{ APLICACIONES_ITEMS : detalla
+    APLICACIONES_ITEMS }o--|| PRODUCTOS : usa
+    APLICACIONES_ITEMS ||--o{ DEVOLUCIONES_STOCK : genera
+    APLICACIONES_ITEMS ||--o{ MERMAS : puede_originar
+    APLICACIONES_ITEMS ||--o{ CONSUMOS_PARTIDA : consume
+    APLICACIONES }o--o| LABORES : vinculada
+
+    LABORES_MATERIALES ||--o{ CONSUMOS_PARTIDA : consume
+    PARTIDAS_PRODUCTO ||--o{ CONSUMOS_PARTIDA : registra
+
+    MAQUINARIAS ||--o{ LABORES : ejecuta
+    MAQUINARIAS ||--o{ MANTENIMIENTOS : recibe
+    CONTRATISTAS ||--o{ LABORES : realiza
+    LABORES ||--o{ LABORES_MATERIALES : consume
+    LABORES ||--o{ LABORES_MANO_OBRA : involucra
+    LABORES_MATERIALES }o--|| PRODUCTOS : usa
+    LABORES_MANO_OBRA }o--|| OPERARIOS : ejecuta
+
+    USUARIOS ||--o{ APLICACIONES : carga
+    USUARIOS ||--o{ LABORES : registra
+    USUARIOS ||--o{ MOVIMIENTOS_STOCK : genera
+    USUARIOS ||--o{ DEVOLUCIONES_STOCK : registra
+    USUARIOS ||--o{ MERMAS : registra
+    USUARIOS ||--o{ ADJUNTOS : sube
+    USUARIOS ||--o{ AUDITORIA : ejecuta
+
+    PRECIOS_REFERENCIA ||--o{ DESTINOS_PRODUCCION : valoriza
+
+    REPORTES_PLANTILLAS ||--o{ REPORTES_SUSCRIPCIONES : usa
+    REPORTES_PLANTILLAS ||--o{ REPORTES_GENERADOS : produce
+    REPORTES_SUSCRIPCIONES ||--o{ REPORTES_GENERADOS : ejecuta
+    USUARIOS ||--o{ REPORTES_SUSCRIPCIONES : recibe
+
+    ALERTAS_CONFIGURACION ||--o{ ALERTAS_DISPARADAS : dispara
+
+    CONVERSACIONES_IA ||--o{ MENSAJES_IA : contiene
+
+    PERIODOS_CONTABLES ||--o{ AUDITORIA : referencia
+
+    EMPRESAS {
+        int id PK
+        string nombre
+        string cuit
+        string datos_fiscales
+        datetime fecha_alta
+        string subdominio
+        string logo_url
+        string moneda_base
+    }
+
+    UNIDADES_NEGOCIO {
+        int id PK
+        int empresa_id FK
+        string nombre
+        string tipo
+        string descripcion
+        boolean activa
+    }
+
+    USUARIOS {
+        int id PK
+        string nombre
+        string email UK
+        string password_hash
+        string telefono
+    }
+
+    USUARIOS_EMPRESAS {
+        int id PK
+        int usuario_id FK
+        int empresa_id FK
+        string rol
+        int campo_id_asignado FK
+    }
+
+    OPERARIOS {
+        int id PK
+        int empresa_id FK
+        string nombre
+        string dni
+        string telefono
+        string categoria
+        float valor_hora_ars
+        int usuario_id FK
+        boolean activo
+    }
+
+    CAMPOS {
+        int id PK
+        int empresa_id FK
+        string nombre
+        float lat
+        float lng
+        float hectareas_totales
+    }
+
+    LOTES {
+        int id PK
+        int campo_id FK
+        string nombre
+        float hectareas
+        json poligono
+    }
+
+    CAMPANIAS {
+        int id PK
+        int lote_id FK
+        int unidad_negocio_id FK
+        string cultivo
+        date fecha_siembra
+        date fecha_cosecha_estimada
+        date fecha_cosecha_real
+        string estado
+        float produccion_total_kg
+        float rendimiento_kg_ha
+        float precio_referencia_ars_kg
+        float ingreso_bruto_ars
+        float costo_directo_ars
+        float costo_mermas_ars
+        float margen_bruto_ars
+        float margen_bruto_ars_ha
+        float desvio_costo_vs_plan
+        float desvio_rinde_vs_plan
+    }
+
+    PLANES_CAMPANIA {
+        int id PK
+        int campania_id FK
+        int presupuesto_siembra_id FK
+        date fecha_plan
+        float rinde_esperado_kg_ha
+        float precio_esperado_ars_kg
+        float costo_presupuestado_ars
+        float ingreso_esperado_ars
+        float margen_esperado_ars
+        float margen_esperado_ars_ha
+        float punto_equilibrio_kg_ha
+        float punto_equilibrio_precio_ars
+        string estado
+        int creado_por FK
+        string observaciones
+    }
+
+    PLANES_CAMPANIA_ITEMS {
+        int id PK
+        int plan_campania_id FK
+        string tipo_item
+        int producto_id FK
+        string descripcion
+        float cantidad_prevista
+        string unidad
+        float costo_unitario_previsto_ars
+        float costo_total_previsto_ars
+        date fecha_prevista
+    }
+
+    PRESUPUESTOS_SIEMBRA {
+        int id PK
+        int empresa_id FK
+        string nombre
+        string cultivo
+        string zona
+        json items_plantilla
+        float rinde_objetivo_kg_ha
+        int creado_por FK
+        datetime fecha_creacion
+        boolean activo
+        string observaciones
+    }
+
+    ANALISIS_SENSIBILIDAD {
+        int id PK
+        int campania_id FK
+        string nombre_escenario
+        datetime fecha
+        float variacion_precio_pct
+        float variacion_dolar_pct
+        float variacion_rinde_pct
+        float variacion_costos_pct
+        float margen_resultante_ars
+        float margen_resultante_ars_ha
+        json detalle_calculo
+        int creado_por FK
+    }
+
+    COSECHAS {
+        int id PK
+        int campania_id FK
+        date fecha
+        float cantidad
+        string unidad_medida
+        float cantidad_kg
+        float humedad_porcentaje
+        string destino_inicial
+        string observaciones
+    }
+
+    DESTINOS_PRODUCCION {
+        int id PK
+        int campania_id FK
+        date fecha
+        string tipo_destino
+        float cantidad_kg
+        int unidad_negocio_destino_id FK
+        string comprador_externo
+        int precio_referencia_id FK
+        string moneda
+        float cotizacion_usd
+        float precio_unitario_moneda_original
+        float precio_unitario_ars_kg
+        float total_ars
+        string numero_factura
+        string archivo_factura_url
+        string observaciones
+    }
+
+    PRECIOS_REFERENCIA {
+        int id PK
+        int empresa_id FK
+        date fecha
+        string cultivo
+        string mercado
+        string moneda
+        float precio_unitario
+        float precio_unitario_ars_kg
+        string fuente
+        string observaciones
+    }
+
+    PRODUCTOS {
+        int id PK
+        int empresa_id FK
+        string nombre
+        string categoria
+        string unidad_base
+        string codigo_barras
+        string codigo_interno
+        string principio_activo
+        float stock_minimo
+        boolean requiere_trazabilidad
+    }
+
+    PRESENTACIONES {
+        int id PK
+        int producto_id FK
+        string descripcion
+        float factor_a_unidad_base
+    }
+
+    PARTIDAS_PRODUCTO {
+        int id PK
+        int producto_id FK
+        int compra_item_id FK
+        string numero_lote_proveedor
+        date fecha_vencimiento
+        float cantidad_inicial
+        float cantidad_actual
+        float costo_unitario_ars
+        datetime fecha_alta
+        string estado
+    }
+
+    CONSUMOS_PARTIDA {
+        int id PK
+        int partida_id FK
+        int aplicacion_item_id FK
+        int labor_material_id FK
+        float cantidad_consumida
+        datetime fecha
+        string motivo
+    }
+
+    PROVEEDORES {
+        int id PK
+        int empresa_id FK
+        string nombre
+        string cuit
+        string contacto
+    }
+
+    CONTRATISTAS {
+        int id PK
+        int empresa_id FK
+        string nombre
+        string cuit
+        string contacto
+        json tipos_servicio
+        string zona_trabajo
+        string observaciones
+        boolean activo
+    }
+
+    DEPOSITOS {
+        int id PK
+        int empresa_id FK
+        string nombre
+        string tipo
+        int campo_id FK
+    }
+
+    STOCK {
+        int id PK
+        int deposito_id FK
+        int producto_id FK
+        float cantidad_actual
+    }
+
+    MOVIMIENTOS_STOCK {
+        int id PK
+        int deposito_id FK
+        int producto_id FK
+        string tipo
+        float cantidad
+        datetime fecha
+        int usuario_id FK
+        string referencia_tipo
+        int referencia_id
+        string observaciones
+    }
+
+    COMPRAS {
+        int id PK
+        int empresa_id FK
+        int proveedor_id FK
+        date fecha
+        string numero_factura
+        string moneda
+        float cotizacion_usd
+        float total_moneda_original
+        float total_en_ars
+        string archivo_factura_url
+        string estado
+        int creado_por FK
+    }
+
+    COMPRAS_ITEMS {
+        int id PK
+        int compra_id FK
+        int producto_id FK
+        int presentacion_id FK
+        float cantidad_presentacion
+        float cantidad_unidad_base
+        float precio_unitario_moneda_original
+        float precio_unitario_ars
+        float subtotal_moneda_original
+        float subtotal_ars
+        int deposito_destino_id FK
+        string numero_lote_proveedor
+        date fecha_vencimiento
+    }
+
+    APLICACIONES {
+        int id PK
+        int campania_id FK
+        date fecha
+        string tipo
+        string estado
+        int usuario_id FK
+        string observaciones
+        boolean sincronizado
+    }
+
+    APLICACIONES_ITEMS {
+        int id PK
+        int aplicacion_id FK
+        int producto_id FK
+        int deposito_origen_id FK
+        float cantidad_retirada
+        float cantidad_aplicada
+        float cantidad_devuelta
+        float costo_unitario_ars_momento
+        float costo_imputado_ars
+    }
+
+    DEVOLUCIONES_STOCK {
+        int id PK
+        int aplicacion_item_id FK
+        date fecha
+        float cantidad
+        int deposito_destino_id FK
+        int usuario_id FK
+        string observaciones
+    }
+
+    MERMAS {
+        int id PK
+        int empresa_id FK
+        date fecha
+        int producto_id FK
+        float cantidad
+        int deposito_id FK
+        string origen
+        string motivo
+        int aplicacion_item_id FK
+        int campania_id FK
+        int partida_id FK
+        float costo_unitario_ars_momento
+        float costo_total_ars
+        int usuario_id FK
+        string observaciones
+    }
+
+    MAQUINARIAS {
+        int id PK
+        int empresa_id FK
+        string nombre
+        string tipo
+        string patente
+        int anio
+        float costo_hora_referencia
+        float costo_hora_real_calculado
+        float horas_uso_acumuladas
+    }
+
+    MANTENIMIENTOS {
+        int id PK
+        int maquinaria_id FK
+        date fecha
+        string tipo
+        string descripcion
+        int proveedor_id FK
+        string moneda
+        float cotizacion_usd
+        float costo_repuestos_ars
+        float costo_mano_obra_ars
+        float costo_servicio_externo_ars
+        float costo_total_ars
+        int horas_maquina_al_momento
+        string archivo_factura_url
+        int usuario_id FK
+        string observaciones
+    }
+
+    LABORES {
+        int id PK
+        int campania_id FK
+        string tipo_labor
+        string modalidad
+        date fecha
+        float hectareas_trabajadas
+        int maquinaria_id FK
+        float horas_trabajadas
+        float combustible_litros
+        float costo_combustible_ars
+        float costo_maquinaria_ars
+        int contratista_id FK
+        string unidad_facturacion
+        float precio_unitario_facturacion
+        float cantidad_facturada
+        string moneda_contratista
+        float cotizacion_usd_contratista
+        float costo_contratista_moneda_original
+        float costo_contratista_ars
+        string numero_factura_contratista
+        string archivo_factura_contratista_url
+        float costo_materiales_ars
+        float costo_mano_obra_ars
+        float costo_total_ars
+        int aplicacion_id FK
+        int usuario_id FK
+        string observaciones
+    }
+
+    LABORES_MATERIALES {
+        int id PK
+        int labor_id FK
+        int producto_id FK
+        int deposito_origen_id FK
+        float cantidad_retirada
+        float cantidad_usada
+        float cantidad_devuelta
+        float costo_unitario_ars_momento
+        float costo_imputado_ars
+    }
+
+    LABORES_MANO_OBRA {
+        int id PK
+        int labor_id FK
+        int operario_id FK
+        date fecha
+        float horas_trabajadas
+        string tipo_jornada
+        float valor_hora_ars
+        float costo_total_ars
+        string observaciones
+    }
+
+    GASTOS_GENERALES {
+        int id PK
+        int empresa_id FK
+        int unidad_negocio_id FK
+        date fecha
+        string categoria
+        string descripcion
+        string moneda
+        float cotizacion_usd
+        float monto_moneda_original
+        float monto_ars
+        string criterio_prorrateo
+        int campania_id FK
+        string archivo_comprobante_url
+    }
+
+    PERIODOS_CONTABLES {
+        int id PK
+        int empresa_id FK
+        date fecha_desde
+        date fecha_hasta
+        string tipo
+        string estado
+        datetime fecha_cierre
+        int cerrado_por FK
+        datetime fecha_reapertura
+        int reabierto_por FK
+        string motivo_reapertura
+        string observaciones
+    }
+
+    KPIS_SNAPSHOTS {
+        int id PK
+        int empresa_id FK
+        int unidad_negocio_id FK
+        date fecha
+        string frecuencia
+        float margen_bruto_acumulado_ars
+        float costo_por_hectarea_promedio
+        float stock_valorizado_ars
+        float ventas_acumuladas_ars
+        float produccion_acumulada_kg
+        int campanias_activas
+        int alertas_activas
+        json kpis_extra
+    }
+
+    CONVERSACIONES_IA {
+        int id PK
+        int usuario_id FK
+        int empresa_id FK
+        string titulo
+        datetime fecha_inicio
+        datetime ultima_interaccion
+        string estado
+    }
+
+    MENSAJES_IA {
+        int id PK
+        int conversacion_id FK
+        string rol
+        string contenido
+        datetime fecha
+        json contexto_datos
+        int tokens_consumidos
+    }
+
+    REPORTES_PLANTILLAS {
+        int id PK
+        int empresa_id FK
+        string nombre
+        string descripcion
+        string tipo
+        string alcance
+        json secciones
+        string formato_salida
+        int creado_por FK
+        datetime fecha_creacion
+        boolean activa
+    }
+
+    REPORTES_SUSCRIPCIONES {
+        int id PK
+        int plantilla_id FK
+        int usuario_id FK
+        string frecuencia
+        string dia_envio
+        string hora_envio
+        json canales
+        json filtros_aplicados
+        boolean activa
+        datetime ultima_ejecucion
+    }
+
+    REPORTES_GENERADOS {
+        int id PK
+        int plantilla_id FK
+        int suscripcion_id FK
+        datetime fecha_generacion
+        date periodo_desde
+        date periodo_hasta
+        string archivo_url
+        json destinatarios
+        string estado
+        string generado_por
+        int tamaño_archivo
+        string hash
+    }
+
+    ALERTAS_CONFIGURACION {
+        int id PK
+        int empresa_id FK
+        string nombre
+        string tipo_alerta
+        json condicion
+        json destinatarios
+        json canales
+        boolean activa
+    }
+
+    ALERTAS_DISPARADAS {
+        int id PK
+        int alerta_config_id FK
+        datetime fecha
+        string entidad_tipo
+        int entidad_id
+        json datos_contexto
+        json usuarios_notificados
+        string estado
+    }
+
+    ADJUNTOS {
+        int id PK
+        string entidad_tipo
+        int entidad_id
+        string tipo_archivo
+        string url
+        string descripcion
+        int subido_por FK
+        datetime fecha_subida
+    }
+
+    AUDITORIA {
+        int id PK
+        int empresa_id FK
+        int usuario_id FK
+        datetime fecha
+        string entidad_tipo
+        int entidad_id
+        string accion
+        json valores_anteriores
+        json valores_nuevos
+        string ip_origen
+        int periodo_contable_id FK
+    }

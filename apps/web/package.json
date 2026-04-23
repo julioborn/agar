@@ -1,0 +1,50 @@
+{
+  "name": "@agrosistema/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@geoman-io/leaflet-geoman-free": "^2.19.3",
+    "@hookform/resolvers": "^3.9.0",
+    "@supabase/ssr": "^0.5.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "@tmcw/togeojson": "^7.1.2",
+    "clsx": "^2.1.0",
+    "date-fns": "^3.6.0",
+    "dexie": "^4.0.8",
+    "dexie-react-hooks": "^1.1.7",
+    "html5-qrcode": "^2.3.8",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
+    "jszip": "^3.10.1",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.400.0",
+    "next": "^15.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.53.0",
+    "react-leaflet": "^4.2.1",
+    "recharts": "^2.12.0",
+    "tailwind-merge": "^2.5.0",
+    "xlsx": "^0.18.5",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.12",
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^15.0.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.4.0"
+  }
+}

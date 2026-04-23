@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Leaflet: etiquetas de lotes sobre el mapa ──────────────────────────────── */
+.lote-map-label {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border: none !important;
+  border-radius: 4px !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15) !important;
+  padding: 2px 6px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
+  white-space: nowrap !important;
+}
+.lote-map-label::before { display: none !important; }
+
+/* Ocultar el ícono de Leaflet que falla con Next.js (opcional) */
+.leaflet-default-icon-path { display: none; }
