@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 import { cn } from '@/lib/utils';
 import PresentacionesManager from './presentaciones-manager';
-import { CATEGORIAS } from '../producto-form';
+import { CATEGORIAS } from '../constants';
 
 const CATEGORIA_LABEL = Object.fromEntries(CATEGORIAS.map((c) => [c.value, c.label]));
 const CATEGORIA_COLOR: Record<string, string> = {
