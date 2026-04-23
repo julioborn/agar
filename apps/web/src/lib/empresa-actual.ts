@@ -38,7 +38,7 @@ export async function getEmpresaActiva(): Promise<EmpresaActivaResult | null> {
     .select('rol, empresa:empresas(id, nombre, cuit, moneda_base)')
     .eq('usuario_id', user.id);
 
-  const vinculaciones = (data ?? []) as VinculacionRow[];
+  const vinculaciones = (data ?? []) as unknown as VinculacionRow[];
   const todasLasEmpresas: EmpresaConRol[] = vinculaciones
     .filter((v) => v.empresa !== null)
     .map((v) => ({ ...(v.empresa as EmpresaConRol), rol: v.rol }));
