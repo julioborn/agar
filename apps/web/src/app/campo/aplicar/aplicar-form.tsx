@@ -141,7 +141,7 @@ export default function AplicarForm({ cultivos, depositos, productos, cultivoPre
           <button
             onClick={() => {
               setDone(false);
-              setItems([{ key: keyCounter++, producto_id: '', deposito_id: depositos[0]?.id ?? '', cantidad_retirada: '', cantidad_devuelta: '0' }]);
+              setItems([{ key: keyCounter++, producto_id: '', deposito_id: depositos[0]?.id ?? '', cantidad_retirada: '', cantidad_aplicada: '', cantidad_devuelta: '0', causa_perdida: '' }]);
               setObservaciones('');
             }}
             className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3.5 rounded-xl text-base transition-colors"
