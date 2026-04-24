@@ -28,7 +28,7 @@ export default async function EmpresasPage() {
 
   const { data: empresas } = await supabase
     .from('empresas')
-    .select('id, nombre, cuit, moneda_base, fecha_alta')
+    .select('id, nombre, cuit, moneda_base, logo_url, fecha_alta')
     .order('fecha_alta', { ascending: false });
 
   const total = empresas?.length ?? 0;

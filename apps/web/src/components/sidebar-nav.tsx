@@ -44,12 +44,12 @@ export default function SidebarNav({ esSuperAdmin, esAdmin = false, collapsed = 
 
   return (
     <aside className={cn(
-      'h-full bg-zinc-900 flex flex-col transition-all duration-200 ease-in-out',
+      'h-full bg-zinc-950 flex flex-col transition-all duration-200 ease-in-out',
       collapsed ? 'w-16' : 'w-60',
     )}>
       {/* Logo + toggle */}
       <div className={cn(
-        'h-14 flex items-center border-b border-white/5 shrink-0 gap-2',
+        'h-20 flex items-center border-b border-white/5 shrink-0 gap-2',
         collapsed ? 'justify-center px-2' : 'px-3 justify-between',
       )}>
         {onToggleCollapse && (

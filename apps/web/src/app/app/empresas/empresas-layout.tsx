@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { Building2, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import CrearEmpresaForm from './crear-empresa-form';
+import LogoUpload from './logo-upload';
 
 interface EmpresaRow {
-  id: string; nombre: string; cuit: string; moneda_base: string; fecha_alta: string;
+  id: string; nombre: string; cuit: string; moneda_base: string; logo_url?: string | null; fecha_alta: string;
 }
 
 interface Props { empresas: EmpresaRow[] }
@@ -51,7 +52,7 @@ export default function EmpresasLayout({ empresas }: Props) {
             </div>
             <div>
               <p className="text-sm font-semibold text-zinc-800">Nueva empresa</p>
-              <p className="text-xs text-zinc-400">Nombre, CUIT y moneda base</p>
+              <p className="text-xs text-zinc-400">Nombre, CUIT, moneda y logo</p>
             </div>
           </div>
           {formOpen ? <ChevronUp className="w-4 h-4 text-zinc-400" /> : <ChevronDown className="w-4 h-4 text-zinc-400" />}
@@ -75,6 +76,7 @@ export default function EmpresasLayout({ empresas }: Props) {
             <table className="w-full text-sm">
               <thead className="bg-zinc-50 border-b border-zinc-100">
                 <tr>
+                  <th className="text-left px-4 py-3 font-medium text-zinc-500">Logo</th>
                   <th className="text-left px-4 py-3 font-medium text-zinc-500">Nombre</th>
                   <th className="text-left px-4 py-3 font-medium text-zinc-500">CUIT</th>
                   <th className="text-left px-4 py-3 font-medium text-zinc-500">Moneda</th>
@@ -84,6 +86,9 @@ export default function EmpresasLayout({ empresas }: Props) {
               <tbody className="divide-y divide-zinc-100">
                 {empresas.map((empresa) => (
                   <tr key={empresa.id} className="hover:bg-[#006836]/5 transition-colors">
+                    <td className="px-4 py-3">
+                      <LogoUpload empresaId={empresa.id} logoUrl={empresa.logo_url} />
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 font-medium text-zinc-800">
                         <Building2 className="w-4 h-4 text-zinc-300 shrink-0" />

@@ -16,7 +16,7 @@ export default async function CampoLayout({ children }: { children: React.ReactN
       {/* Header fijo */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-green-700 text-white h-14 flex items-center px-4 shadow-md">
         <div className="flex items-center gap-2">
-          <img src="/agar2.png" alt="agar" className="h-8 w-auto brightness-0 invert" />
+          <img src="/agar6.png" alt="agar" className="h-8 w-auto brightness-0 invert" />
           <span className="text-green-300 text-sm font-normal">· {empresaData.empresa.nombre}</span>
         </div>
       </header>

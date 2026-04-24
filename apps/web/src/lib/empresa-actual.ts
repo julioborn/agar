@@ -7,6 +7,7 @@ export interface EmpresaConRol {
   cuit: string;
   moneda_base: string;
   rol: string;
+  logo_url?: string;
 }
 
 export interface EmpresaActivaResult {
@@ -23,6 +24,7 @@ type VinculacionRow = {
     nombre: string;
     cuit: string;
     moneda_base: string;
+    logo_url?: string;
   } | null;
 };
 
@@ -35,7 +37,7 @@ export async function getEmpresaActiva(): Promise<EmpresaActivaResult | null> {
   // filas de usuarios_empresas, pero acá solo queremos las del usuario actual.
   const { data } = await supabase
     .from('usuarios_empresas')
-    .select('rol, empresa:empresas(id, nombre, cuit, moneda_base)')
+    .select('rol, empresa:empresas(id, nombre, cuit, moneda_base, logo_url)')
     .eq('usuario_id', user.id);
 
   const vinculaciones = (data ?? []) as unknown as VinculacionRow[];

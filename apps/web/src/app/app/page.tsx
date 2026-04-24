@@ -132,7 +132,7 @@ export default async function DashboardPage() {
       <div>
         <div className="flex items-center gap-2 mb-3">
           <TrendingUp className="w-4 h-4 text-[#006836]" />
-          <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">Accesos rápidos</h2>
+          <h2 className="text-md font-semibold text-zinc-500 tracking-wider">Accesos rápidos</h2>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

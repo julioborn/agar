@@ -4,7 +4,8 @@
       "Bash(npx tsc *)",
       "Bash(grep -v \"^$\")",
       "Bash(npm install *)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")"
     ]
   }
 }

@@ -61,7 +61,7 @@ export default function AppShell({
       <div className="flex flex-col flex-1 min-w-0">
 
         {/* Header */}
-        <header className="h-20 shrink-0 bg-zinc-900 flex items-center px-4 relative">
+        <header className="h-20 shrink-0 bg-zinc-950 flex items-center px-4 relative">
 
           {/* Izquierda: hamburger mobile + empresa */}
           <div className="flex items-center gap-3 min-w-0">
@@ -75,8 +75,8 @@ export default function AppShell({
           </div>
 
           {/* Centro: logo */}
-          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2.5  pointer-events-none select-none">
-            <Image src="/agar2.png" alt="agar" width={140} height={115}/>
+          <div className="fixed left-1/2 -translate-x-1/2 top-0 h-14 flex items-center gap-2.5 pointer-events-none select-none z-10">
+            <Image src="/agar6.png" alt="agar" width={120} height={120} className="h-22 mt-5 w-auto" />
           </div>
 
           {/* Derecha: email + logout */}
