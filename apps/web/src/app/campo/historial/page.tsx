@@ -6,8 +6,8 @@ import { FlaskConical, Package } from 'lucide-react';
 const TIPO_COLOR: Record<string, string> = {
   fitosanitaria: 'bg-purple-100 text-purple-700',
   fertilizacion: 'bg-blue-100 text-blue-700',
-  siembra:       'bg-green-100 text-green-700',
-  otro:          'bg-slate-100 text-slate-600',
+  siembra:       'bg-[#006836]/10 text-[#006836]',
+  otro:          'bg-zinc-100 text-zinc-600',
 };
 
 const TIPO_LABEL: Record<string, string> = {
@@ -25,7 +25,6 @@ export default async function HistorialPage() {
   const empresaData = await getEmpresaActiva();
   if (!empresaData) redirect('/login');
 
-  // Últimas 30 aplicaciones del usuario, con ítems
   const { data: aplicaciones } = await supabase
     .from('aplicaciones')
     .select(`
@@ -45,17 +44,17 @@ export default async function HistorialPage() {
 
   return (
     <div className="px-4 py-6 space-y-4">
-      <h1 className="text-xl font-bold text-slate-900">Mis aplicaciones</h1>
+      <h1 className="text-xl font-bold text-zinc-900">Mis aplicaciones</h1>
 
       {(!aplicaciones || aplicaciones.length === 0) ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center">
-          <FlaskConical className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-          <p className="text-slate-400 text-sm">Aún no registraste aplicaciones.</p>
+        <div className="bg-white rounded-2xl border border-zinc-200 p-10 text-center">
+          <FlaskConical className="w-10 h-10 text-zinc-200 mx-auto mb-3" />
+          <p className="text-zinc-400 text-sm">Aún no registraste aplicaciones.</p>
         </div>
       ) : (
         <ul className="space-y-3">
           {aplicaciones.map((a: any) => (
-            <li key={a.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+            <li key={a.id} className="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
               {/* Cabecera */}
               <div className="flex items-start gap-3 px-4 pt-4 pb-3">
                 <div className="flex-1 min-w-0">
@@ -63,34 +62,34 @@ export default async function HistorialPage() {
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${TIPO_COLOR[a.tipo] ?? TIPO_COLOR.otro}`}>
                       {TIPO_LABEL[a.tipo] ?? a.tipo}
                     </span>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-zinc-400">
                       {new Date(a.fecha + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </span>
                   </div>
-                  <p className="font-semibold text-slate-900 mt-1.5 text-sm">
+                  <p className="font-semibold text-zinc-900 mt-1.5 text-sm">
                     {a.cultivo?.cultivo}
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-zinc-500">
                     {a.cultivo?.lote?.nombre} · {a.cultivo?.lote?.campo?.nombre}
                   </p>
                   {a.observaciones && (
-                    <p className="text-xs text-slate-400 mt-1 italic">{a.observaciones}</p>
+                    <p className="text-xs text-zinc-400 mt-1 italic">{a.observaciones}</p>
                   )}
                 </div>
               </div>
 
               {/* Ítems */}
               {a.items && a.items.length > 0 && (
-                <div className="border-t border-slate-100 px-4 py-3 space-y-2">
+                <div className="border-t border-zinc-100 px-4 py-3 space-y-2">
                   {a.items.map((item: any, idx: number) => (
                     <div key={idx} className="flex items-start gap-2">
-                      <Package className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-slate-600">
-                        <span className="font-medium text-slate-800">{item.producto?.nombre}</span>
+                      <Package className="w-3.5 h-3.5 text-zinc-400 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-zinc-600">
+                        <span className="font-medium text-zinc-800">{item.producto?.nombre}</span>
                         {' · '}
                         <span>{item.cantidad_retirada} {item.producto?.unidad_base} retirados</span>
                         {item.cantidad_devuelta > 0 && (
-                          <span className="text-slate-400"> · {item.cantidad_devuelta} devueltos</span>
+                          <span className="text-zinc-400"> · {item.cantidad_devuelta} devueltos</span>
                         )}
                       </div>
                     </div>

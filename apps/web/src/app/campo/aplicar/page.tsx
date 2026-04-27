@@ -62,7 +62,7 @@ export default async function AplicarPage({ searchParams }: Props) {
 
   return (
     <div className="px-4 py-6">
-      <h1 className="text-xl font-bold text-slate-900 mb-6">Nueva aplicación</h1>
+      <h1 className="text-xl font-bold text-zinc-900 mb-6">Nueva aplicación</h1>
       <AplicarForm
         cultivos={(cultivos ?? []).map((c: any) => ({
           id: c.id,

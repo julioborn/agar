@@ -12,7 +12,6 @@ export default async function CampoHome() {
   const empresaData = await getEmpresaActiva();
   if (!empresaData) redirect('/login');
 
-  // Cultivos activos: planificados y en curso
   const { data: cultivos } = await supabase
     .from('cultivos')
     .select(`
@@ -28,30 +27,30 @@ export default async function CampoHome() {
     <div className="px-4 py-6 space-y-6">
       {/* Saludo */}
       <div>
-        <p className="text-slate-500 text-sm capitalize">{hoy}</p>
+        <p className="text-zinc-500 text-sm capitalize">{hoy}</p>
       </div>
 
       {/* Botón principal */}
       <Link
         href="/campo/aplicar"
-        className="block w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white rounded-2xl p-5 text-center transition-colors shadow-sm"
+        className="block w-full bg-[#006836] hover:bg-[#005228] active:bg-[#004020] text-white rounded-2xl p-5 text-center transition-colors shadow-sm"
       >
         <FlaskConical className="w-8 h-8 mx-auto mb-2" strokeWidth={1.8} />
         <span className="text-lg font-semibold">Registrar aplicación</span>
-        <p className="text-green-100 text-sm mt-1">Fitosanitaria, fertilización, siembra…</p>
+        <p className="text-white/70 text-sm mt-1">Fitosanitaria, fertilización, siembra…</p>
       </Link>
 
-      {/* Campañas en curso */}
+      {/* Cultivos activos */}
       <div>
-        <h2 className="text-base font-semibold text-slate-700 mb-3 flex items-center gap-2">
-          <Sprout className="w-4 h-4 text-green-600" />
+        <h2 className="text-base font-semibold text-zinc-700 mb-3 flex items-center gap-2">
+          <Sprout className="w-4 h-4 text-[#006836]" />
           Cultivos activos
-          <span className="ml-auto text-xs font-normal text-slate-400">{cultivos?.length ?? 0} activos</span>
+          <span className="ml-auto text-xs font-normal text-zinc-400">{cultivos?.length ?? 0} activos</span>
         </h2>
 
         {(!cultivos || cultivos.length === 0) ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-6 text-center">
-            <p className="text-slate-400 text-sm">No hay cultivos activos.</p>
+          <div className="bg-white rounded-xl border border-zinc-200 p-6 text-center">
+            <p className="text-zinc-400 text-sm">No hay cultivos activos.</p>
           </div>
         ) : (
           <ul className="space-y-2">
@@ -59,21 +58,21 @@ export default async function CampoHome() {
               <li key={c.id}>
                 <Link
                   href={`/campo/aplicar?cultivo=${c.id}`}
-                  className="flex items-center bg-white rounded-xl border border-slate-200 px-4 py-4 gap-3 active:bg-slate-50 transition-colors"
+                  className="flex items-center bg-white rounded-xl border border-zinc-200 px-4 py-4 gap-3 active:bg-zinc-50 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-900 text-base truncate">{c.cultivo}</p>
-                    <p className="text-sm text-slate-500 truncate mt-0.5">
+                    <p className="font-semibold text-zinc-900 text-base truncate">{c.cultivo}</p>
+                    <p className="text-sm text-zinc-500 truncate mt-0.5">
                       {(c.lote as any)?.nombre} · {(c.lote as any)?.campo?.nombre}
                     </p>
-                    <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
+                    <p className="text-xs text-zinc-400 mt-1 flex items-center gap-2">
                       <span>Siembra: {new Date(c.fecha_siembra + 'T00:00:00').toLocaleDateString('es-AR')}</span>
-                      <span className={`px-1.5 py-0.5 rounded-full font-medium ${c.estado === 'en_curso' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                      <span className={`px-1.5 py-0.5 rounded-full font-medium ${c.estado === 'en_curso' ? 'bg-[#006836]/10 text-[#006836]' : 'bg-amber-100 text-amber-700'}`}>
                         {c.estado === 'en_curso' ? 'En curso' : 'Planificada'}
                       </span>
                     </p>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-slate-300 flex-shrink-0" />
+                  <ChevronRight className="w-5 h-5 text-zinc-300 flex-shrink-0" />
                 </Link>
               </li>
             ))}
