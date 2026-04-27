@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { ChevronLeft, Sprout, Wheat, TrendingUp } from 'lucide-react';
+import { ChevronLeft, Sprout, Wheat, TrendingUp, Tractor } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 import { cn } from '@/lib/utils';
@@ -8,6 +8,10 @@ import RegistrarCosechaForm from './registrar-cosecha-form';
 import ConfigProduccionForm from './config-produccion-form';
 import AplicacionesList from './aplicaciones-list';
 import NuevaAplicacionInline from './nueva-aplicacion-inline';
+import NuevaLaborInline from './nueva-labor-inline';
+import LaborsList from './labores-list';
+import NuevaCosechaInline from './nueva-cosecha-inline';
+import CosechaList from './cosecha-list';
 
 const ESTADO_STYLE: Record<string, string> = {
   planificada: 'bg-blue-500/20 text-blue-100',
@@ -33,7 +37,11 @@ export default async function CultivoDetallePage({ params }: Props) {
 
   const todayISO = new Date().toISOString().slice(0, 10);
 
-  const [{ data: cultivo }, { data: aplicaciones }, { data: productos }, { data: depositos }] = await Promise.all([
+  const [
+    { data: cultivo }, { data: aplicaciones }, { data: productos }, { data: depositos },
+    { data: labores }, { data: tiposLabor }, { data: maquinarias }, { data: proveedores }, { data: config },
+    { data: costosCosecha },
+  ] = await Promise.all([
     supabase
       .from('cultivos')
       .select(`
@@ -64,6 +72,31 @@ export default async function CultivoDetallePage({ params }: Props) {
       .order('fecha', { ascending: false }),
     supabase.from('productos').select('id, nombre, unidad_base').order('nombre'),
     supabase.from('depositos').select('id, nombre').order('nombre'),
+    supabase.from('labores')
+      .select(`id, fecha, tipo_ejecucion, observaciones, horas_trabajadas,
+               modalidad_cobro, precio_unitario, hectareas_trabajadas, costo_total_calculado,
+               tipo_labor:tipos_labor(nombre),
+               maquinaria:maquinarias(nombre, tipo),
+               proveedor:proveedores(nombre)`)
+      .eq('cultivo_id', cultivoId)
+      .order('fecha', { ascending: false }),
+    supabase.from('tipos_labor').select('id, nombre')
+      .eq('empresa_id', empresaData.empresa.id).order('nombre'),
+    supabase.from('maquinarias')
+      .select('id, nombre, tipo, consumo_combustible_hora, costo_mantenimiento_hora, valor_adquisicion, vida_util_horas')
+      .eq('empresa_id', empresaData.empresa.id).eq('activa', true).order('nombre'),
+    supabase.from('proveedores').select('id, nombre')
+      .eq('empresa_id', empresaData.empresa.id).order('nombre'),
+    supabase.from('configuracion_empresa').select('precio_combustible')
+      .eq('empresa_id', empresaData.empresa.id).maybeSingle(),
+    supabase.from('costos_cosecha')
+      .select(`id, fecha, tipo_ejecucion, observaciones, horas_trabajadas,
+               modalidad_cobro, precio_unitario, hectareas_trabajadas, toneladas_trabajadas,
+               costo_total_calculado,
+               maquinaria:maquinarias(nombre),
+               proveedor:proveedores(nombre)`)
+      .eq('cultivo_id', cultivoId)
+      .order('fecha', { ascending: false }),
   ]);
 
   if (!cultivo) notFound();
@@ -79,6 +112,11 @@ export default async function CultivoDetallePage({ params }: Props) {
   const campania = cultivo.campania as any;
   const costoTotal = cultivo.costo_directo_ars ?? 0;
   const unidadLabel = (cultivo as any).unidad_produccion ?? 'kg';
+
+  const costoLaboresTotal = (labores ?? []).reduce((acc, l: any) => acc + Number(l.costo_total_calculado ?? 0), 0);
+  const costoAplicacionesTotal = (aplicaciones ?? []).reduce((acc, a: any) =>
+    acc + ((a.aplicaciones_items ?? []) as any[]).reduce((s: number, it: any) => s + Number(it.costo_imputado_ars ?? 0), 0), 0);
+  const costoCosechaTotal = (costosCosecha ?? []).reduce((acc, c: any) => acc + Number(c.costo_total_calculado ?? 0), 0);
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
@@ -168,23 +206,47 @@ export default async function CultivoDetallePage({ params }: Props) {
               </div>
             </div>
 
-            {/* Tabla ingreso − costo = margen */}
+            {/* Estado de Resultados */}
             <div className="rounded-xl overflow-hidden border border-zinc-100 text-sm">
-              <div className="flex justify-between items-center px-4 py-2.5">
-                <span className="text-zinc-500">Ingreso bruto</span>
+              <div className="flex justify-between items-center px-4 py-2.5 bg-zinc-50">
+                <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Valor de producción</span>
                 <span className="font-semibold text-zinc-800">
                   {(cultivo as any).ingreso_bruto_ars != null ? ars.format((cultivo as any).ingreso_bruto_ars) : '—'}
                 </span>
               </div>
               <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-100">
-                <span className="text-zinc-500">Costo directo</span>
+                <span className="text-zinc-500 flex items-center gap-1.5">
+                  <span className="text-zinc-300 text-xs">−</span> Labores
+                </span>
+                <span className="font-medium text-red-500">
+                  {costoLaboresTotal > 0 ? ars.format(costoLaboresTotal) : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-100">
+                <span className="text-zinc-500 flex items-center gap-1.5">
+                  <span className="text-zinc-300 text-xs">−</span> Aplicaciones y productos
+                </span>
+                <span className="font-medium text-red-500">
+                  {costoAplicacionesTotal > 0 ? ars.format(costoAplicacionesTotal) : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-100">
+                <span className="text-zinc-500 flex items-center gap-1.5">
+                  <span className="text-zinc-300 text-xs">−</span> Cosecha / Trilla
+                </span>
+                <span className="font-medium text-red-500">
+                  {costoCosechaTotal > 0 ? ars.format(costoCosechaTotal) : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-200 bg-zinc-50">
+                <span className="text-zinc-600 font-semibold">Costo directo total</span>
                 <span className="font-semibold text-red-500">
                   {costoTotal > 0 ? `− ${ars.format(costoTotal)}` : '—'}
                 </span>
               </div>
-              <div className="flex justify-between items-center px-4 py-3 border-t border-zinc-200 bg-zinc-50">
-                <span className="font-bold text-zinc-700">Margen bruto</span>
-                <span className={cn('font-bold text-2xl', cultivo.margen_bruto_ars != null && cultivo.margen_bruto_ars >= 0 ? 'text-[#006836]' : 'text-red-600')}>
+              <div className="flex justify-between items-center px-4 py-3 border-t border-zinc-300 bg-zinc-800">
+                <span className="font-bold text-zinc-300 text-sm uppercase tracking-wider">Margen bruto</span>
+                <span className={cn('font-bold text-2xl', cultivo.margen_bruto_ars != null && cultivo.margen_bruto_ars >= 0 ? 'text-[#4ade80]' : 'text-red-400')}>
                   {cultivo.margen_bruto_ars != null ? ars.format(cultivo.margen_bruto_ars) : '—'}
                 </span>
               </div>
@@ -224,12 +286,64 @@ export default async function CultivoDetallePage({ params }: Props) {
         </div>
       )}
 
+      {/* ── Labores ───────────────────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Tractor className="w-4 h-4 text-[#006836]" />
+          <h2 className="text-sm font-semibold text-zinc-500 tracking-wider">
+            Labores
+            {labores && labores.length > 0 && (
+              <span className="ml-1.5 text-zinc-400 normal-case font-normal">({labores.length})</span>
+            )}
+          </h2>
+        </div>
+        {cultivo.estado !== 'cancelada' && cultivo.estado !== 'cosechada' && (
+          <div className="mb-3">
+            <NuevaLaborInline
+              cultivoId={cultivoId}
+              tiposLabor={(tiposLabor ?? []) as any}
+              maquinarias={(maquinarias ?? []) as any}
+              proveedores={(proveedores ?? []) as any}
+              precioCombustible={config?.precio_combustible ?? 0}
+              hectareasLote={(cultivo.lote as any)?.hectareas ?? null}
+            />
+          </div>
+        )}
+        <LaborsList labores={(labores ?? []) as any} cultivoId={cultivoId} />
+      </div>
+
+      {/* ── Cosecha / Trilla ──────────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Wheat className="w-4 h-4 text-[#006836]" />
+          <h2 className="text-sm font-semibold text-zinc-500 tracking-wider">
+            Cosecha / Trilla
+            {costosCosecha && costosCosecha.length > 0 && (
+              <span className="ml-1.5 text-zinc-400 normal-case font-normal">({costosCosecha.length})</span>
+            )}
+          </h2>
+        </div>
+        {cultivo.estado !== 'cancelada' && (
+          <div className="mb-3">
+            <NuevaCosechaInline
+              cultivoId={cultivoId}
+              maquinarias={(maquinarias ?? []) as any}
+              proveedores={(proveedores ?? []) as any}
+              precioCombustible={config?.precio_combustible ?? 0}
+              hectareasLote={(cultivo.lote as any)?.hectareas ?? null}
+              produccionTotalKg={cultivo.produccion_total_kg ?? null}
+            />
+          </div>
+        )}
+        <CosechaList costosCosecha={(costosCosecha ?? []) as any} cultivoId={cultivoId} />
+      </div>
+
       {/* ── Aplicaciones ──────────────────────────────────────────────── */}
       <div>
         <div className="flex items-center gap-2 mb-3">
           <TrendingUp className="w-4 h-4 text-[#006836]" />
           <h2 className="text-sm font-semibold text-zinc-500 tracking-wider">
-            Aplicaciones
+            Aplicaciones y productos
             {aplicaciones && aplicaciones.length > 0 && (
               <span className="ml-1.5 text-zinc-400 normal-case font-normal">({aplicaciones.length})</span>
             )}

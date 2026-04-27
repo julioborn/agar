@@ -8,20 +8,24 @@ import {
   LayoutDashboard, MapPin, Package, Archive, Warehouse,
   ShoppingCart, Truck, Sprout, Briefcase, Building2,
   Users, Calendar, ChevronRight, Menu, Wheat,
+  Tractor, Wrench, Settings,
 } from 'lucide-react';
 
 const navItems = [
-  { href: '/app',                  label: 'Inicio',             icon: LayoutDashboard, exact: true },
-  { href: '/app/campos',           label: 'Campos y Lotes',     icon: MapPin },
-  { href: '/app/cultivos',         label: 'Cultivos',           icon: Sprout },
-  { href: '/app/produccion',       label: 'Producción',         icon: Wheat },
-  { href: '/app/campanias',        label: 'Campañas',           icon: Calendar },
-  { href: '/app/productos',        label: 'Productos',          icon: Package },
-  { href: '/app/depositos',        label: 'Depósitos',          icon: Archive },
-  { href: '/app/stock',            label: 'Stock',              icon: Warehouse },
-  { href: '/app/compras',          label: 'Compras',            icon: ShoppingCart },
-  { href: '/app/proveedores',      label: 'Proveedores',        icon: Truck },
+  { href: '/app',                  label: 'Inicio',              icon: LayoutDashboard, exact: true },
+  { href: '/app/campos',           label: 'Campos y Lotes',      icon: MapPin },
+  { href: '/app/cultivos',         label: 'Cultivos',            icon: Sprout },
+  { href: '/app/produccion',       label: 'Producción',          icon: Wheat },
+  { href: '/app/campanias',        label: 'Campañas',            icon: Calendar },
+  { href: '/app/maquinarias',      label: 'Maquinarias',         icon: Tractor },
+  { href: '/app/tipos-labor',      label: 'Tipos de Labor',      icon: Wrench },
+  { href: '/app/productos',        label: 'Productos',           icon: Package },
+  { href: '/app/depositos',        label: 'Depósitos',           icon: Archive },
+  { href: '/app/stock',            label: 'Stock',               icon: Warehouse },
+  { href: '/app/compras',          label: 'Compras',             icon: ShoppingCart },
+  { href: '/app/proveedores',      label: 'Proveedores',         icon: Truck },
   { href: '/app/unidades-negocio', label: 'Unidades de negocio', icon: Briefcase },
+  { href: '/app/configuracion',    label: 'Configuración',       icon: Settings },
 ];
 
 const adminItems = [
