@@ -5,7 +5,7 @@ import { getEmpresaActiva } from '@/lib/empresa-actual';
 import { cn } from '@/lib/utils';
 import {
   Sprout, Package, ShoppingCart, AlertTriangle,
-  MapPin, Warehouse, ArrowRight, TrendingUp, DollarSign, FileUp,
+  MapPin, Warehouse, ArrowRight, TrendingUp, CircleDollarSign, FileUp, Building2,
 } from 'lucide-react';
 
 const ROL_LABEL: Record<string, string> = {
@@ -75,21 +75,39 @@ export default async function DashboardPage() {
     <div className="max-w-5xl mx-auto space-y-6">
 
       {/* ── Encabezado ───────────────────────────────────────────────── */}
-      <div className="rounded-2xl bg-[#006836] p-6 sm:p-8 text-white relative overflow-hidden">
-        <div className="absolute right-0 top-0 h-full w-64 opacity-10 pointer-events-none"
-          style={{ background: 'radial-gradient(circle at 80% 50%, white 0%, transparent 70%)' }} />
-        <div className="absolute -right-8 -bottom-8 w-40 h-40 rounded-full border-2 border-white/10 pointer-events-none" />
-        <div className="absolute -right-2 -bottom-12 w-64 h-64 rounded-full border border-white/5 pointer-events-none" />
+      <div className="rounded-2xl bg-gradient-to-br from-[#004d24] via-[#005f30] to-[#006836] p-6 sm:p-8 text-white relative overflow-hidden shadow-lg shadow-[#006836]/25 border border-white/5">
+
+        {/* Anillos decorativos */}
+        <div className="absolute -right-14 -top-14 w-60 h-60 rounded-full border border-white/10 pointer-events-none" />
+        <div className="absolute -right-7 -top-7 w-44 h-44 rounded-full border border-white/[0.06] pointer-events-none" />
+        <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-black/10 pointer-events-none" />
+        <div className="absolute right-20 bottom-2 w-16 h-16 rounded-full bg-white/5 pointer-events-none" />
+
+        {/* Ícono decorativo de fondo */}
+        <div className="absolute right-5 bottom-0 opacity-[0.04] pointer-events-none">
+          <Sprout className="w-52 h-52" />
+        </div>
+
         <div className="relative">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white/90 tracking-wide">
+          {/* Rol + fecha */}
+          <div className="flex items-center gap-2 mb-5">
+            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/15 text-white/90 tracking-wide border border-white/10">
               {ROL_LABEL[rol] ?? rol}
             </span>
-            <span className="text-white/40 text-xs">·</span>
-            <span className="text-white/60 text-xs">{fechaLabel}</span>
+            <span className="text-white/30 text-xs">·</span>
+            <span className="text-white/50 text-xs">{fechaLabel}</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{empresa.nombre}</h1>
-          <p className="text-white/60 text-sm mt-1">Panel de gestión agropecuaria</p>
+
+          {/* Empresa: avatar + nombre */}
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center flex-shrink-0 shadow-inner">
+              <Building2 className="w-7 h-7 text-white/70" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight">{empresa.nombre}</h1>
+              <p className="text-white/50 text-sm mt-0.5 font-medium">Panel de gestión agropecuaria</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -147,8 +165,8 @@ export default async function DashboardPage() {
         <Link href="/app/configuracion" className="group block">
           <div className="bg-white rounded-2xl border border-zinc-100 hover:border-[#006836]/25 p-5 shadow-sm hover:shadow-md transition-all duration-200">
             <div className="flex items-start justify-between mb-4">
-              <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
-                <DollarSign className="w-4 h-4 text-blue-600" />
+              <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center">
+                <CircleDollarSign className="w-5 h-5 text-amber-500" />
               </div>
               <ArrowRight className="w-4 h-4 text-zinc-200 group-hover:text-[#006836] group-hover:translate-x-0.5 transition-all" />
             </div>
