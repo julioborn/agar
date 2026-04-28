@@ -5,7 +5,8 @@
       "Bash(grep -v \"^$\")",
       "Bash(npm install *)",
       "Bash(xargs grep *)",
-      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")"
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
+      "PowerShell(cmd /c \"dir /b \"\"C:\\\\PROYECTOS\\\\agrosistema\\\\apps\\\\web\\\\src\\\\app\\\\app\\\\cultivos\\\\[cultivoId]\"\"\")"
     ]
   }
 }

@@ -12,6 +12,7 @@ import NuevaLaborInline from './nueva-labor-inline';
 import LaborsList from './labores-list';
 import NuevaCosechaInline from './nueva-cosecha-inline';
 import CosechaList from './cosecha-list';
+import CollapsibleCard from './collapsible-card';
 
 const ESTADO_STYLE: Record<string, string> = {
   planificada: 'bg-blue-500/20 text-blue-100',
@@ -113,288 +114,329 @@ export default async function CultivoDetallePage({ params }: Props) {
   const costoTotal = cultivo.costo_directo_ars ?? 0;
   const unidadLabel = (cultivo as any).unidad_produccion ?? 'kg';
 
-  const costoLaboresTotal     = (labores ?? []).reduce((acc, l: any) => acc + Number(l.costo_total_calculado ?? 0), 0);
-  const costoCosechaTotal     = (costosCosecha ?? []).reduce((acc, c: any) => acc + Number(c.costo_total_calculado ?? 0), 0);
+  const costoLaboresTotal      = (labores ?? []).reduce((acc, l: any) => acc + Number(l.costo_total_calculado ?? 0), 0);
+  const costoCosechaTotal      = (costosCosecha ?? []).reduce((acc, c: any) => acc + Number(c.costo_total_calculado ?? 0), 0);
   const costoAplicacionesTotal = (aplicaciones ?? []).reduce((acc, a: any) =>
     acc + ((a.aplicaciones_items ?? []) as any[]).reduce((s: number, it: any) => s + Number(it.costo_imputado_ars ?? 0), 0), 0);
+  const totalTrabajosServicios = costoLaboresTotal + costoCosechaTotal;
 
-  const activo = cultivo.estado !== 'cancelada';
+  const cantLabores     = (labores ?? []).length;
+  const cantCosechas    = (costosCosecha ?? []).length;
+  const cantAplicaciones = (aplicaciones ?? []).length;
+
+  const activo   = cultivo.estado !== 'cancelada';
   const editable = cultivo.estado === 'en_curso' || cultivo.estado === 'planificada';
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
 
       {/* ── Banner ─────────────────────────────────────────────────────── */}
-      <div className="rounded-2xl bg-[#006836] px-6 py-5 text-white relative overflow-hidden">
-        <div className="absolute right-0 top-0 h-full w-48 opacity-10 pointer-events-none"
-          style={{ background: 'radial-gradient(circle at 80% 50%, white 0%, transparent 70%)' }} />
+      <div className="rounded-2xl bg-gradient-to-br from-[#005a2c] via-[#006836] to-[#004d24] px-6 py-5 text-white relative overflow-hidden shadow-lg shadow-[#006836]/20 border border-white/5">
+
+        {/* Decoración: círculos difusos */}
+        <div className="absolute -right-10 -top-10 w-52 h-52 rounded-full bg-white/5 pointer-events-none" />
+        <div className="absolute right-20 -bottom-16 w-64 h-64 rounded-full bg-black/10 pointer-events-none" />
+        <div className="absolute right-4 top-6 w-24 h-24 rounded-full bg-white/5 pointer-events-none" />
+
+        {/* Ícono decorativo de fondo */}
+        <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-5 pointer-events-none">
+          <Sprout className="w-40 h-40" />
+        </div>
+
+        {/* Breadcrumb */}
         <Link href="/app/cultivos"
-          className="inline-flex items-center gap-1 text-white/60 hover:text-white text-xs mb-3 transition-colors">
-          <ChevronLeft className="w-3.5 h-3.5" /> Cultivos
+          className="inline-flex items-center gap-1 text-white/50 hover:text-white/90 text-xs mb-4 transition-colors">
+          <ChevronLeft className="w-3.5 h-3.5" /> Volver a cultivos
         </Link>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2.5 mb-1">
-              <Sprout className="w-5 h-5 text-white/70" />
-              <h1 className="text-2xl font-bold tracking-tight">{cultivo.cultivo}</h1>
-              <span className={cn('inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold', ESTADO_STYLE[cultivo.estado] ?? 'bg-white/20 text-white')}>
+
+        {/* Título + estado */}
+        <div className="flex items-start gap-3 mb-1">
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/10 flex-shrink-0 mt-0.5">
+            <Sprout className="w-5 h-5 text-white/80" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <h1 className="text-2xl font-bold tracking-tight leading-tight">{cultivo.cultivo}</h1>
+              <span className={cn('inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border border-white/10', ESTADO_STYLE[cultivo.estado] ?? 'bg-white/20 text-white')}>
                 {ESTADO_LABEL[cultivo.estado] ?? cultivo.estado}
               </span>
             </div>
-            <p className="text-white/60 text-sm">
+            <p className="text-white/55 text-sm leading-relaxed">
               {lote?.campo?.nombre}
-              {lote?.nombre && <> <span className="text-white/30">›</span> {lote.nombre}</>}
-              {lote?.hectareas && <span className="text-white/40 ml-1">({num(lote.hectareas, 1)} ha)</span>}
-              {unidad?.nombre && <> <span className="text-white/30">·</span> {unidad.nombre}</>}
-              {campania?.nombre && <> <span className="text-white/30">·</span> <span className="text-white/80">{campania.nombre}</span></>}
+              {lote?.nombre && <> <span className="text-white/25 mx-1">›</span> {lote.nombre}</>}
+              {lote?.hectareas && <span className="text-white/35 ml-1">({num(lote.hectareas, 1)} ha)</span>}
+              {unidad?.nombre && <> <span className="text-white/25 mx-1.5">·</span> {unidad.nombre}</>}
+              {campania?.nombre && <> <span className="text-white/25 mx-1.5">·</span> <span className="text-white/75 font-medium">{campania.nombre}</span></>}
             </p>
             {cultivo.observaciones && (
-              <p className="text-white/50 text-xs mt-2 italic">{cultivo.observaciones}</p>
+              <p className="text-white/40 text-xs mt-1.5 italic">{cultivo.observaciones}</p>
             )}
           </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-white/10">
+
+        {/* Fechas y costo — glass cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-5">
           {[
-            { label: 'Siembra',       value: fmt(cultivo.fecha_siembra) },
-            { label: 'Est. cosecha',  value: fmt(cultivo.fecha_cosecha_estimada) },
-            { label: 'Cosecha real',  value: fmt(cultivo.fecha_cosecha_real) },
-            { label: 'Costo directo', value: costoTotal > 0 ? ars.format(costoTotal) : '—' },
+            { label: 'Siembra',          value: fmt(cultivo.fecha_siembra) },
+            { label: 'Est. cosecha',     value: fmt(cultivo.fecha_cosecha_estimada) },
+            { label: 'Cosecha real',     value: fmt(cultivo.fecha_cosecha_real) },
+            { label: 'Costo acumulado',  value: costoTotal > 0 ? ars.format(costoTotal) : '—' },
           ].map(({ label, value }) => (
-            <div key={label}>
-              <p className="text-white/40 text-xs">{label}</p>
-              <p className="text-white font-semibold text-sm mt-0.5">{value}</p>
+            <div key={label} className="bg-white/[0.08] backdrop-blur-sm rounded-xl px-3 py-2.5 border border-white/[0.08]">
+              <p className="text-white/45 text-[10px] uppercase tracking-wider font-medium">{label}</p>
+              <p className="text-white font-semibold text-sm mt-1 leading-none">{value}</p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          GRUPO 1 — TRABAJOS Y SERVICIOS
-          Labores de campo + servicios de cosecha/trilla (no afectan stock)
-      ════════════════════════════════════════════════════════════════ */}
-      <section className="space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-100">
-            <Tractor className="w-4 h-4 text-indigo-600" />
+      {/* ── Resumen de costos por categoría ───────────────────────────── */}
+      {(totalTrabajosServicios > 0 || costoAplicacionesTotal > 0) && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white rounded-xl border border-indigo-100 px-4 py-3 shadow-sm text-center">
+            <p className="text-xs text-zinc-400 mb-1">Trabajos y servicios</p>
+            <p className="text-base font-bold text-indigo-600">
+              {totalTrabajosServicios > 0 ? ars.format(totalTrabajosServicios) : '—'}
+            </p>
           </div>
-          <div>
-            <h2 className="text-base font-bold text-zinc-800">Trabajos y Servicios</h2>
-            <p className="text-xs text-zinc-400">Labores de campo · Cosecha / Trilla (servicio contratado)</p>
+          <div className="bg-white rounded-xl border border-orange-100 px-4 py-3 shadow-sm text-center">
+            <p className="text-xs text-zinc-400 mb-1">Uso de productos</p>
+            <p className="text-base font-bold text-orange-600">
+              {costoAplicacionesTotal > 0 ? ars.format(costoAplicacionesTotal) : '—'}
+            </p>
           </div>
-          {(costoLaboresTotal + costoCosechaTotal) > 0 && (
-            <span className="ml-auto text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
-              {ars.format(costoLaboresTotal + costoCosechaTotal)}
-            </span>
-          )}
-        </div>
-
-        <div className="bg-white rounded-2xl border border-indigo-100 overflow-hidden shadow-sm">
-          {/* Labores */}
-          <div className="px-5 py-3 border-b border-zinc-100 flex items-center gap-2">
-            <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Labores</span>
-            {labores && labores.length > 0 && (
-              <span className="text-xs text-zinc-400">({labores.length})</span>
-            )}
-          </div>
-          <div className="p-4 space-y-3">
-            {editable && (
-              <NuevaLaborInline
-                cultivoId={cultivoId}
-                tiposLabor={(tiposLabor ?? []) as any}
-                maquinarias={(maquinarias ?? []) as any}
-                proveedores={(proveedores ?? []) as any}
-                precioCombustible={config?.precio_combustible ?? 0}
-                hectareasLote={(cultivo.lote as any)?.hectareas ?? null}
-              />
-            )}
-            <LaborsList labores={(labores ?? []) as any} cultivoId={cultivoId} />
-          </div>
-
-          {/* Cosecha / Trilla — servicio */}
-          <div className="px-5 py-3 border-t border-zinc-100 flex items-center gap-2">
-            <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Cosecha / Trilla — servicio</span>
-            {costosCosecha && costosCosecha.length > 0 && (
-              <span className="text-xs text-zinc-400">({costosCosecha.length})</span>
-            )}
-          </div>
-          <div className="p-4 space-y-3">
-            {activo && (
-              <NuevaCosechaInline
-                cultivoId={cultivoId}
-                maquinarias={(maquinarias ?? []) as any}
-                proveedores={(proveedores ?? []) as any}
-                precioCombustible={config?.precio_combustible ?? 0}
-                hectareasLote={(cultivo.lote as any)?.hectareas ?? null}
-                produccionTotalKg={cultivo.produccion_total_kg ?? null}
-              />
-            )}
-            <CosechaList costosCosecha={(costosCosecha ?? []) as any} cultivoId={cultivoId} />
+          <div className="bg-white rounded-xl border border-zinc-200 px-4 py-3 shadow-sm text-center">
+            <p className="text-xs text-zinc-400 mb-1">Total costos</p>
+            <p className="text-base font-bold text-zinc-700">
+              {costoTotal > 0 ? ars.format(costoTotal) : '—'}
+            </p>
           </div>
         </div>
-      </section>
+      )}
 
-      {/* ═══════════════════════════════════════════════════════════════
-          GRUPO 2 — USO DE PRODUCTOS
-          Aplicaciones de insumos que descuentan del stock
-      ════════════════════════════════════════════════════════════════ */}
-      <section className="space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-orange-100">
-            <Package className="w-4 h-4 text-orange-600" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-zinc-800">Uso de Productos</h2>
-            <p className="text-xs text-zinc-400">Agroquímicos, fertilizantes y otros insumos · descuenta del stock</p>
-          </div>
-          {costoAplicacionesTotal > 0 && (
-            <span className="ml-auto text-xs font-semibold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-lg">
-              {ars.format(costoAplicacionesTotal)}
-            </span>
-          )}
+      {/* ── Card 1: Trabajos y Servicios ──────────────────────────────── */}
+      <CollapsibleCard
+        icon={<Tractor className="w-4 h-4 text-indigo-600" />}
+        iconBg="bg-indigo-100"
+        title="Trabajos y Servicios"
+        subtitle="Labores de campo · Cosecha / Trilla (servicio contratado)"
+        borderColor="border-indigo-100"
+        badge={
+          totalTrabajosServicios > 0
+            ? <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg">{ars.format(totalTrabajosServicios)}</span>
+            : undefined
+        }
+        stats={[
+          { label: 'Labores', value: cantLabores > 0 ? String(cantLabores) : 'Sin registros' },
+          { label: 'Cosecha/Trilla', value: cantCosechas > 0 ? String(cantCosechas) : 'Sin registros' },
+        ]}
+      >
+        {/* Labores */}
+        <div className="px-5 py-3 border-b border-zinc-100 flex items-center gap-2">
+          <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Labores</span>
+          {cantLabores > 0 && <span className="text-xs text-zinc-400">({cantLabores})</span>}
         </div>
-
-        <div className="bg-white rounded-2xl border border-orange-100 overflow-hidden shadow-sm">
-          <div className="p-4 space-y-3">
-            {editable && (
-              <NuevaAplicacionInline
-                cultivoId={cultivoId}
-                productos={productos ?? []}
-                depositos={depositos ?? []}
-                todayISO={todayISO}
-              />
-            )}
-            <AplicacionesList
-              aplicaciones={(aplicaciones ?? []) as any}
+        <div className="p-4 space-y-3">
+          {editable && (
+            <NuevaLaborInline
               cultivoId={cultivoId}
-              costoTotal={costoTotal}
+              tiposLabor={(tiposLabor ?? []) as any}
+              maquinarias={(maquinarias ?? []) as any}
+              proveedores={(proveedores ?? []) as any}
+              precioCombustible={config?.precio_combustible ?? 0}
+              hectareasLote={(cultivo.lote as any)?.hectareas ?? null}
             />
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          GRUPO 3 — COSECHA / RECOLECCIÓN
-          Registro de producción y resultado económico
-      ════════════════════════════════════════════════════════════════ */}
-      <section className="space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-[#006836]/10">
-            <Wheat className="w-4 h-4 text-[#006836]" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-zinc-800">Cosecha / Recolección</h2>
-            <p className="text-xs text-zinc-400">Registro de producción y resultado económico del cultivo</p>
-          </div>
+          )}
+          <LaborsList labores={(labores ?? []) as any} cultivoId={cultivoId} />
         </div>
 
-        <div className="bg-white rounded-2xl border border-[#006836]/15 overflow-hidden shadow-sm">
+        {/* Cosecha / Trilla */}
+        <div className="px-5 py-3 border-t border-zinc-100 flex items-center gap-2">
+          <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Cosecha / Trilla — servicio</span>
+          {cantCosechas > 0 && <span className="text-xs text-zinc-400">({cantCosechas})</span>}
+        </div>
+        <div className="p-4 space-y-3">
           {activo && (
-            <div className="p-4 border-b border-zinc-100 space-y-3">
-              <ConfigProduccionForm
+            <NuevaCosechaInline
+              cultivoId={cultivoId}
+              maquinarias={(maquinarias ?? []) as any}
+              proveedores={(proveedores ?? []) as any}
+              precioCombustible={config?.precio_combustible ?? 0}
+              hectareasLote={(cultivo.lote as any)?.hectareas ?? null}
+              produccionTotalKg={cultivo.produccion_total_kg ?? null}
+            />
+          )}
+          <CosechaList costosCosecha={(costosCosecha ?? []) as any} cultivoId={cultivoId} />
+        </div>
+      </CollapsibleCard>
+
+      {/* ── Card 2: Uso de Productos ──────────────────────────────────── */}
+      <CollapsibleCard
+        icon={<Package className="w-4 h-4 text-orange-600" />}
+        iconBg="bg-orange-100"
+        title="Uso de Productos"
+        subtitle="Agroquímicos, fertilizantes y otros insumos · descuenta del stock"
+        borderColor="border-orange-100"
+        badge={
+          costoAplicacionesTotal > 0
+            ? <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg">{ars.format(costoAplicacionesTotal)}</span>
+            : undefined
+        }
+        stats={[
+          { label: 'Aplicaciones', value: cantAplicaciones > 0 ? String(cantAplicaciones) : 'Sin registros' },
+        ]}
+      >
+        <div className="p-4 space-y-3">
+          {editable && (
+            <NuevaAplicacionInline
+              cultivoId={cultivoId}
+              productos={productos ?? []}
+              depositos={depositos ?? []}
+              todayISO={todayISO}
+            />
+          )}
+          <AplicacionesList
+            aplicaciones={(aplicaciones ?? []) as any}
+            cultivoId={cultivoId}
+            costoTotal={costoTotal}
+          />
+        </div>
+      </CollapsibleCard>
+
+      {/* ── Card 3: Cosecha / Recolección ────────────────────────────── */}
+      <CollapsibleCard
+        icon={<Wheat className="w-4 h-4 text-[#006836]" />}
+        iconBg="bg-[#006836]/10"
+        title="Cosecha y Recolección"
+        subtitle="Registro de producción y resultado económico del cultivo"
+        borderColor="border-[#006836]/15"
+        defaultOpen={cultivo.estado === 'cosechada'}
+        badge={
+          cultivo.estado === 'cosechada' && cultivo.margen_bruto_ars != null
+            ? (
+              <span className={cn(
+                'text-xs font-semibold px-2 py-0.5 rounded-lg',
+                cultivo.margen_bruto_ars >= 0 ? 'text-[#006836] bg-[#006836]/10' : 'text-red-600 bg-red-50'
+              )}>
+                MB: {ars.format(cultivo.margen_bruto_ars)}
+              </span>
+            )
+            : cultivo.produccion_total_kg != null
+              ? <span className="text-xs font-semibold text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-lg">{num(cultivo.produccion_total_kg, 0)} {unidadLabel}</span>
+              : undefined
+        }
+        stats={cultivo.estado !== 'cosechada' && costoTotal > 0
+          ? [{ label: 'Costo acumulado', value: ars.format(costoTotal) }]
+          : []
+        }
+      >
+        {/* Configuración de producción y registro */}
+        {activo && (
+          <div className="p-4 space-y-3">
+            <ConfigProduccionForm
+              cultivoId={cultivoId}
+              productoFinalActual={(cultivo as any).producto_final ?? null}
+              unidadActual={(cultivo as any).unidad_produccion ?? 'kg'}
+            />
+            {editable && (
+              <RegistrarCosechaForm
                 cultivoId={cultivoId}
-                productoFinalActual={(cultivo as any).producto_final ?? null}
-                unidadActual={(cultivo as any).unidad_produccion ?? 'kg'}
+                hectareas={lote?.hectareas ?? null}
+                unidadProduccion={(cultivo as any).unidad_produccion ?? 'kg'}
+                productoFinal={(cultivo as any).producto_final ?? null}
+                produccionActual={cultivo.produccion_total_kg ?? null}
+                precioVentaActual={(cultivo as any).precio_venta_ars ?? null}
+                fechaCosechaActual={cultivo.fecha_cosecha_real}
+                costoDirecto={cultivo.costo_directo_ars ?? null}
               />
-              {editable && (
-                <RegistrarCosechaForm
-                  cultivoId={cultivoId}
-                  hectareas={lote?.hectareas ?? null}
-                  unidadProduccion={(cultivo as any).unidad_produccion ?? 'kg'}
-                  productoFinal={(cultivo as any).producto_final ?? null}
-                  produccionActual={cultivo.produccion_total_kg ?? null}
-                  precioVentaActual={(cultivo as any).precio_venta_ars ?? null}
-                  fechaCosechaActual={cultivo.fecha_cosecha_real}
-                  costoDirecto={cultivo.costo_directo_ars ?? null}
-                />
+            )}
+          </div>
+        )}
+
+        {/* Panel de resultados — solo cuando está cosechada */}
+        {cultivo.estado === 'cosechada' && (
+          <div className="p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-[#006836]" />
+              <h3 className="text-sm font-semibold text-zinc-700">Producción y margen bruto</h3>
+              {(cultivo as any).producto_final && (
+                <span className="text-xs text-zinc-400">· {(cultivo as any).producto_final}</span>
               )}
             </div>
-          )}
 
-          {/* Panel de producción — visible cuando está cosechada */}
-          {cultivo.estado === 'cosechada' && (
-            <div className="p-5 space-y-4">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-[#006836]" />
-                <h3 className="text-sm font-semibold text-zinc-700">Producción y margen bruto</h3>
-                {(cultivo as any).producto_final && (
-                  <span className="text-xs text-zinc-400">· {(cultivo as any).producto_final}</span>
-                )}
+            {/* Métricas */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-3 bg-zinc-50 rounded-xl">
+                <p className="text-xs text-zinc-400 mb-1">Producción</p>
+                <p className="text-xl font-bold text-zinc-800">
+                  {cultivo.produccion_total_kg != null ? num(cultivo.produccion_total_kg, 0) : '—'}
+                </p>
+                <p className="text-xs text-zinc-400">{unidadLabel}</p>
               </div>
-
-              {/* Métricas */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center p-3 bg-zinc-50 rounded-xl">
-                  <p className="text-xs text-zinc-400 mb-1">Producción</p>
-                  <p className="text-xl font-bold text-zinc-800">
-                    {cultivo.produccion_total_kg != null ? num(cultivo.produccion_total_kg, 0) : '—'}
-                  </p>
-                  <p className="text-xs text-zinc-400">{unidadLabel}</p>
-                </div>
-                <div className="text-center p-3 bg-zinc-50 rounded-xl">
-                  <p className="text-xs text-zinc-400 mb-1">Rendimiento</p>
-                  <p className="text-xl font-bold text-zinc-800">
-                    {cultivo.rendimiento_kg_ha != null ? num(cultivo.rendimiento_kg_ha, 1) : '—'}
-                  </p>
-                  <p className="text-xs text-zinc-400">{unidadLabel}/ha</p>
-                </div>
-                <div className="text-center p-3 bg-zinc-50 rounded-xl">
-                  <p className="text-xs text-zinc-400 mb-1">Precio venta</p>
-                  <p className="text-xl font-bold text-zinc-800">
-                    {(cultivo as any).precio_venta_ars != null ? ars.format((cultivo as any).precio_venta_ars) : '—'}
-                  </p>
-                  <p className="text-xs text-zinc-400">por {unidadLabel}</p>
-                </div>
+              <div className="text-center p-3 bg-zinc-50 rounded-xl">
+                <p className="text-xs text-zinc-400 mb-1">Rendimiento</p>
+                <p className="text-xl font-bold text-zinc-800">
+                  {cultivo.rendimiento_kg_ha != null ? num(cultivo.rendimiento_kg_ha, 1) : '—'}
+                </p>
+                <p className="text-xs text-zinc-400">{unidadLabel}/ha</p>
               </div>
-
-              {/* Estado de resultados */}
-              <div className="rounded-xl overflow-hidden border border-zinc-100 text-sm">
-                <div className="flex justify-between items-center px-4 py-2.5 bg-zinc-50">
-                  <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Valor de producción</span>
-                  <span className="font-semibold text-zinc-800">
-                    {(cultivo as any).ingreso_bruto_ars != null ? ars.format((cultivo as any).ingreso_bruto_ars) : '—'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-100">
-                  <span className="text-zinc-500 flex items-center gap-1.5">
-                    <span className="text-zinc-300 text-xs">−</span> Trabajos y servicios
-                  </span>
-                  <span className="font-medium text-red-500">
-                    {(costoLaboresTotal + costoCosechaTotal) > 0 ? ars.format(costoLaboresTotal + costoCosechaTotal) : '—'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-100">
-                  <span className="text-zinc-500 flex items-center gap-1.5">
-                    <span className="text-zinc-300 text-xs">−</span> Uso de productos
-                  </span>
-                  <span className="font-medium text-red-500">
-                    {costoAplicacionesTotal > 0 ? ars.format(costoAplicacionesTotal) : '—'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-200 bg-zinc-50">
-                  <span className="text-zinc-600 font-semibold">Costo directo total</span>
-                  <span className="font-semibold text-red-500">
-                    {costoTotal > 0 ? `− ${ars.format(costoTotal)}` : '—'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center px-4 py-3 border-t border-zinc-300 bg-zinc-800">
-                  <span className="font-bold text-zinc-300 text-sm uppercase tracking-wider">Margen bruto</span>
-                  <span className={cn('font-bold text-2xl', cultivo.margen_bruto_ars != null && cultivo.margen_bruto_ars >= 0 ? 'text-[#4ade80]' : 'text-red-400')}>
-                    {cultivo.margen_bruto_ars != null ? ars.format(cultivo.margen_bruto_ars) : '—'}
-                  </span>
-                </div>
+              <div className="text-center p-3 bg-zinc-50 rounded-xl">
+                <p className="text-xs text-zinc-400 mb-1">Precio venta</p>
+                <p className="text-xl font-bold text-zinc-800">
+                  {(cultivo as any).precio_venta_ars != null ? ars.format((cultivo as any).precio_venta_ars) : '—'}
+                </p>
+                <p className="text-xs text-zinc-400">por {unidadLabel}</p>
               </div>
             </div>
-          )}
 
-          {/* Cuando está en curso, mostrar resumen de costos parciales */}
-          {cultivo.estado !== 'cosechada' && cultivo.estado !== 'cancelada' && costoTotal > 0 && (
-            <div className="px-5 py-3 border-t border-zinc-100 flex items-center justify-between text-sm">
-              <span className="text-zinc-500">Costo acumulado hasta hoy</span>
-              <span className="font-bold text-zinc-800">{ars.format(costoTotal)}</span>
+            {/* Estado de resultados */}
+            <div className="rounded-xl overflow-hidden border border-zinc-100 text-sm">
+              <div className="flex justify-between items-center px-4 py-2.5 bg-zinc-50">
+                <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Valor de producción</span>
+                <span className="font-semibold text-zinc-800">
+                  {(cultivo as any).ingreso_bruto_ars != null ? ars.format((cultivo as any).ingreso_bruto_ars) : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-100">
+                <span className="text-zinc-500 flex items-center gap-1.5">
+                  <span className="text-zinc-300 text-xs">−</span> Trabajos y servicios
+                </span>
+                <span className="font-medium text-red-500">
+                  {totalTrabajosServicios > 0 ? ars.format(totalTrabajosServicios) : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-100">
+                <span className="text-zinc-500 flex items-center gap-1.5">
+                  <span className="text-zinc-300 text-xs">−</span> Uso de productos
+                </span>
+                <span className="font-medium text-red-500">
+                  {costoAplicacionesTotal > 0 ? ars.format(costoAplicacionesTotal) : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-200 bg-zinc-50">
+                <span className="text-zinc-600 font-semibold">Costo directo total</span>
+                <span className="font-semibold text-red-500">
+                  {costoTotal > 0 ? `− ${ars.format(costoTotal)}` : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center px-4 py-3 border-t border-zinc-300 bg-zinc-800">
+                <span className="font-bold text-zinc-300 text-sm uppercase tracking-wider">Margen bruto</span>
+                <span className={cn('font-bold text-2xl', cultivo.margen_bruto_ars != null && cultivo.margen_bruto_ars >= 0 ? 'text-[#4ade80]' : 'text-red-400')}>
+                  {cultivo.margen_bruto_ars != null ? ars.format(cultivo.margen_bruto_ars) : '—'}
+                </span>
+              </div>
             </div>
-          )}
-        </div>
-      </section>
+          </div>
+        )}
+
+        {/* Costo parcial cuando está en curso */}
+        {cultivo.estado !== 'cosechada' && cultivo.estado !== 'cancelada' && costoTotal > 0 && (
+          <div className="px-5 py-3 border-t border-zinc-100 flex items-center justify-between text-sm">
+            <span className="text-zinc-500">Costo acumulado hasta hoy</span>
+            <span className="font-bold text-zinc-800">{ars.format(costoTotal)}</span>
+          </div>
+        )}
+      </CollapsibleCard>
 
     </div>
   );
