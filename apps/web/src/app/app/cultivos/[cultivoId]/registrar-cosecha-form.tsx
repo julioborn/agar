@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Wheat, ChevronDown, ChevronUp, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { useCurrency } from '@/lib/currency-context';
 
 const UNIDAD_LABEL: Record<string, string> = {
   kg: 'kg', tn: 'tn', m3: 'm³', bolsa_silaje: 'bolsas', fardo: 'fardos', litro: 'L', unidad: 'u.',
@@ -27,6 +28,7 @@ export default function RegistrarCosechaForm({
 }: Props) {
   const router = useRouter();
   const supabase = createClient();
+  const { formatMoney } = useCurrency();
   const todayISO = new Date().toISOString().slice(0, 10);
   const unidadLabel = UNIDAD_LABEL[unidadProduccion] ?? unidadProduccion;
 
@@ -43,7 +45,6 @@ export default function RegistrarCosechaForm({
   const margen = precio ? ingreso - (costoDirecto ?? 0) : null;
   const rendimiento = produccionNum && hectareas ? produccionNum / hectareas : null;
 
-  const ars = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
   const num = (n: number, d = 1) => new Intl.NumberFormat('es-AR', { maximumFractionDigits: d }).format(n);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -146,14 +147,14 @@ export default function RegistrarCosechaForm({
               {precio && (
                 <div>
                   <p className="text-xs text-zinc-400">Ingreso bruto</p>
-                  <p className="text-sm font-bold text-zinc-700">{ars.format(ingreso)}</p>
+                  <p className="text-sm font-bold text-zinc-700">{formatMoney(ingreso)}</p>
                 </div>
               )}
               {margen !== null && (
                 <div>
                   <p className="text-xs text-zinc-400">Margen bruto</p>
                   <p className={cn('text-sm font-bold', margen >= 0 ? 'text-[#006836]' : 'text-red-500')}>
-                    {ars.format(margen)}
+                    {formatMoney(margen)}
                   </p>
                 </div>
               )}

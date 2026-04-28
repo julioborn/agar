@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Plus, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/lib/currency-context';
 
 const TIPO_COLOR: Record<string, string> = {
   fitosanitaria: 'bg-orange-100 text-orange-700',
@@ -44,11 +45,11 @@ interface Props {
   costoTotal: number;
 }
 
-const ars = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
 const num = (n: number | null, d = 4) => n != null ? new Intl.NumberFormat('es-AR', { maximumFractionDigits: d }).format(n) : '—';
 const fmtFecha = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
 
 export default function AplicacionesList({ aplicaciones, cultivoId, costoTotal }: Props) {
+  const { formatMoney } = useCurrency();
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set());
 
   function toggle(id: string) {
@@ -97,7 +98,7 @@ export default function AplicacionesList({ aplicaciones, cultivoId, costoTotal }
                 </span>
               </div>
               <div className="flex items-center gap-3 shrink-0">
-                <span className="text-sm font-bold text-zinc-800">{ars.format(total)}</span>
+                <span className="text-sm font-bold text-zinc-800">{formatMoney(total)}</span>
                 {open
                   ? <ChevronUp className="w-4 h-4 text-zinc-400" />
                   : <ChevronDown className="w-4 h-4 text-zinc-400" />}
@@ -137,7 +138,7 @@ export default function AplicacionesList({ aplicaciones, cultivoId, costoTotal }
                               ) : <span className="text-zinc-200 text-xs">—</span>}
                             </td>
                             <td className="px-4 py-2.5 text-right font-semibold text-zinc-800">
-                              {ars.format(it.costo_imputado_ars ?? 0)}
+                              {formatMoney(it.costo_imputado_ars ?? 0)}
                             </td>
                           </tr>
                         );
@@ -157,7 +158,7 @@ export default function AplicacionesList({ aplicaciones, cultivoId, costoTotal }
       {/* Total acumulado */}
       <div className="flex justify-between items-center px-5 py-3 bg-zinc-900 rounded-2xl">
         <span className="text-sm font-medium text-zinc-400">Costo directo total acumulado</span>
-        <span className="text-lg font-bold text-white">{ars.format(costoTotal)}</span>
+        <span className="text-lg font-bold text-white">{formatMoney(costoTotal)}</span>
       </div>
     </div>
   );

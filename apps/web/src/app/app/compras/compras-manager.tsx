@@ -5,6 +5,7 @@ import { Filter, X, ChevronDown, ChevronUp, ShoppingCart, Calendar, Truck, FileT
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import ExportButtons from '@/components/export-buttons';
+import { useCurrency } from '@/lib/currency-context';
 
 const ESTADO_BADGE: Record<string, string> = {
   confirmada: 'bg-[#006836]/10 text-[#006836]',
@@ -43,6 +44,7 @@ const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('es-AR',
 const fmtLong = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
 
 export default function ComprasManager({ compras, proveedores, empresaNombre }: Props) {
+  const { formatMoney, currency } = useCurrency();
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [proveedorId, setProveedorId] = useState('');
@@ -113,8 +115,8 @@ export default function ComprasManager({ compras, proveedores, empresaNombre }: 
         <div className="bg-white rounded-2xl border border-zinc-100 px-4 py-3 flex items-center gap-3 shadow-sm">
           <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-blue-400" />
           <div>
-            <p className="text-xl font-bold text-zinc-900 leading-none">{totalArs > 0 ? ars.format(totalArs) : '—'}</p>
-            <p className="text-xs text-zinc-400 mt-0.5">Total ARS</p>
+            <p className="text-xl font-bold text-zinc-900 leading-none">{totalArs > 0 ? formatMoney(totalArs) : '—'}</p>
+            <p className="text-xs text-zinc-400 mt-0.5">Total {currency}</p>
           </div>
         </div>
         <div className="bg-white rounded-2xl border border-zinc-100 px-4 py-3 flex items-center gap-3 shadow-sm">
@@ -219,7 +221,7 @@ export default function ComprasManager({ compras, proveedores, empresaNombre }: 
                     {/* Total */}
                     <div className="w-32 shrink-0 text-right">
                       <p className="text-sm font-bold text-zinc-900">
-                        {c.total_en_ars != null ? ars.format(c.total_en_ars) : '—'}
+                        {c.total_en_ars != null ? formatMoney(c.total_en_ars) : '—'}
                       </p>
                       {c.moneda !== 'ARS' && c.total_moneda_original != null && (
                         <p className="text-xs text-zinc-400">{num.format(c.total_moneda_original)} {c.moneda}</p>
@@ -314,7 +316,7 @@ export default function ComprasManager({ compras, proveedores, empresaNombre }: 
                                       {num4.format(item.precio_unitario_moneda_original)} {c.moneda}
                                     </td>
                                     <td className="px-3 py-2.5 text-zinc-500">{(item.deposito_destino as any)?.nombre ?? '—'}</td>
-                                    <td className="px-3 py-2.5 text-right font-semibold text-zinc-800">{ars.format(item.subtotal_ars)}</td>
+                                    <td className="px-3 py-2.5 text-right font-semibold text-zinc-800">{formatMoney(item.subtotal_ars)}</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -328,7 +330,7 @@ export default function ComprasManager({ compras, proveedores, empresaNombre }: 
                               </span>
                             )}
                             <span className="text-zinc-600">
-                              Total ARS: <strong className="text-sm text-zinc-900">{c.total_en_ars != null ? ars.format(c.total_en_ars) : '—'}</strong>
+                              Total {currency}: <strong className="text-sm text-zinc-900">{c.total_en_ars != null ? formatMoney(c.total_en_ars) : '—'}</strong>
                             </span>
                           </div>
                         </div>

@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { Plus, ChevronDown, ChevronUp, Tractor, Truck, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { crearLabor } from '../actions';
+import { useCurrency } from '@/lib/currency-context';
 
 interface TipoLabor  { id: string; nombre: string; }
 interface Maquinaria {
@@ -27,8 +28,6 @@ interface Props {
 const sel = 'w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#006836]/40 disabled:opacity-50 bg-white';
 const inp = 'w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#006836]/40 disabled:opacity-50';
 const lbl = 'block text-xs font-medium text-zinc-500 mb-1.5';
-const ars = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
-
 function costoHoraMaquinaria(m: Maquinaria, precioCombustible: number) {
   const combust = m.consumo_combustible_hora * precioCombustible;
   const mant    = m.costo_mantenimiento_hora;
@@ -40,6 +39,7 @@ function costoHoraMaquinaria(m: Maquinaria, precioCombustible: number) {
 export default function NuevaLaborInline({
   cultivoId, tiposLabor, maquinarias, proveedores, precioCombustible, hectareasLote,
 }: Props) {
+  const { formatMoney } = useCurrency();
   const [open,          setOpen]          = useState(false);
   const [tipoLaborId,   setTipoLaborId]   = useState('');
   const [fecha,         setFecha]         = useState(new Date().toISOString().slice(0, 10));
@@ -164,7 +164,7 @@ export default function NuevaLaborInline({
                   <option value="">Seleccioná…</option>
                   {maquinarias.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.nombre} — {ars.format(costoHoraMaquinaria(m, precioCombustible))}/h
+                      {m.nombre} — {formatMoney(costoHoraMaquinaria(m, precioCombustible))}/h
                     </option>
                   ))}
                 </select>
@@ -233,7 +233,7 @@ export default function NuevaLaborInline({
               <Calculator className="w-4 h-4 text-[#006836] shrink-0" />
               <div>
                 <p className="text-xs text-zinc-500">Costo estimado de esta labor</p>
-                <p className="text-lg font-bold text-[#006836]">{ars.format(costoEstimado)}</p>
+                <p className="text-lg font-bold text-[#006836]">{formatMoney(costoEstimado)}</p>
               </div>
             </div>
           )}

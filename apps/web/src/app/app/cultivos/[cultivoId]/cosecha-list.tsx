@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { Tractor, Truck, Trash2, ChevronDown, ChevronUp, Wheat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { eliminarCostoCosecha } from '../actions';
+import { useCurrency } from '@/lib/currency-context';
 
 interface CostoCosecha {
   id: string;
@@ -22,7 +23,6 @@ interface CostoCosecha {
 
 interface Props { costosCosecha: CostoCosecha[]; cultivoId: string; }
 
-const ars = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
 const fmtFecha = (d: string) =>
   new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
 
@@ -31,6 +31,7 @@ const MODALIDAD_LABEL: Record<string, string> = {
 };
 
 export default function CosechaList({ costosCosecha, cultivoId }: Props) {
+  const { formatMoney } = useCurrency();
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -85,7 +86,7 @@ export default function CosechaList({ costosCosecha, cultivoId }: Props) {
                 </div>
               </div>
               <div className="flex items-center gap-3 shrink-0">
-                <span className="text-sm font-bold text-zinc-800">{ars.format(c.costo_total_calculado)}</span>
+                <span className="text-sm font-bold text-zinc-800">{formatMoney(c.costo_total_calculado)}</span>
                 {open ? <ChevronUp className="w-4 h-4 text-zinc-400" /> : <ChevronDown className="w-4 h-4 text-zinc-400" />}
               </div>
             </button>
@@ -108,7 +109,7 @@ export default function CosechaList({ costosCosecha, cultivoId }: Props) {
                   {!EsPropio && c.precio_unitario && (
                     <div>
                       <span className="text-xs text-zinc-400">Precio unitario</span>
-                      <p className="font-medium text-zinc-700">{ars.format(c.precio_unitario)}</p>
+                      <p className="font-medium text-zinc-700">{formatMoney(c.precio_unitario)}</p>
                     </div>
                   )}
                   {c.hectareas_trabajadas && (
@@ -131,7 +132,7 @@ export default function CosechaList({ costosCosecha, cultivoId }: Props) {
                   )}
                 </div>
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-sm font-bold text-[#006836]">{ars.format(c.costo_total_calculado)}</span>
+                  <span className="text-sm font-bold text-[#006836]">{formatMoney(c.costo_total_calculado)}</span>
                   <button type="button" onClick={() => handleDelete(c.id)}
                     disabled={pending || deleting === c.id}
                     className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-red-500 transition-colors disabled:opacity-40">
@@ -146,7 +147,7 @@ export default function CosechaList({ costosCosecha, cultivoId }: Props) {
 
       <div className="flex justify-between items-center px-5 py-3 bg-zinc-800 rounded-2xl">
         <span className="text-sm font-medium text-zinc-400">Total cosecha/trilla</span>
-        <span className="text-lg font-bold text-white">{ars.format(total)}</span>
+        <span className="text-lg font-bold text-white">{formatMoney(total)}</span>
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import {
   Sprout, Package, ShoppingCart, AlertTriangle,
   MapPin, Warehouse, ArrowRight, TrendingUp, CircleDollarSign, FileUp, Building2,
 } from 'lucide-react';
+import { Money } from '@/lib/currency-context';
 
 const ROL_LABEL: Record<string, string> = {
   super_admin:     'Super Administrador',
@@ -68,7 +69,6 @@ export default async function DashboardPage() {
   const cotizCompra = cotizManual ? null : cotizBNA?.compra ?? null;
   const cotizEsManual = !!cotizManual;
 
-  const ars = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
   const num = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
 
   return (
@@ -156,7 +156,7 @@ export default async function DashboardPage() {
             </div>
             <p className="text-3xl font-bold tracking-tight text-zinc-900">{cantidadCompras}</p>
             <p className="text-xs text-zinc-400 mt-1 font-medium truncate">
-              {cantidadCompras > 0 ? ars.format(comprasMes) : 'Sin compras este mes'}
+              {cantidadCompras > 0 ? <Money ars={comprasMes} /> : 'Sin compras este mes'}
             </p>
           </div>
         </Link>

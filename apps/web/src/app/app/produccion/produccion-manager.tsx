@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Filter, X, ChevronRight, Wheat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ExportButtons from '@/components/export-buttons';
+import { useCurrency } from '@/lib/currency-context';
 
 const ESTADO_BADGE: Record<string, string> = {
   planificada: 'bg-blue-100 text-blue-700',
@@ -52,6 +53,7 @@ const num = (n: number | null, d = 0) => n != null ? new Intl.NumberFormat('es-A
 const fmt = (d: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
 
 export default function ProduccionManager({ cultivos, campanias, campos, empresaNombre }: Props) {
+  const { formatMoney } = useCurrency();
   const [campaniaId, setCampaniaId] = useState('');
   const [campoNombre, setCampoNombre] = useState('');
   const [estado, setEstado] = useState('');
@@ -105,9 +107,9 @@ export default function ProduccionManager({ cultivos, campanias, campos, empresa
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: 'Cultivos', value: filtrados.length.toString(), sub: `${cosechados.length} cosechados` },
-          { label: 'Ingreso bruto', value: ingresoTotal > 0 ? ars.format(ingresoTotal) : '—', sub: 'cultivos cosechados con precio' },
-          { label: 'Costo directo', value: costoTotal > 0 ? ars.format(costoTotal) : '—', sub: 'suma de aplicaciones' },
-          { label: 'Margen bruto total', value: margenTotal !== 0 ? ars.format(margenTotal) : '—', sub: 'ingreso − costo', highlight: margenTotal >= 0 },
+          { label: 'Ingreso bruto', value: ingresoTotal > 0 ? formatMoney(ingresoTotal) : '—', sub: 'cultivos cosechados con precio' },
+          { label: 'Costo directo', value: costoTotal > 0 ? formatMoney(costoTotal) : '—', sub: 'suma de aplicaciones' },
+          { label: 'Margen bruto total', value: margenTotal !== 0 ? formatMoney(margenTotal) : '—', sub: 'ingreso − costo', highlight: margenTotal >= 0 },
         ].map(({ label, value, sub, highlight }) => (
           <div key={label} className="bg-white rounded-2xl border border-zinc-100 px-5 py-4 shadow-sm">
             <p className="text-xs text-zinc-400 font-medium uppercase tracking-wide">{label}</p>
@@ -255,15 +257,15 @@ export default function ProduccionManager({ cultivos, campanias, campos, empresa
                       )}
                     </td>
                     <td className="px-4 py-3 text-right text-zinc-700">
-                      {c.ingreso_bruto_ars != null ? ars.format(c.ingreso_bruto_ars) : <span className="text-zinc-300">—</span>}
+                      {c.ingreso_bruto_ars != null ? formatMoney(c.ingreso_bruto_ars) : <span className="text-zinc-300">—</span>}
                     </td>
                     <td className="px-4 py-3 text-right text-zinc-700">
-                      {c.costo_directo_ars != null ? ars.format(c.costo_directo_ars) : <span className="text-zinc-300">—</span>}
+                      {c.costo_directo_ars != null ? formatMoney(c.costo_directo_ars) : <span className="text-zinc-300">—</span>}
                     </td>
                     <td className="px-4 py-3 text-right">
                       {c.margen_bruto_ars != null ? (
                         <span className={c.margen_bruto_ars >= 0 ? 'text-[#006836] font-bold' : 'text-red-600 font-bold'}>
-                          {ars.format(c.margen_bruto_ars)}
+                          {formatMoney(c.margen_bruto_ars)}
                         </span>
                       ) : <span className="text-zinc-300">—</span>}
                     </td>

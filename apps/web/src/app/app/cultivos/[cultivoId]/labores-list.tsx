@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { Tractor, Truck, Trash2, ChevronDown, ChevronUp, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { eliminarLabor } from '../actions';
+import { useCurrency } from '@/lib/currency-context';
 
 interface Labor {
   id: string;
@@ -25,11 +26,11 @@ interface Props {
   cultivoId: string;
 }
 
-const ars   = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
 const fmtFecha = (d: string) =>
   new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
 
 export default function LaborsList({ labores, cultivoId }: Props) {
+  const { formatMoney } = useCurrency();
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -91,7 +92,7 @@ export default function LaborsList({ labores, cultivoId }: Props) {
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <span className="text-sm font-bold text-zinc-800">
-                  {ars.format(labor.costo_total_calculado)}
+                  {formatMoney(labor.costo_total_calculado)}
                 </span>
                 {open
                   ? <ChevronUp className="w-4 h-4 text-zinc-400" />
@@ -128,7 +129,7 @@ export default function LaborsList({ labores, cultivoId }: Props) {
                       <span className="text-xs text-zinc-400">
                         {labor.modalidad_cobro === 'por_ha' ? 'Precio/ha' : 'Precio total'}
                       </span>
-                      <p className="font-medium text-zinc-700">{ars.format(labor.precio_unitario)}</p>
+                      <p className="font-medium text-zinc-700">{formatMoney(labor.precio_unitario)}</p>
                     </div>
                   )}
                   {labor.observaciones && (
@@ -140,7 +141,7 @@ export default function LaborsList({ labores, cultivoId }: Props) {
                 </div>
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-sm font-bold text-[#006836]">
-                    Costo: {ars.format(labor.costo_total_calculado)}
+                    Costo: {formatMoney(labor.costo_total_calculado)}
                   </span>
                   <button
                     type="button"
@@ -161,7 +162,7 @@ export default function LaborsList({ labores, cultivoId }: Props) {
       {/* Subtotal labores */}
       <div className="flex justify-between items-center px-5 py-3 bg-zinc-800 rounded-2xl">
         <span className="text-sm font-medium text-zinc-400">Total labores</span>
-        <span className="text-lg font-bold text-white">{ars.format(total)}</span>
+        <span className="text-lg font-bold text-white">{formatMoney(total)}</span>
       </div>
     </div>
   );

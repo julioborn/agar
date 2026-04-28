@@ -4,6 +4,7 @@ import { ChevronLeft, Sprout, Wheat, Tractor, Package, BarChart3 } from 'lucide-
 import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 import { cn } from '@/lib/utils';
+import { Money } from '@/lib/currency-context';
 import RegistrarCosechaForm from './registrar-cosecha-form';
 import ConfigProduccionForm from './config-produccion-form';
 import AplicacionesList from './aplicaciones-list';
@@ -102,7 +103,6 @@ export default async function CultivoDetallePage({ params }: Props) {
 
   if (!cultivo) notFound();
 
-  const ars = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
   const num = (n: number | null, d = 2) => n != null ? new Intl.NumberFormat('es-AR', { maximumFractionDigits: d }).format(n) : '—';
   const fmt = (d: string | null) => d
     ? new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -177,16 +177,21 @@ export default async function CultivoDetallePage({ params }: Props) {
         {/* Fechas y costo — glass cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-5">
           {[
-            { label: 'Siembra',          value: fmt(cultivo.fecha_siembra) },
-            { label: 'Est. cosecha',     value: fmt(cultivo.fecha_cosecha_estimada) },
-            { label: 'Cosecha real',     value: fmt(cultivo.fecha_cosecha_real) },
-            { label: 'Costo acumulado',  value: costoTotal > 0 ? ars.format(costoTotal) : '—' },
+            { label: 'Siembra',       value: fmt(cultivo.fecha_siembra) },
+            { label: 'Est. cosecha',  value: fmt(cultivo.fecha_cosecha_estimada) },
+            { label: 'Cosecha real',  value: fmt(cultivo.fecha_cosecha_real) },
           ].map(({ label, value }) => (
             <div key={label} className="bg-white/[0.08] backdrop-blur-sm rounded-xl px-3 py-2.5 border border-white/[0.08]">
               <p className="text-white/45 text-[10px] uppercase tracking-wider font-medium">{label}</p>
               <p className="text-white font-semibold text-sm mt-1 leading-none">{value}</p>
             </div>
           ))}
+          <div className="bg-white/[0.08] backdrop-blur-sm rounded-xl px-3 py-2.5 border border-white/[0.08]">
+            <p className="text-white/45 text-[10px] uppercase tracking-wider font-medium">Costo acumulado</p>
+            <p className="text-white font-semibold text-sm mt-1 leading-none">
+              {costoTotal > 0 ? <Money ars={costoTotal} /> : '—'}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -196,19 +201,19 @@ export default async function CultivoDetallePage({ params }: Props) {
           <div className="bg-white rounded-xl border border-indigo-100 px-4 py-3 shadow-sm text-center">
             <p className="text-xs text-zinc-400 mb-1">Trabajos y servicios</p>
             <p className="text-base font-bold text-indigo-600">
-              {totalTrabajosServicios > 0 ? ars.format(totalTrabajosServicios) : '—'}
+              {totalTrabajosServicios > 0 ? <Money ars={totalTrabajosServicios} /> : '—'}
             </p>
           </div>
           <div className="bg-white rounded-xl border border-orange-100 px-4 py-3 shadow-sm text-center">
             <p className="text-xs text-zinc-400 mb-1">Uso de productos</p>
             <p className="text-base font-bold text-orange-600">
-              {costoAplicacionesTotal > 0 ? ars.format(costoAplicacionesTotal) : '—'}
+              {costoAplicacionesTotal > 0 ? <Money ars={costoAplicacionesTotal} /> : '—'}
             </p>
           </div>
           <div className="bg-white rounded-xl border border-zinc-200 px-4 py-3 shadow-sm text-center">
             <p className="text-xs text-zinc-400 mb-1">Total costos</p>
             <p className="text-base font-bold text-zinc-700">
-              {costoTotal > 0 ? ars.format(costoTotal) : '—'}
+              {costoTotal > 0 ? <Money ars={costoTotal} /> : '—'}
             </p>
           </div>
         </div>
@@ -223,7 +228,7 @@ export default async function CultivoDetallePage({ params }: Props) {
         borderColor="border-indigo-100"
         badge={
           totalTrabajosServicios > 0
-            ? <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg">{ars.format(totalTrabajosServicios)}</span>
+            ? <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg"><Money ars={totalTrabajosServicios} /></span>
             : undefined
         }
         stats={[
@@ -279,7 +284,7 @@ export default async function CultivoDetallePage({ params }: Props) {
         borderColor="border-orange-100"
         badge={
           costoAplicacionesTotal > 0
-            ? <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg">{ars.format(costoAplicacionesTotal)}</span>
+            ? <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg"><Money ars={costoAplicacionesTotal} /></span>
             : undefined
         }
         stats={[
@@ -318,7 +323,7 @@ export default async function CultivoDetallePage({ params }: Props) {
                 'text-xs font-semibold px-2 py-0.5 rounded-lg',
                 cultivo.margen_bruto_ars >= 0 ? 'text-[#006836] bg-[#006836]/10' : 'text-red-600 bg-red-50'
               )}>
-                MB: {ars.format(cultivo.margen_bruto_ars)}
+                MB: <Money ars={cultivo.margen_bruto_ars} />
               </span>
             )
             : cultivo.produccion_total_kg != null
@@ -326,7 +331,7 @@ export default async function CultivoDetallePage({ params }: Props) {
               : undefined
         }
         stats={cultivo.estado !== 'cosechada' && costoTotal > 0
-          ? [{ label: 'Costo acumulado', value: ars.format(costoTotal) }]
+          ? [{ label: 'Costo acumulado', value: <Money ars={costoTotal} /> }]
           : []
         }
       >
@@ -383,7 +388,7 @@ export default async function CultivoDetallePage({ params }: Props) {
               <div className="text-center p-3 bg-zinc-50 rounded-xl">
                 <p className="text-xs text-zinc-400 mb-1">Precio venta</p>
                 <p className="text-xl font-bold text-zinc-800">
-                  {(cultivo as any).precio_venta_ars != null ? ars.format((cultivo as any).precio_venta_ars) : '—'}
+                  {(cultivo as any).precio_venta_ars != null ? <Money ars={(cultivo as any).precio_venta_ars} /> : '—'}
                 </p>
                 <p className="text-xs text-zinc-400">por {unidadLabel}</p>
               </div>
@@ -394,7 +399,7 @@ export default async function CultivoDetallePage({ params }: Props) {
               <div className="flex justify-between items-center px-4 py-2.5 bg-zinc-50">
                 <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Valor de producción</span>
                 <span className="font-semibold text-zinc-800">
-                  {(cultivo as any).ingreso_bruto_ars != null ? ars.format((cultivo as any).ingreso_bruto_ars) : '—'}
+                  {(cultivo as any).ingreso_bruto_ars != null ? <Money ars={(cultivo as any).ingreso_bruto_ars} /> : '—'}
                 </span>
               </div>
               <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-100">
@@ -402,7 +407,7 @@ export default async function CultivoDetallePage({ params }: Props) {
                   <span className="text-zinc-300 text-xs">−</span> Trabajos y servicios
                 </span>
                 <span className="font-medium text-red-500">
-                  {totalTrabajosServicios > 0 ? ars.format(totalTrabajosServicios) : '—'}
+                  {totalTrabajosServicios > 0 ? <Money ars={totalTrabajosServicios} /> : '—'}
                 </span>
               </div>
               <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-100">
@@ -410,19 +415,19 @@ export default async function CultivoDetallePage({ params }: Props) {
                   <span className="text-zinc-300 text-xs">−</span> Uso de productos
                 </span>
                 <span className="font-medium text-red-500">
-                  {costoAplicacionesTotal > 0 ? ars.format(costoAplicacionesTotal) : '—'}
+                  {costoAplicacionesTotal > 0 ? <Money ars={costoAplicacionesTotal} /> : '—'}
                 </span>
               </div>
               <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-200 bg-zinc-50">
                 <span className="text-zinc-600 font-semibold">Costo directo total</span>
                 <span className="font-semibold text-red-500">
-                  {costoTotal > 0 ? `− ${ars.format(costoTotal)}` : '—'}
+                  {costoTotal > 0 ? <>− <Money ars={costoTotal} /></> : '—'}
                 </span>
               </div>
               <div className="flex justify-between items-center px-4 py-3 border-t border-zinc-300 bg-zinc-800">
                 <span className="font-bold text-zinc-300 text-sm uppercase tracking-wider">Margen bruto</span>
                 <span className={cn('font-bold text-2xl', cultivo.margen_bruto_ars != null && cultivo.margen_bruto_ars >= 0 ? 'text-[#4ade80]' : 'text-red-400')}>
-                  {cultivo.margen_bruto_ars != null ? ars.format(cultivo.margen_bruto_ars) : '—'}
+                  {cultivo.margen_bruto_ars != null ? <Money ars={cultivo.margen_bruto_ars} /> : '—'}
                 </span>
               </div>
             </div>
@@ -433,7 +438,7 @@ export default async function CultivoDetallePage({ params }: Props) {
         {cultivo.estado !== 'cosechada' && cultivo.estado !== 'cancelada' && costoTotal > 0 && (
           <div className="px-5 py-3 border-t border-zinc-100 flex items-center justify-between text-sm">
             <span className="text-zinc-500">Costo acumulado hasta hoy</span>
-            <span className="font-bold text-zinc-800">{ars.format(costoTotal)}</span>
+            <span className="font-bold text-zinc-800"><Money ars={costoTotal} /></span>
           </div>
         )}
       </CollapsibleCard>

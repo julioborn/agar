@@ -10,7 +10,7 @@ interface Props {
   title: string;
   subtitle: string;
   badge?: React.ReactNode;
-  stats?: { label: string; value: string }[];
+  stats?: { label: string; value: React.ReactNode }[];
   borderColor?: string;
   defaultOpen?: boolean;
   children: React.ReactNode;
