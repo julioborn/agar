@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ShoppingCart, Plus } from 'lucide-react';
+import { ShoppingCart, Plus, FileUp } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 import ComprasManager from './compras-manager';
@@ -45,10 +45,16 @@ export default async function ComprasPage() {
             </p>
           </div>
         </div>
-        <Link href="/app/compras/nueva"
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#006836] text-white text-sm font-semibold rounded-xl hover:bg-[#005228] transition-colors">
-          <Plus className="w-4 h-4" /> Nueva compra
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/app/compras/importar"
+            className="inline-flex items-center gap-1.5 px-4 py-2 border border-[#006836] text-[#006836] text-sm font-semibold rounded-xl hover:bg-[#006836]/5 transition-colors">
+            <FileUp className="w-4 h-4" /> Importar factura
+          </Link>
+          <Link href="/app/compras/nueva"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#006836] text-white text-sm font-semibold rounded-xl hover:bg-[#005228] transition-colors">
+            <Plus className="w-4 h-4" /> Nueva compra
+          </Link>
+        </div>
       </div>
 
       <ComprasManager compras={compras} proveedores={provRes.data ?? []} empresaNombre={empresa.nombre} />

@@ -1,8 +1,19 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
-import { Settings, Fuel } from 'lucide-react';
+import { Settings, Fuel, DollarSign } from 'lucide-react';
 import ConfigForm from './config-form';
+
+async function fetchCotizBNA(): Promise<number | null> {
+  try {
+    const res = await fetch('https://dolarapi.com/v1/dolares/oficial', { next: { revalidate: 3600 } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.venta ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export default async function ConfiguracionPage() {
   const supabase = await createClient();
@@ -16,11 +27,16 @@ export default async function ConfiguracionPage() {
   const esAdmin = rol === 'admin_empresa' || esSuperAdmin;
   if (!esAdmin) redirect('/app');
 
-  const { data: config } = await supabase
-    .from('configuracion_empresa')
-    .select('precio_combustible, tipo_combustible')
-    .eq('empresa_id', empresa.id)
-    .maybeSingle();
+  const [configRes, cotizBNA] = await Promise.all([
+    supabase
+      .from('configuracion_empresa')
+      .select('precio_combustible, tipo_combustible, cotizacion_usd, cotizacion_usd_fecha')
+      .eq('empresa_id', empresa.id)
+      .maybeSingle(),
+    fetchCotizBNA(),
+  ]);
+
+  const config = configRes.data;
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
@@ -34,22 +50,40 @@ export default async function ConfiguracionPage() {
         </div>
       </div>
 
-      {/* Combustible */}
       <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden">
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-zinc-100">
           <Fuel className="w-4 h-4 text-[#006836]" />
-          <h2 className="text-sm font-semibold text-zinc-800">Precio de combustible</h2>
+          <h2 className="text-sm font-semibold text-zinc-800">Combustible y cotización USD</h2>
         </div>
         <div className="p-5">
-          <p className="text-xs text-zinc-400 mb-4">
-            Este precio se usa globalmente para calcular el costo de funcionamiento
-            de cada maquinaria. Actualizarlo afecta todos los cálculos futuros.
+          <p className="text-xs text-zinc-400 mb-5">
+            El precio de combustible se usa en los costos de maquinaria.
+            La cotización del dólar se aplica a todas las operaciones en moneda extranjera.
           </p>
           <ConfigForm
             empresaId={empresa.id}
             initialPrecio={config?.precio_combustible ?? 0}
             initialTipo={config?.tipo_combustible ?? 'gasoil'}
+            initialCotizUsd={config?.cotizacion_usd ?? null}
+            cotizBNA={cotizBNA}
           />
+        </div>
+      </div>
+
+      {/* Info sobre la tasa automática */}
+      <div className="bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 flex gap-3">
+        <DollarSign className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+        <div className="text-xs text-blue-700 space-y-1">
+          <p className="font-semibold">Cotización automática BNA</p>
+          <p>
+            Cuando no hay una cotización manual configurada, el sistema obtiene la tasa oficial
+            del Banco Nación Argentina (dólar oficial venta) actualizada cada hora.
+            {cotizBNA != null && (
+              <span className="ml-1 font-semibold">
+                Tasa actual: ${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 }).format(cotizBNA)}
+              </span>
+            )}
+          </p>
         </div>
       </div>
     </div>

@@ -20,6 +20,10 @@ const nextConfig = {
         dompurify: false,
       };
     }
+    if (isServer) {
+      // pdf-parse usa canvas como dependencia opcional — no está disponible en el runtime de Next.js
+      config.externals = [...(Array.isArray(config.externals) ? config.externals : []), 'canvas'];
+    }
     return config;
   },
 };
