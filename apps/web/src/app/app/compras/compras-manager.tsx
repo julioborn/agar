@@ -37,7 +37,6 @@ interface CompraItem {
 
 interface Props { compras: Compra[]; proveedores: { id: string; nombre: string }[]; empresaNombre: string }
 
-const ars = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
 const num = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
 const num4 = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 });
 const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -90,14 +89,14 @@ export default function ComprasManager({ compras, proveedores, empresaNombre }: 
   }
 
   const exportColumns = [
-    { header: 'Fecha', key: 'fecha', width: 12, format: (v: string) => fmt(v) },
-    { header: 'N° Factura', key: 'numero_factura', width: 16, format: (v: any) => v ?? '' },
-    { header: 'Proveedor', key: 'proveedor_nombre', width: 28 },
-    { header: 'Moneda', key: 'moneda', width: 10 },
-    { header: 'Total original', key: 'total_moneda_original', width: 16, format: (v: any) => v != null ? num.format(v) : '' },
-    { header: 'Cotiz. USD', key: 'cotizacion_usd', width: 12, format: (v: any) => v != null ? num.format(v) : '' },
-    { header: 'Total ARS', key: 'total_en_ars', width: 18, format: (v: any) => v != null ? ars.format(v) : '' },
-    { header: 'Estado', key: 'estado', width: 12 },
+    { header: 'Fecha',          key: 'fecha',                  width: 12, format: (v: string) => fmt(v) },
+    { header: 'N° Factura',     key: 'numero_factura',         width: 18, format: (v: any) => v ?? '' },
+    { header: 'Proveedor',      key: 'proveedor_nombre',       width: 30 },
+    { header: 'Moneda original',key: 'moneda',                 width: 14 },
+    { header: 'Total original', key: 'total_moneda_original',  width: 16, format: (v: any) => v != null ? num.format(v) : '' },
+    { header: 'Cotiz. USD',     key: 'cotizacion_usd',         width: 12, format: (v: any) => v != null ? num.format(v) : '' },
+    { header: `Total (${currency})`, key: 'total_en_ars',      width: 20, format: (v: any) => v != null ? formatMoney(v) : '' },
+    { header: 'Estado',         key: 'estado',                 width: 14, format: (v: string) => ESTADO_LABEL[v] ?? v },
   ];
 
   return (

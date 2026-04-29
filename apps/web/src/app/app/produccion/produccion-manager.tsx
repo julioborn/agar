@@ -48,12 +48,11 @@ interface Props {
   empresaNombre: string;
 }
 
-const ars = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
 const num = (n: number | null, d = 0) => n != null ? new Intl.NumberFormat('es-AR', { maximumFractionDigits: d }).format(n) : '—';
 const fmt = (d: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
 
 export default function ProduccionManager({ cultivos, campanias, campos, empresaNombre }: Props) {
-  const { formatMoney } = useCurrency();
+  const { formatMoney, currency } = useCurrency();
   const [campaniaId, setCampaniaId] = useState('');
   const [campoNombre, setCampoNombre] = useState('');
   const [estado, setEstado] = useState('');
@@ -82,22 +81,22 @@ export default function ProduccionManager({ cultivos, campanias, campos, empresa
   }
 
   const exportColumns = [
-    { header: 'Cultivo', key: 'cultivo', width: 20 },
-    { header: 'Producto final', key: 'producto_final', width: 20, format: (v: any) => v ?? '' },
-    { header: 'Campo', key: 'campo_nombre', width: 18 },
-    { header: 'Lote', key: 'lote_nombre', width: 16 },
-    { header: 'Hectáreas', key: 'lote_hectareas', width: 12, format: (v: any) => v != null ? num(v, 2) : '' },
-    { header: 'Campaña', key: 'campania_nombre', width: 16, format: (v: any) => v ?? '' },
-    { header: 'Estado', key: 'estado', width: 14, format: (v: string) => ESTADO_LABEL[v] ?? v },
-    { header: 'F. Siembra', key: 'fecha_siembra', width: 14, format: (v: any) => fmt(v) },
-    { header: 'F. Cosecha', key: 'fecha_cosecha_real', width: 14, format: (v: any) => fmt(v) },
-    { header: 'Producción', key: 'produccion_total', width: 16, format: (v: any) => v != null ? num(v, 2) : '' },
-    { header: 'Unidad', key: 'unidad_produccion', width: 10 },
-    { header: 'Rend. por ha', key: 'rendimiento_por_ha', width: 14, format: (v: any) => v != null ? num(v, 2) : '' },
-    { header: 'Precio venta (ARS)', key: 'precio_venta_ars', width: 18, format: (v: any) => v != null ? ars.format(v) : '' },
-    { header: 'Ingreso bruto', key: 'ingreso_bruto_ars', width: 16, format: (v: any) => v != null ? ars.format(v) : '' },
-    { header: 'Costo directo', key: 'costo_directo_ars', width: 16, format: (v: any) => v != null ? ars.format(v) : '' },
-    { header: 'Margen bruto', key: 'margen_bruto_ars', width: 16, format: (v: any) => v != null ? ars.format(v) : '' },
+    { header: 'Cultivo',                     key: 'cultivo',            width: 22 },
+    { header: 'Producto final',              key: 'producto_final',     width: 20, format: (v: any) => v ?? '' },
+    { header: 'Campo',                       key: 'campo_nombre',       width: 20 },
+    { header: 'Lote',                        key: 'lote_nombre',        width: 16 },
+    { header: 'Hectáreas',                   key: 'lote_hectareas',     width: 12, format: (v: any) => v != null ? num(v, 2) : '' },
+    { header: 'Campaña',                     key: 'campania_nombre',    width: 16, format: (v: any) => v ?? '' },
+    { header: 'Estado',                      key: 'estado',             width: 14, format: (v: string) => ESTADO_LABEL[v] ?? v },
+    { header: 'F. Siembra',                  key: 'fecha_siembra',      width: 14, format: (v: any) => fmt(v) },
+    { header: 'F. Cosecha',                  key: 'fecha_cosecha_real', width: 14, format: (v: any) => fmt(v) },
+    { header: 'Producción',                  key: 'produccion_total',   width: 16, format: (v: any) => v != null ? num(v, 2) : '' },
+    { header: 'Unidad',                      key: 'unidad_produccion',  width: 10 },
+    { header: 'Rendimiento / ha',            key: 'rendimiento_por_ha', width: 16, format: (v: any) => v != null ? num(v, 2) : '' },
+    { header: `Precio venta (${currency})`,  key: 'precio_venta_ars',   width: 20, format: (v: any) => v != null ? formatMoney(v) : '' },
+    { header: `Ingreso bruto (${currency})`, key: 'ingreso_bruto_ars',  width: 20, format: (v: any) => v != null ? formatMoney(v) : '' },
+    { header: `Costo directo (${currency})`, key: 'costo_directo_ars',  width: 20, format: (v: any) => v != null ? formatMoney(v) : '' },
+    { header: `Margen bruto (${currency})`,  key: 'margen_bruto_ars',   width: 20, format: (v: any) => v != null ? formatMoney(v) : '' },
   ];
 
   return (
