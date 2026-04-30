@@ -2,9 +2,14 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'agar',
+  title: 'AGAR',
   description: 'Gestión agropecuaria integral',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/agaricon.png',
+  },
 };
 
 export const viewport: Viewport = {
