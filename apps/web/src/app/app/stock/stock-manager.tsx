@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Filter, X, BarChart2 } from 'lucide-react';
+import Link from 'next/link';
+import { Filter, X, BarChart2, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ExportButtons from '@/components/export-buttons';
 import { CATEGORIAS } from '../productos/constants';
@@ -120,6 +121,13 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
                 <X className="w-3 h-3" /> Limpiar
               </button>
             )}
+            <Link
+              href="/app/stock/importar"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border border-[#006836]/30 text-[#006836] bg-[#006836]/5 hover:bg-[#006836]/10 transition-colors"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Cargar desde archivo
+            </Link>
             <ExportButtons data={exportData} columns={exportColumns}
               filename={`stock-${empresaNombre.replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}`}
               title={`Stock · ${empresaNombre}`} />
