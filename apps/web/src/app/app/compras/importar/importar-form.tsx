@@ -498,167 +498,183 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
           </div>
         )}
 
-        {/* Items */}
-        <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
-          <div className="px-5 py-4 border-b border-zinc-100">
-            <h2 className="font-semibold text-zinc-800">Productos — {items.length} ítem{items.length !== 1 ? 's' : ''} extraído{items.length !== 1 ? 's' : ''}</h2>
-          </div>
+        {/* Items — cards */}
+        <div className="flex flex-col gap-3">
+          {items.map((item) => {
+            const tops = mejoresMatches(item.descripcion_factura, productos, 5);
+            const esNuevo = item.producto_id === '_nuevo_';
+            const esSinAsignar = item.producto_id === '';
+            const prodSeleccionado = productos.find((p) => p.id === item.producto_id);
+            const cantNum = parseFloat(item.cantidad) || 0;
+            const precioNum = parseFloat(item.precio_unitario_neto) || 0;
+            const subtotalOrig = cantNum * precioNum;
+            const subtotalArs = moneda === 'USD' ? subtotalOrig * cotizNum : subtotalOrig;
 
-          <div className="divide-y divide-zinc-50">
-            {items.map((item) => {
-              const tops = mejoresMatches(item.descripcion_factura, productos, 5);
-              const esNuevo = item.producto_id === '_nuevo_';
-              const prodSeleccionado = productos.find((p) => p.id === item.producto_id);
-              const cantNum = parseFloat(item.cantidad) || 0;
-              const precioNum = parseFloat(item.precio_unitario_neto) || 0;
-              const subtotalOrig = cantNum * precioNum;
-              const subtotalArs = moneda === 'USD' ? subtotalOrig * cotizNum : subtotalOrig;
-
-              return (
-                <div key={item._id} className={cn('p-4 space-y-3', esNuevo && 'bg-blue-50/40')}>
-                  {/* Descripción extraída */}
-                  <div className="flex items-start gap-2">
+            return (
+              <div
+                key={item._id}
+                className={cn(
+                  'rounded-2xl border p-4 space-y-3 transition-colors',
+                  esNuevo    ? 'bg-blue-50/60 border-blue-200' :
+                  esSinAsignar ? 'bg-white border-red-200' :
+                  'bg-white border-zinc-100'
+                )}
+              >
+                {/* Header */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2 min-w-0">
                     <span className="text-xs font-mono bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded mt-0.5 shrink-0">
                       {item.codigo_proveedor_ext ?? '—'}
                     </span>
-                    <p className="text-sm font-medium text-zinc-700 leading-tight">{item.descripcion_factura}</p>
+                    <p className="text-sm font-semibold text-zinc-800 leading-tight">{item.descripcion_factura}</p>
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {/* Producto */}
-                    <div className="space-y-1 lg:col-span-2">
-                      <label className="block text-xs font-medium text-zinc-500">Producto en sistema</label>
-                      <select
-                        value={item.producto_id}
-                        onChange={(e) => updateItem(item._id, { producto_id: e.target.value })}
-                        className={cn(field, !item.producto_id && 'border-red-300 ring-1 ring-red-200')}
-                        disabled={fase === 'guardando'}
-                      >
-                        <option value="">-- Sin asignar --</option>
-                        {tops.length > 0 && (
-                          <optgroup label="Coincidencias sugeridas">
-                            {tops.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.nombre}{p.principio_activo ? ` (${p.principio_activo})` : ''}
-                              </option>
-                            ))}
-                          </optgroup>
-                        )}
-                        <optgroup label="Todos los productos">
-                          {productos
-                            .filter((p) => !tops.find((t) => t.id === p.id))
-                            .map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                        </optgroup>
-                        <optgroup label="─────────────">
-                          <option value="_nuevo_">+ Crear nuevo producto…</option>
-                        </optgroup>
-                      </select>
-                      {prodSeleccionado?.principio_activo && (
-                        <p className="text-xs text-zinc-400">Principio activo: {prodSeleccionado.principio_activo}</p>
-                      )}
-                    </div>
-
-                    {/* Cantidad */}
-                    <div className="space-y-1">
-                      <label className="block text-xs font-medium text-zinc-500">
-                        Cantidad ({item.unidad})
-                      </label>
-                      <input
-                        type="number" step="0.001" min="0"
-                        value={item.cantidad}
-                        onChange={(e) => updateItem(item._id, { cantidad: e.target.value })}
-                        className={field} disabled={fase === 'guardando'}
-                      />
-                    </div>
-
-                    {/* Precio neto */}
-                    <div className="space-y-1">
-                      <label className="block text-xs font-medium text-zinc-500">
-                        Precio neto ({moneda})
-                      </label>
-                      <input
-                        type="number" step="0.01" min="0"
-                        value={item.precio_unitario_neto}
-                        onChange={(e) => updateItem(item._id, { precio_unitario_neto: e.target.value })}
-                        className={field} disabled={fase === 'guardando'}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Mini-form para nuevo producto */}
                   {esNuevo && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-3">
-                      <p className="text-xs font-semibold text-blue-700">Definir nuevo producto</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                        <div className="space-y-1 sm:col-span-2">
-                          <label className="block text-xs font-medium text-zinc-500">Nombre del producto</label>
-                          <input
-                            type="text" value={item.nuevo_nombre}
-                            onChange={(e) => updateItem(item._id, { nuevo_nombre: e.target.value })}
-                            className={field} placeholder="Ej: Glifosato 66%" disabled={fase === 'guardando'}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="block text-xs font-medium text-zinc-500">Categoría</label>
-                          <select value={item.nuevo_categoria}
-                            onChange={(e) => updateItem(item._id, { nuevo_categoria: e.target.value })}
-                            className={field} disabled={fase === 'guardando'}>
-                            {CATEGORIAS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                          </select>
-                        </div>
-                        <div className="space-y-1">
-                          <label className="block text-xs font-medium text-zinc-500">Unidad base</label>
-                          <select value={item.nuevo_unidad_base}
-                            onChange={(e) => updateItem(item._id, { nuevo_unidad_base: e.target.value })}
-                            className={field} disabled={fase === 'guardando'}>
-                            {UNIDADES.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
-                          </select>
-                        </div>
-                        <div className="space-y-1 sm:col-span-2">
-                          <label className="block text-xs font-medium text-zinc-500">Principio activo (opcional)</label>
-                          <input
-                            type="text" value={item.nuevo_principio_activo}
-                            onChange={(e) => updateItem(item._id, { nuevo_principio_activo: e.target.value })}
-                            className={field} placeholder="Ej: Glifosato 66%" disabled={fase === 'guardando'}
-                          />
-                        </div>
-                      </div>
-                    </div>
+                    <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Nuevo</span>
                   )}
+                  {!esNuevo && !esSinAsignar && (
+                    <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-[#006836]/10 text-[#006836]">Asignado</span>
+                  )}
+                  {esSinAsignar && (
+                    <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-600">Sin asignar</span>
+                  )}
+                </div>
 
-                  {/* Depósito + subtotal */}
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <div className="flex-1 min-w-[180px] space-y-1">
-                      <label className="block text-xs font-medium text-zinc-500">Depósito destino</label>
-                      <select
-                        value={item.deposito_id}
-                        onChange={(e) => updateItem(item._id, { deposito_id: e.target.value })}
-                        className={cn(field, !item.deposito_id && 'border-amber-300')}
-                        disabled={fase === 'guardando'}
-                      >
-                        <option value="">Seleccionar depósito…</option>
-                        {depositos.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
-                      </select>
-                    </div>
-                    <div className="text-right shrink-0 pt-5">
-                      <p className="text-xs text-zinc-400">{moneda !== 'ARS' ? `${num(subtotalOrig)} ${moneda}` : ''}</p>
-                      <p className="text-sm font-bold text-zinc-800">{ars(subtotalArs)}</p>
-                    </div>
+                {/* Selector de producto */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-zinc-500">Producto en sistema</label>
+                  <select
+                    value={item.producto_id}
+                    onChange={(e) => updateItem(item._id, { producto_id: e.target.value })}
+                    className={cn(field, esSinAsignar && 'border-red-300 ring-1 ring-red-200')}
+                    disabled={fase === 'guardando'}
+                  >
+                    <option value="">-- Sin asignar --</option>
+                    {tops.length > 0 && (
+                      <optgroup label="Coincidencias sugeridas">
+                        {tops.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.nombre}{p.principio_activo ? ` (${p.principio_activo})` : ''}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    <optgroup label="Todos los productos">
+                      {productos
+                        .filter((p) => !tops.find((t) => t.id === p.id))
+                        .map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                    </optgroup>
+                    <optgroup label="─────────────">
+                      <option value="_nuevo_">+ Crear nuevo producto…</option>
+                    </optgroup>
+                  </select>
+                  {prodSeleccionado?.principio_activo && (
+                    <p className="text-xs text-zinc-400">P.A.: {prodSeleccionado.principio_activo}</p>
+                  )}
+                </div>
+
+                {/* Cantidad | Precio */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-zinc-500">Cantidad ({item.unidad})</label>
+                    <input
+                      type="number" step="0.001" min="0"
+                      value={item.cantidad}
+                      onChange={(e) => updateItem(item._id, { cantidad: e.target.value })}
+                      className={field} disabled={fase === 'guardando'}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-zinc-500">Precio neto ({moneda})</label>
+                    <input
+                      type="number" step="0.01" min="0"
+                      value={item.precio_unitario_neto}
+                      onChange={(e) => updateItem(item._id, { precio_unitario_neto: e.target.value })}
+                      className={field} disabled={fase === 'guardando'}
+                    />
                   </div>
                 </div>
-              );
-            })}
-          </div>
 
-          {/* Totales */}
-          <div className="px-5 py-3 bg-zinc-50 border-t border-zinc-100 flex items-center justify-end gap-6 text-sm">
+                {/* Nuevo producto */}
+                {esNuevo && (
+                  <div className="bg-white rounded-xl border border-blue-200 p-3 space-y-3 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1 h-4 rounded-full bg-blue-400" />
+                      <p className="text-xs font-semibold text-blue-700">Definir nuevo producto</p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-medium text-zinc-500">Nombre</label>
+                      <input
+                        type="text" value={item.nuevo_nombre}
+                        onChange={(e) => updateItem(item._id, { nuevo_nombre: e.target.value })}
+                        className={field} placeholder="Ej: Glifosato 66%" disabled={fase === 'guardando'}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="block text-xs font-medium text-zinc-500">Categoría</label>
+                        <select value={item.nuevo_categoria}
+                          onChange={(e) => updateItem(item._id, { nuevo_categoria: e.target.value })}
+                          className={field} disabled={fase === 'guardando'}>
+                          {CATEGORIAS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-xs font-medium text-zinc-500">Unidad base</label>
+                        <select value={item.nuevo_unidad_base}
+                          onChange={(e) => updateItem(item._id, { nuevo_unidad_base: e.target.value })}
+                          className={field} disabled={fase === 'guardando'}>
+                          {UNIDADES.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-medium text-zinc-500">Principio activo (opcional)</label>
+                      <input
+                        type="text" value={item.nuevo_principio_activo}
+                        onChange={(e) => updateItem(item._id, { nuevo_principio_activo: e.target.value })}
+                        className={field} placeholder="Ej: Glifosato 66%" disabled={fase === 'guardando'}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Depósito + subtotal */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 space-y-1">
+                    <label className="block text-xs font-medium text-zinc-500">Depósito destino</label>
+                    <select
+                      value={item.deposito_id}
+                      onChange={(e) => updateItem(item._id, { deposito_id: e.target.value })}
+                      className={cn(field, !item.deposito_id && 'border-amber-300')}
+                      disabled={fase === 'guardando'}
+                    >
+                      <option value="">Seleccionar depósito…</option>
+                      {depositos.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
+                    </select>
+                  </div>
+                  <div className="text-right shrink-0 pt-5">
+                    {moneda !== 'ARS' && <p className="text-xs text-zinc-400">{num(subtotalOrig)} {moneda}</p>}
+                    <p className="text-sm font-bold text-zinc-800">{ars(subtotalArs)}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Totales */}
+        <div className="bg-white rounded-2xl border border-zinc-100 px-5 py-3 flex items-center justify-between text-sm">
+          <p className="text-xs text-zinc-400">
+            {items.length} ítem{items.length !== 1 ? 's' : ''} · {items.filter(i => i.producto_id === '_nuevo_').length} nuevo{items.filter(i => i.producto_id === '_nuevo_').length !== 1 ? 's' : ''} · {items.filter(i => i.producto_id === '').length} sin asignar
+          </p>
+          <div className="flex items-center gap-6">
             {moneda !== 'ARS' && (
               <span className="text-zinc-500">
-                Total neto {moneda}: <strong className="text-zinc-700">{num(totalNeto)}</strong>
+                Total {moneda}: <strong className="text-zinc-700">{num(totalNeto)}</strong>
               </span>
             )}
             <span className="text-zinc-600">
-              Total neto ARS: <strong className="text-lg text-zinc-900">{ars(totalArs)}</strong>
+              Total ARS: <strong className="text-lg text-zinc-900">{ars(totalArs)}</strong>
             </span>
           </div>
         </div>
