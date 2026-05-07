@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Package, Plus, ChevronDown, ChevronUp, ExternalLink, Search, Filter, X } from 'lucide-react';
+import { Package, Plus, ChevronDown, ChevronUp, ExternalLink, Search, Filter, X, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import ProductoForm, { CATEGORIAS, type ProductoRow } from './producto-form';
@@ -53,6 +53,7 @@ export default function ProductosManager({ productos, empresaId }: Props) {
   const [texto, setTexto] = useState('');
   const [categoria, setCategoria] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   function handleSuccess() {
     setFormOpen(false);
@@ -61,8 +62,13 @@ export default function ProductosManager({ productos, empresaId }: Props) {
   }
 
   async function handleDelete(id: string) {
+    setDeleteError(null);
     const supabase = createClient();
-    await supabase.from('productos').delete().eq('id', id);
+    const { error } = await supabase.from('productos').delete().eq('id', id);
+    if (error) {
+      setDeleteError('No se puede eliminar este producto porque tiene stock, compras u otros registros asociados.');
+      return;
+    }
     router.refresh();
   }
 
@@ -103,6 +109,17 @@ export default function ProductosManager({ productos, empresaId }: Props) {
           </div>
         ))}
       </div>
+
+      {/* Error de borrado */}
+      {deleteError && (
+        <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+          <span className="flex-1">{deleteError}</span>
+          <button onClick={() => setDeleteError(null)} className="text-red-400 hover:text-red-600">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Nuevo producto (colapsable) */}
       <div className={cn(
