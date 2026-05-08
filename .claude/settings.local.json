@@ -7,7 +7,13 @@
       "Bash(xargs grep *)",
       "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
       "PowerShell(cmd /c \"dir /b \"\"C:\\\\PROYECTOS\\\\agrosistema\\\\apps\\\\web\\\\src\\\\app\\\\app\\\\cultivos\\\\[cultivoId]\"\"\")",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(python *)",
+      "Bash(Out-File -FilePath C:\\\\PROYECTOS\\\\agrosistema\\\\scripts\\\\productos_data.txt -Encoding utf8)",
+      "Bash(Get-Content \"C:\\\\PROYECTOS\\\\agrosistema\\\\scripts\\\\seed-plantillas.sql\")",
+      "Bash(Measure-Object -Line)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Get-ChildItem \"C:\\\\PROYECTOS\\\\agrosistema\\\\apps\\\\web\\\\src\\\\app\\\\app\" -Recurse -Name | Where-Object { $_ -match 'labor|producto' })"
     ]
   }
 }
