@@ -8,7 +8,7 @@ import {
   LayoutDashboard, MapPin, Package, Archive, Warehouse,
   ShoppingCart, Truck, Sprout, Briefcase, Building2,
   Users, Calendar, ChevronRight, Menu, Wheat,
-  Tractor, Wrench, Settings,
+  Tractor, Wrench, Settings, Building, Landmark, BarChart3,
 } from 'lucide-react';
 
 const navItems = [
@@ -25,7 +25,10 @@ const navItems = [
   { href: '/app/compras',          label: 'Compras',             icon: ShoppingCart },
   { href: '/app/proveedores',      label: 'Proveedores',         icon: Truck },
   { href: '/app/unidades-negocio', label: 'Unidades de negocio', icon: Briefcase },
-  { href: '/app/configuracion',    label: 'Configuración',       icon: Settings },
+  { href: '/app/costos-campo',      label: 'Costos de campo',     icon: Building },
+  { href: '/app/costos-empresa',    label: 'Costos de empresa',   icon: Landmark },
+  { href: '/app/reportes/margenes', label: 'Reporte márgenes',    icon: BarChart3 },
+  { href: '/app/configuracion',     label: 'Configuración',       icon: Settings },
 ];
 
 const adminItems = [

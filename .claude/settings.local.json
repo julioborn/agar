@@ -13,7 +13,11 @@
       "Bash(Get-Content \"C:\\\\PROYECTOS\\\\agrosistema\\\\scripts\\\\seed-plantillas.sql\")",
       "Bash(Measure-Object -Line)",
       "PowerShell(Get-Content *)",
-      "PowerShell(Get-ChildItem \"C:\\\\PROYECTOS\\\\agrosistema\\\\apps\\\\web\\\\src\\\\app\\\\app\" -Recurse -Name | Where-Object { $_ -match 'labor|producto' })"
+      "PowerShell(Get-ChildItem \"C:\\\\PROYECTOS\\\\agrosistema\\\\apps\\\\web\\\\src\\\\app\\\\app\" -Recurse -Name | Where-Object { $_ -match 'labor|producto' })",
+      "Bash(Get-ChildItem -Path \"C:\\\\PROYECTOS\\\\agrosistema\" -Force)",
+      "Bash(Select-Object -Property Name, PSIsContainer)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(Get-Content *)"
     ]
   }
 }
