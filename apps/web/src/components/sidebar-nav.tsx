@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, MapPin, Package, Archive, Warehouse,
   ShoppingCart, Truck, Sprout, Briefcase, Building2,
-  Users, Calendar, Menu, Wheat,
+  Users, Menu, Wheat,
   Tractor, Wrench, Settings, Building, Landmark, BarChart3,
 } from 'lucide-react';
 
@@ -28,44 +28,53 @@ interface NavSection {
 
 const navSections: NavSection[] = [
   {
-    label: 'Producción',
+    label: 'Estructura',
     items: [
-      { href: '/app/campos',     label: 'Campos y Lotes', icon: MapPin },
-      { href: '/app/cultivos',   label: 'Cultivos',       icon: Sprout },
-      { href: '/app/produccion', label: 'Producción',     icon: Wheat },
-      { href: '/app/campanias',  label: 'Campañas',       icon: Calendar },
-    ],
-  },
-  {
-    label: 'Equipamiento',
-    items: [
-      { href: '/app/maquinarias',  label: 'Maquinarias',    icon: Tractor },
-      { href: '/app/tipos-labor',  label: 'Tipos de Labor', icon: Wrench },
+      { href: '/app/campos',      label: 'Campos y Lotes', icon: MapPin },
+      { href: '/app/maquinarias', label: 'Maquinaria',     icon: Tractor },
     ],
   },
   {
     label: 'Insumos',
     items: [
-      { href: '/app/productos',   label: 'Productos',   icon: Package },
       { href: '/app/depositos',   label: 'Depósitos',   icon: Archive },
-      { href: '/app/stock',       label: 'Stock',       icon: Warehouse },
-      { href: '/app/compras',     label: 'Compras',     icon: ShoppingCart },
       { href: '/app/proveedores', label: 'Proveedores', icon: Truck },
+      { href: '/app/productos',   label: 'Productos',   icon: Package },
+      { href: '/app/compras',     label: 'Compras',     icon: ShoppingCart },
+      { href: '/app/stock',       label: 'Stock',       icon: Warehouse },
     ],
   },
   {
-    label: 'Costos y Resultados',
+    label: 'Costos directos',
     items: [
-      { href: '/app/costos-campo',      label: 'Costos de campo',    icon: Building },
-      { href: '/app/costos-empresa',    label: 'Costos de empresa',  icon: Landmark },
-      { href: '/app/reportes/margenes', label: 'Reporte márgenes',   icon: BarChart3 },
+      { href: '/app/cultivos',    label: 'Cultivos', icon: Sprout },
+      { href: '/app/tipos-labor', label: 'Labores',  icon: Wrench },
+    ],
+  },
+  {
+    label: 'Costos Indirectos',
+    items: [
+      { href: '/app/costos-campo',   label: 'Costos de Campo',   icon: Building },
+      { href: '/app/costos-empresa', label: 'Costos de empresa', icon: Landmark },
+    ],
+  },
+  {
+    label: 'Ingresos',
+    items: [
+      { href: '/app/produccion', label: 'Producción', icon: Wheat },
+    ],
+  },
+  {
+    label: 'Reportes',
+    items: [
+      { href: '/app/reportes/margenes', label: 'Reporte de márgenes', icon: BarChart3 },
     ],
   },
   {
     label: 'Configuración',
     items: [
-      { href: '/app/unidades-negocio', label: 'Unidades de negocio', icon: Briefcase },
-      { href: '/app/configuracion',    label: 'Configuración',       icon: Settings },
+      { href: '/app/unidades-negocio', label: 'Unidades de Negocios',     icon: Briefcase },
+      { href: '/app/configuracion',    label: 'Configuración de precios', icon: Settings },
     ],
   },
 ];
