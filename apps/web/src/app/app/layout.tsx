@@ -34,7 +34,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { empresa, rol, esSuperAdmin, todasLasEmpresas } = empresaData;
 
-  if (rol === 'encargado_campo') redirect('/campo');
+  // Solo redirigir al campo si el usuario NO tiene ningún rol administrativo en ninguna empresa
+  const tieneRolAdmin = todasLasEmpresas.some(
+    (e) => e.rol === 'super_admin' || e.rol === 'admin_empresa' || e.rol === 'contador',
+  );
+  if (rol === 'encargado_campo' && !tieneRolAdmin) redirect('/campo');
 
   const usdRate = await fetchUsdRate(empresa.id);
 
