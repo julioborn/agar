@@ -133,6 +133,7 @@ interface Props {
   empresaNombre: string;
   usuarioId: string;
   riaExistente?: RiaExistente;
+  basePath?: string;
 }
 
 // ── Constantes ─────────────────────────────────────────────────────────────────
@@ -158,6 +159,7 @@ const calc = (cant: string, costo: string) =>
 export default function RiaForm({
   mode, lotes, depositos, productos, campanias, proveedores,
   tiposLabor, empresaId, empresaNombre, usuarioId, riaExistente,
+  basePath = '/app/ria',
 }: Props) {
   const router = useRouter();
   const esReadOnly = mode === 'ver';
@@ -483,7 +485,7 @@ export default function RiaForm({
     setSaving(false);
     if (result.error) { setErrorMsg(result.error); return; }
     if (result.riaId && !riaExistente) {
-      router.push(`/app/ria/${result.riaId}`);
+      router.push(`${basePath}/${result.riaId}`);
     } else {
       router.refresh();
     }
@@ -512,7 +514,7 @@ export default function RiaForm({
     const confirmResult = await confirmarRia(riaId!);
     setConfirming(false);
     if (confirmResult.error) { setErrorMsg(confirmResult.error); return; }
-    router.push(`/app/ria/${riaId}`);
+    router.push(`${basePath}/${riaId}`);
     router.refresh();
   }
 
@@ -583,7 +585,7 @@ export default function RiaForm({
       {/* Encabezado */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Link href="/app/ria" className="p-2 rounded-xl hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 transition-colors">
+          <Link href={basePath} className="p-2 rounded-xl hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 transition-colors">
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>

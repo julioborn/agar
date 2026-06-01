@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, FlaskConical, ClipboardList } from 'lucide-react';
+import { Home, FlaskConical, ClipboardList, FileText } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { href: '/campo',          label: 'Inicio',   Icon: Home },
-  { href: '/campo/aplicar',  label: 'Aplicar',  Icon: FlaskConical },
+  { href: '/campo',           label: 'Inicio',   Icon: Home },
+  { href: '/campo/aplicar',   label: 'Aplicar',  Icon: FlaskConical },
+  { href: '/campo/ria',       label: 'Remitos',  Icon: FileText },
   { href: '/campo/historial', label: 'Historial', Icon: ClipboardList },
 ];
 

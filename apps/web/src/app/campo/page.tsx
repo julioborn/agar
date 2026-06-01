@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
-import { Sprout, ChevronRight, FlaskConical } from 'lucide-react';
+import { Sprout, ChevronRight, FlaskConical, FileText } from 'lucide-react';
 
 export default async function CampoHome() {
   const supabase = await createClient();
@@ -30,15 +30,25 @@ export default async function CampoHome() {
         <p className="text-zinc-500 text-sm capitalize">{hoy}</p>
       </div>
 
-      {/* Botón principal */}
-      <Link
-        href="/campo/aplicar"
-        className="block w-full bg-[#006836] hover:bg-[#005228] active:bg-[#004020] text-white rounded-2xl p-5 text-center transition-colors shadow-sm"
-      >
-        <FlaskConical className="w-8 h-8 mx-auto mb-2" strokeWidth={1.8} />
-        <span className="text-lg font-semibold">Registrar aplicación</span>
-        <p className="text-white/70 text-sm mt-1">Fitosanitaria, fertilización, siembra…</p>
-      </Link>
+      {/* Acciones rápidas */}
+      <div className="grid grid-cols-2 gap-3">
+        <Link
+          href="/campo/aplicar"
+          className="block bg-[#006836] hover:bg-[#005228] active:bg-[#004020] text-white rounded-2xl p-4 text-center transition-colors shadow-sm"
+        >
+          <FlaskConical className="w-7 h-7 mx-auto mb-2" strokeWidth={1.8} />
+          <span className="text-sm font-semibold">Registrar aplicación</span>
+          <p className="text-white/70 text-xs mt-0.5">Fitosanitaria, fert., siembra…</p>
+        </Link>
+        <Link
+          href="/campo/ria/nuevo"
+          className="block bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-900 text-white rounded-2xl p-4 text-center transition-colors shadow-sm"
+        >
+          <FileText className="w-7 h-7 mx-auto mb-2" strokeWidth={1.8} />
+          <span className="text-sm font-semibold">Nuevo remito</span>
+          <p className="text-white/70 text-xs mt-0.5">Insumos, labores, cosecha…</p>
+        </Link>
+      </div>
 
       {/* Cultivos activos */}
       <div>
