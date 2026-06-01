@@ -8,6 +8,7 @@ import {
   ShoppingCart, Truck, Sprout, Briefcase, Building2,
   Users, Menu, Wheat,
   Tractor, Wrench, Settings, Building, Landmark, BarChart3,
+  FileText,
 } from 'lucide-react';
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -42,6 +43,12 @@ const navSections: NavSection[] = [
       { href: '/app/productos',   label: 'Productos',   icon: Package },
       { href: '/app/compras',     label: 'Compras',     icon: ShoppingCart },
       { href: '/app/stock',       label: 'Stock',       icon: Warehouse },
+    ],
+  },
+  {
+    label: 'Operaciones',
+    items: [
+      { href: '/app/ria', label: 'Remitos Internos', icon: FileText },
     ],
   },
   {

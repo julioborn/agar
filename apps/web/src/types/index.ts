@@ -78,3 +78,78 @@ export interface MovimientoStock {
   referencia_id?: string;
   observaciones?: string;
 }
+
+// ── RIA (Remito Interno Agrícola) ──────────────────────────────────────────────
+
+export type EstadoRia = 'borrador' | 'confirmado' | 'anulado';
+export type UnidadLaborRia = 'has' | 'hs' | 'tn' | 'viaje' | 'global' | 'km';
+
+export interface RemitoInterno {
+  id: string;
+  empresa_id: string;
+  numero_ria: string;
+  numero_anio: number;
+  numero_correlativo: number;
+  fecha: string;
+  operador_id?: string;
+  lote_id: string;
+  campania_id?: string;
+  cultivo_id?: string;
+  superficie_afectada?: number;
+  cultivo_descripcion?: string;
+  estado: EstadoRia;
+  total_insumos: number;
+  total_labores: number;
+  total_ria: number;
+  costo_por_ha?: number;
+  motivo_anulacion?: string;
+  anulado_por?: string;
+  fecha_anulacion?: string;
+  observaciones?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RemitoInsumo {
+  id: string;
+  remito_id: string;
+  deposito_id: string;
+  producto_id: string;
+  cantidad: number;
+  dosis_por_ha?: number;
+  costo_unitario: number;
+  costo_unitario_manual: boolean;
+  subtotal: number;
+  observaciones?: string;
+}
+
+export interface RemitoLabor {
+  id: string;
+  remito_id: string;
+  tipo_labor_id?: string;
+  tipo_labor_nombre?: string;
+  descripcion: string;
+  prestador_id?: string;
+  prestador_nombre?: string;
+  unidad_medida: UnidadLaborRia;
+  cantidad: number;
+  tarifa: number;
+  subtotal: number;
+  fecha_ejecucion?: string;
+  observaciones?: string;
+}
+
+export interface RemitoProduccion {
+  id: string;
+  remito_id: string;
+  producto_id: string;
+  deposito_ingreso_id: string;
+  cantidad: number;
+  rendimiento_por_ha?: number;
+  humedad_porcentaje?: number;
+  calidad_categoria?: string;
+  precio_referencia?: number;
+  subtotal_valor?: number;
+  costo_produccion_unitario?: number;
+  observaciones?: string;
+}
