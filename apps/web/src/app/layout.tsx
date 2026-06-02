@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   description: 'Gestión agropecuaria integral',
   manifest: '/manifest.json',
   icons: {
-    icon: '/favicon.svg',
-    shortcut: '/favicon.svg',
-    apple: '/agaricon.png',
+    icon: '/agar-final.png',
+    shortcut: '/agar-final.png',
+    apple: '/agar-final.png',
   },
 };
 
