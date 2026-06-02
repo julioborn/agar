@@ -1,6 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
+// Tiempo de vida de las cookies de sesión: 1 año.
+// Sin esto, en iOS/Android PWA las cookies se borran al "cerrar" la app
+// porque quedan como session cookies (sin maxAge).
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -13,23 +18,26 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
-          // Primero actualiza las cookies del request (para que el resto del middleware las vea)
           cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
+            request.cookies.set(name, value),
           );
-          // Luego propaga las cookies al response (para que el browser las guarde)
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
+            response.cookies.set(name, value, {
+              ...options,
+              // Forzar maxAge para que persistan en PWA al cerrar/reabrir la app
+              maxAge: options?.maxAge ?? COOKIE_MAX_AGE,
+              sameSite: 'lax',
+              secure: process.env.NODE_ENV === 'production',
+            }),
           );
         },
       },
-    }
+    },
   );
 
-  // Refresca la sesión si el token está por vencer.
-  // getUser() es la llamada correcta según docs de Supabase SSR —
-  // getSession() no valida el JWT contra el servidor.
+  // getUser() valida el JWT y renueva el access token si expiró,
+  // usando el refresh token — escribe los nuevos tokens via setAll().
   await supabase.auth.getUser();
 
   return response;
@@ -37,12 +45,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Aplica el middleware a todas las rutas excepto:
-     * - _next/static  (archivos estáticos)
-     * - _next/image   (optimización de imágenes)
-     * - favicon.ico, imágenes, etc.
-     */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|pdf)$).*)',
   ],
 };
