@@ -89,27 +89,27 @@ export default function AppShell({
         {/* Main column */}
         <div className="flex flex-col flex-1 min-w-0">
 
-          {/* Header */}
-          <header className="h-20 shrink-0 bg-zinc-950 flex items-center px-4 relative">
+          {/* Header — layout 3 columnas para que el logo siempre quede centrado sin solapar */}
+          <header className="h-16 shrink-0 bg-zinc-950 flex items-center px-3 gap-2">
 
-            {/* Izquierda: hamburger mobile */}
-            <div className="flex items-center gap-3 min-w-0">
+            {/* Izquierda: hamburger (solo mobile) */}
+            <div className="w-9 shrink-0">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+                className="lg:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
                 aria-label="Abrir menú"
               >
                 <Menu className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Centro: logo */}
-            <div className="fixed left-1/2 -translate-x-1/2 top-0 h-14 flex items-center gap-2.5 pointer-events-none select-none z-10">
-              <Image src="/agar6.png" alt="agar" width={120} height={120} className="h-22 mt-5 w-auto" />
+            {/* Centro: logo — flex-1 + justify-center garantiza el centrado real */}
+            <div className="flex-1 flex justify-center pointer-events-none select-none">
+              <Image src="/agar-final.png" alt="AGAR" width={110} height={44} className="h-10 w-auto" />
             </div>
 
             {/* Derecha: toggle moneda + logout */}
-            <div className="ml-auto flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               <CurrencyToggle />
               <LogoutButton />
             </div>
