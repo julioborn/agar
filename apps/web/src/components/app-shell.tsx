@@ -92,8 +92,8 @@ export default function AppShell({
           {/* Header — layout 3 columnas para que el logo siempre quede centrado sin solapar */}
           <header className="h-16 shrink-0 bg-zinc-950 flex items-center px-3 gap-2">
 
-            {/* Izquierda: hamburger (solo mobile) */}
-            <div className="w-9 shrink-0">
+            {/* Izquierda: hamburger + logo circular (mobile) */}
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setSidebarOpen(true)}
                 className="lg:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
@@ -101,6 +101,9 @@ export default function AppShell({
               >
                 <Menu className="w-5 h-5" />
               </button>
+              <div className="lg:hidden pointer-events-none select-none">
+                <Image src="/agar-final.png" alt="AGAR" width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
+              </div>
             </div>
 
             {/* Centro: logo — solo visible en desktop (lg+) */}
