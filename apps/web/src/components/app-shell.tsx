@@ -103,10 +103,12 @@ export default function AppShell({
               </button>
             </div>
 
-            {/* Centro: logo — flex-1 + justify-center garantiza el centrado real */}
-            <div className="flex-1 flex justify-center pointer-events-none select-none">
+            {/* Centro: logo — solo visible en desktop (lg+) */}
+            <div className="flex-1 hidden lg:flex justify-center pointer-events-none select-none">
               <Image src="/agar-final.png" alt="AGAR" width={110} height={44} className="h-10 w-auto" />
             </div>
+            {/* Spacer mobile para que los controles queden a la derecha */}
+            <div className="flex-1 lg:hidden" />
 
             {/* Derecha: toggle moneda + logout */}
             <div className="flex items-center gap-2 shrink-0">

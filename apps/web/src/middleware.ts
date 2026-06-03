@@ -28,6 +28,7 @@ export async function middleware(request: NextRequest) {
               // Forzar maxAge para que persistan en PWA al cerrar/reabrir la app
               maxAge: options?.maxAge ?? COOKIE_MAX_AGE,
               sameSite: 'lax',
+              path: '/',
               secure: process.env.NODE_ENV === 'production',
             }),
           );

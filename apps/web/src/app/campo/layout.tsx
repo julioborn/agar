@@ -13,17 +13,13 @@ export default async function CampoLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-zinc-50 flex flex-col">
-      {/* Header fijo — 3 columnas: logo centrado, empresa a la izquierda, espacio a la derecha */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-zinc-950 h-14 flex items-center px-4 gap-3">
-        <span className="text-zinc-500 text-xs truncate max-w-[100px]">{empresaData.empresa.nombre}</span>
-        <div className="flex-1 flex justify-center pointer-events-none select-none">
-          <img src="/agar-final.png" alt="AGAR" className="h-8 w-auto" />
-        </div>
-        <div className="w-[100px]" />
+      {/* Header fijo — nombre de empresa a la izquierda, sin logo */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-zinc-950 h-12 flex items-center px-4">
+        <span className="text-zinc-400 text-sm font-medium truncate">{empresaData.empresa.nombre}</span>
       </header>
 
       {/* Contenido con padding para header y bottom nav */}
-      <main className="flex-1 pt-14 pb-20 overflow-y-auto">
+      <main className="flex-1 pt-12 pb-20 overflow-y-auto">
         {children}
       </main>
 
