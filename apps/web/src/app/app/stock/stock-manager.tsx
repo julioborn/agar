@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Filter, X, BarChart2, Upload } from 'lucide-react';
+import { Filter, X, BarChart2, Upload, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ExportButtons from '@/components/export-buttons';
 import { CATEGORIAS } from '../productos/constants';
@@ -195,8 +195,13 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
                     {filas.map((row) => {
                       const bajo = row.cantidad_actual <= row.producto_stock_minimo && row.producto_stock_minimo > 0;
                       return (
-                        <tr key={row.id} className={cn('transition-colors', bajo ? 'bg-red-50' : 'hover:bg-[#006836]/5')}>
-                          <td className="px-4 py-3 font-medium text-zinc-800">{row.producto_nombre}</td>
+                        <tr key={row.id} className={cn('transition-colors cursor-pointer', bajo ? 'bg-red-50 hover:bg-red-100/60' : 'hover:bg-[#006836]/5')}>
+                          <td className="px-4 py-3">
+                            <Link href={`/app/stock/${row.producto_id}`} className="flex items-center gap-1 font-medium text-zinc-800 hover:text-[#006836] transition-colors">
+                              {row.producto_nombre}
+                              <ChevronRight className="w-3.5 h-3.5 text-zinc-300 shrink-0" />
+                            </Link>
+                          </td>
                           <td className="px-4 py-3">
                             <span className={cn('inline-block px-2 py-0.5 rounded-full text-xs font-medium',
                               CATEGORIA_BADGE[row.producto_categoria] ?? 'bg-zinc-100 text-zinc-500')}>
