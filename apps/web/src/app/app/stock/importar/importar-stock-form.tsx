@@ -142,15 +142,15 @@ export default function ImportarStockForm({ productos, depositos, proveedores }:
       if (extraido.proveedor_nombre) {
         const nombreIA = extraido.proveedor_nombre.trim();
         setProveedorNombreIA(nombreIA);
+
         // 1. Buscar en memoria guardada (localStorage)
         let matchId = '';
         try {
           const mapa: Record<string, string> = JSON.parse(localStorage.getItem('agro_proveedor_map') ?? '{}');
-          const key = normalizar(nombreIA);
-          matchId = mapa[key] ?? '';
+          matchId = mapa[normalizar(nombreIA)] ?? '';
         } catch { /* ignorar */ }
 
-        // 2. Si no hay en memoria, fuzzy match contra lista
+        // 2. Si no hay en memoria, fuzzy match contra lista existente
         if (!matchId) {
           const mejor = proveedores
             .map((p) => ({ id: p.id, score: similaridad(p.nombre, nombreIA) }))
@@ -158,7 +158,14 @@ export default function ImportarStockForm({ productos, depositos, proveedores }:
           if (mejor && mejor.score >= 0.5) matchId = mejor.id;
         }
 
-        if (matchId) setProveedorId(matchId);
+        if (matchId) {
+          // Proveedor existente encontrado → pre-seleccionar
+          setProveedorId(matchId);
+        } else {
+          // No existe → activar modo "crear nuevo" con el nombre detectado
+          setProveedorId('_nuevo_');
+          setNuevoProvNombre(nombreIA);
+        }
       }
 
       // ── Auto-fill N° factura ────────────────────────────────────────────
