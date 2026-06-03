@@ -105,7 +105,7 @@ export default function AppShell({
 
             {/* Centro: logo — solo visible en desktop (lg+) */}
             <div className="flex-1 hidden lg:flex justify-center pointer-events-none select-none">
-              <Image src="/agar-final.png" alt="AGAR" width={110} height={44} className="h-10 w-auto" />
+              <Image src="/agar-final.png" alt="AGAR" width={44} height={44} className="h-10 w-10 rounded-full object-cover" />
             </div>
             {/* Spacer mobile para que los controles queden a la derecha */}
             <div className="flex-1 lg:hidden" />
