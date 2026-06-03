@@ -62,7 +62,9 @@ Reglas adicionales:
 2. Todos los importes deben ser NETOS, sin IVA ni percepciones
 3. Si la factura está en pesos pero indica cotización del dólar, guardá la cotización en "cotizacion_usd"
 4. Si la factura está en USD, "moneda" = "USD" y los importes van en USD
-5. "subtotal_neto" de la cabecera = suma de todos los subtotales netos de los ítems`;
+5. "subtotal_neto" de la cabecera = suma de todos los subtotales netos de los ítems
+6. CRÍTICO — formato de números en JSON: usá SIEMPRE punto como separador decimal y SIN separador de miles.
+   ✓ Correcto: 3425.10   ✗ Incorrecto: 3.425,10 o 3.425.10 o 3425,10`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -155,15 +157,27 @@ async function llamarClaudeConPDF(base64: string): Promise<NextResponse> {
 
 // ── Parser de respuesta ──────────────────────────────────────────────────────
 
+function normalizarNumerosJSON(json: string): string {
+  return json.replace(/(\d{1,3}(?:\.\d{3})+)[,.](\d{1,2})(?=\s*[,\]\}\n])/g, (_, entero, decimal) => {
+    return entero.replace(/\./g, '') + '.' + decimal;
+  });
+}
+
 function interpretarRespuesta(text: string): NextResponse {
   const limpio = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-  try {
-    const factura: FacturaExtraida = JSON.parse(limpio);
-    return NextResponse.json({ factura });
-  } catch {
-    return NextResponse.json(
-      { error: 'No se pudo interpretar la respuesta de la IA. Revisá el archivo.', raw: text },
-      { status: 422 }
-    );
-  }
+
+  const parsear = (raw: string) => {
+    try { return JSON.parse(raw) as FacturaExtraida; } catch { return null; }
+  };
+
+  const factura = parsear(limpio)
+    ?? parsear(normalizarNumerosJSON(limpio))
+    ?? (() => { const m = limpio.match(/\{[\s\S]*\}/); return m ? (parsear(m[0]) ?? parsear(normalizarNumerosJSON(m[0]))) : null; })();
+
+  if (factura) return NextResponse.json({ factura });
+
+  return NextResponse.json(
+    { error: 'No se pudo interpretar la respuesta de la IA. Revisá el archivo.', raw: text.slice(0, 300) },
+    { status: 422 }
+  );
 }

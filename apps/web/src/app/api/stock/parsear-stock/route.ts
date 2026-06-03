@@ -47,7 +47,9 @@ Reglas adicionales:
 1. Solo incluí productos con cantidad mayor a cero
 2. Si el mismo producto aparece en múltiples filas, consolidá sumando cantidades
 3. Unidades: L (litros), kg, tn, unidad, sobre, bolsa — inferir del contexto si no está claro
-4. Precios NETOS sin IVA. Si no hay precios, null en precio_unitario_neto`;
+4. Precios NETOS sin IVA. Si no hay precios, null en precio_unitario_neto
+5. CRÍTICO — formato de números en JSON: usá SIEMPRE punto como separador decimal y SIN separador de miles.
+   ✓ Correcto: 3425.10   ✗ Incorrecto: 3.425,10 o 3.425.10 o 3425,10`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -160,27 +162,37 @@ async function llamarClaudeConPDF(base64: string): Promise<NextResponse> {
   return interpretarRespuesta(text);
 }
 
+// Convierte números con formato argentino a JSON válido
+// 3.425,10 → 3425.10 | 3.425.10 → 3425.10 | 1.234.567,89 → 1234567.89
+function normalizarNumerosJSON(json: string): string {
+  return json.replace(/(\d{1,3}(?:\.\d{3})+)[,.](\d{1,2})(?=\s*[,\]\}\n])/g, (_, entero, decimal) => {
+    return entero.replace(/\./g, '') + '.' + decimal;
+  });
+}
+
 function interpretarRespuesta(text: string): NextResponse {
   const limpio = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
 
+  const normalizar = (parsed: any): StockExtraido | null => {
+    if (!Array.isArray(parsed?.items)) return null;
+    return {
+      proveedor_nombre: parsed.proveedor_nombre ?? null,
+      numero_factura: parsed.numero_factura ?? null,
+      items: parsed.items.map((i: any) => ({
+        descripcion: i.descripcion ?? '',
+        cantidad: Number(i.cantidad) || 0,
+        unidad: i.unidad ?? 'unidad',
+        precio_unitario_neto: i.precio_unitario_neto != null ? Number(i.precio_unitario_neto) || null : null,
+      })),
+    };
+  };
+
   const parsear = (raw: string): StockExtraido | null => {
-    try {
-      const parsed = JSON.parse(raw);
-      // Backward compat: si solo tiene items (formato viejo), wrappear
-      if (Array.isArray(parsed.items)) {
-        return {
-          proveedor_nombre: parsed.proveedor_nombre ?? null,
-          numero_factura: parsed.numero_factura ?? null,
-          items: parsed.items.map((i: any) => ({
-            descripcion: i.descripcion ?? '',
-            cantidad: Number(i.cantidad) || 0,
-            unidad: i.unidad ?? 'unidad',
-            precio_unitario_neto: i.precio_unitario_neto ?? null,
-          })),
-        };
-      }
-      return null;
-    } catch { return null; }
+    // Intento 1: JSON directo
+    try { return normalizar(JSON.parse(raw)); } catch { /* continuar */ }
+    // Intento 2: limpiar números con formato argentino y reintentar
+    try { return normalizar(JSON.parse(normalizarNumerosJSON(raw))); } catch { /* continuar */ }
+    return null;
   };
 
   const stock = parsear(limpio) ?? (() => {
