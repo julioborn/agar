@@ -25,10 +25,11 @@ const TIPO_META: Record<string, {
 };
 
 const nFmt = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 });
+const TZ = 'America/Argentina/Buenos_Aires';
 const fmtFecha = (s: string) =>
-  new Date(s).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  new Date(s).toLocaleDateString('es-AR', { timeZone: TZ, day: '2-digit', month: '2-digit', year: 'numeric' });
 const fmtHora = (s: string) =>
-  new Date(s).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  new Date(s).toLocaleTimeString('es-AR', { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
 
 export default async function StockProductoPage({ params }: Props) {
   const { productoId } = await params;

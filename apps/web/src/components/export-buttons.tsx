@@ -24,10 +24,11 @@ interface Props {
 const GREEN_HEX  = '006836';
 const GREEN_RGB  = [0, 104, 54] as const;
 const LIGHT_HEX  = 'F0F7F3';
+const TZ = 'America/Argentina/Buenos_Aires';
 const DATE_FMT   = (d: Date) =>
-  d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  d.toLocaleDateString('es-AR', { timeZone: TZ, day: '2-digit', month: '2-digit', year: 'numeric' });
 const TIME_FMT   = (d: Date) =>
-  d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  d.toLocaleTimeString('es-AR', { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
 
 async function loadLogoBase64(): Promise<string | null> {
   try {

@@ -21,7 +21,7 @@ export default async function CampoHome() {
     .in('estado', ['planificada', 'en_curso'])
     .order('fecha_siembra', { ascending: false });
 
-  const hoy = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const hoy = new Date().toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', weekday: 'long', day: 'numeric', month: 'long' });
 
   return (
     <div className="px-4 py-6 space-y-6">
