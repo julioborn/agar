@@ -108,7 +108,7 @@ async function parsearExcel(file: File): Promise<NextResponse> {
 async function llamarClaude(contenido: string): Promise<NextResponse> {
   const response = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
+    max_tokens: 4096,
     system: [
       {
         type: 'text',
@@ -127,7 +127,7 @@ async function llamarClaude(contenido: string): Promise<NextResponse> {
 async function llamarClaudeConPDF(base64: string): Promise<NextResponse> {
   const response = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
+    max_tokens: 4096,
     system: [
       {
         type: 'text',

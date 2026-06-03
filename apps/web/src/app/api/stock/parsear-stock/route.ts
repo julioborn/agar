@@ -133,7 +133,7 @@ async function parsearExcel(file: File): Promise<NextResponse> {
 async function llamarClaude(contenido: string): Promise<NextResponse> {
   const response = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
+    max_tokens: 4096,
     system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: contenido }],
   });
@@ -145,7 +145,7 @@ async function llamarClaude(contenido: string): Promise<NextResponse> {
 async function llamarClaudeConPDF(base64: string): Promise<NextResponse> {
   const response = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
+    max_tokens: 4096,
     system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
     messages: [{
       role: 'user',
@@ -190,9 +190,13 @@ function interpretarRespuesta(text: string): NextResponse {
 
   if (stock) return NextResponse.json({ stock });
 
-  console.error('[parsear-stock] Respuesta no parseable:', text);
+  // Detectar si fue corte por límite de tokens
+  const truncado = text.length > 10 && !text.trim().endsWith('}');
+  console.error('[parsear-stock] Respuesta no parseable (truncada:', truncado, '):', text.slice(0, 300));
   return NextResponse.json(
-    { error: 'No se pudo interpretar la respuesta de la IA. Revisá el archivo.' },
+    { error: truncado
+        ? 'La factura tiene demasiados ítems y la respuesta quedó incompleta. Intentá con un archivo más corto o dividido en partes.'
+        : 'No se pudo interpretar la respuesta de la IA. Revisá que el archivo sea una factura o inventario de productos.' },
     { status: 422 }
   );
 }
