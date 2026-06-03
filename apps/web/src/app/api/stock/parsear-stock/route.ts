@@ -190,13 +190,11 @@ function interpretarRespuesta(text: string): NextResponse {
 
   if (stock) return NextResponse.json({ stock });
 
-  // Detectar si fue corte por límite de tokens
-  const truncado = text.length > 10 && !text.trim().endsWith('}');
-  console.error('[parsear-stock] Respuesta no parseable (truncada:', truncado, '):', text.slice(0, 300));
+  console.error('[parsear-stock] Respuesta no parseable:', text.slice(0, 500));
+  // Devolvemos los primeros 300 chars de lo que dijo Claude para diagnosticar
+  const preview = text.slice(0, 300).trim();
   return NextResponse.json(
-    { error: truncado
-        ? 'La factura tiene demasiados ítems y la respuesta quedó incompleta. Intentá con un archivo más corto o dividido en partes.'
-        : 'No se pudo interpretar la respuesta de la IA. Revisá que el archivo sea una factura o inventario de productos.' },
+    { error: `La IA no pudo generar un resultado válido. Respuesta: "${preview}"` },
     { status: 422 }
   );
 }
