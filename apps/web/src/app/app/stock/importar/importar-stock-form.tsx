@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Upload, FileText, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CATEGORIAS, UNIDADES } from '@/app/app/productos/constants';
-import { registrarCargaStock, crearProductoParaStock, registrarCompraDesdeImportacion } from './actions';
+import { registrarCargaStock, crearProductoParaStock, crearProveedorParaStock, registrarCompraDesdeImportacion } from './actions';
 import type { StockExtraido } from '@/app/api/stock/parsear-stock/route';
 
 interface Producto { id: string; nombre: string; categoria: string; unidad_base: string; principio_activo: string | null; }
@@ -102,6 +102,8 @@ export default function ImportarStockForm({ productos, depositos, proveedores }:
   const [proveedorId, setProveedorId] = useState('');
   const [numeroFactura, setNumeroFactura] = useState('');
   const [proveedorNombreIA, setProveedorNombreIA] = useState('');
+  const [nuevoProvNombre, setNuevoProvNombre] = useState('');
+  const [nuevoProvCuit, setNuevoProvCuit] = useState('');
   const [depositoGlobal, setDepositoGlobal] = useState(() => depositos[0]?.id ?? '');
   const [unidadGlobal, setUnidadGlobal] = useState('');
   const [items, setItems] = useState<ItemReview[]>([]);
@@ -224,9 +226,26 @@ export default function ImportarStockForm({ productos, depositos, proveedores }:
       }
     }
 
+    // Validar nuevo proveedor si se seleccionó esa opción
+    if (proveedorId === '_nuevo_' && !nuevoProvNombre.trim()) {
+      setError('Ingresá el nombre del nuevo proveedor.');
+      return;
+    }
+
     setFase('guardando');
 
     try {
+      // Crear proveedor nuevo si corresponde
+      let proveedorIdFinal = proveedorId === '_nuevo_' ? '' : proveedorId;
+      if (proveedorId === '_nuevo_') {
+        const res = await crearProveedorParaStock({
+          nombre: nuevoProvNombre.trim(),
+          cuit: nuevoProvCuit.trim() || undefined,
+        });
+        if (res.error || !res.id) { setError(res.error ?? 'Error al crear proveedor'); setFase('revision'); return; }
+        proveedorIdFinal = res.id;
+      }
+
       const productosCreados: Record<string, string> = {};
       for (const item of items.filter((i) => i.producto_id === '_nuevo_')) {
         const result = await crearProductoParaStock({
@@ -252,9 +271,9 @@ export default function ImportarStockForm({ productos, depositos, proveedores }:
         precio_unitario: parseFloat(item.precio_unitario || '0'),
       }));
 
-      const result = proveedorId || numeroFactura.trim()
+      const result = proveedorIdFinal || numeroFactura.trim()
         ? await registrarCompraDesdeImportacion({
-            proveedor_id: proveedorId || undefined,
+            proveedor_id: proveedorIdFinal || undefined,
             numero_factura: numeroFactura.trim() || undefined,
             fecha,
             observaciones: observaciones.trim() || undefined,
@@ -269,10 +288,10 @@ export default function ImportarStockForm({ productos, depositos, proveedores }:
       if (result.error) { setError(result.error); setFase('revision'); return; }
 
       // Guardar mapeo nombre-IA → proveedor_id para futuros análisis
-      if (proveedorId && proveedorNombreIA) {
+      if (proveedorIdFinal && proveedorNombreIA) {
         try {
           const mapa: Record<string, string> = JSON.parse(localStorage.getItem('agro_proveedor_map') ?? '{}');
-          mapa[normalizar(proveedorNombreIA)] = proveedorId;
+          mapa[normalizar(proveedorNombreIA)] = proveedorIdFinal;
           localStorage.setItem('agro_proveedor_map', JSON.stringify(mapa));
         } catch { /* ignorar */ }
       }
@@ -415,7 +434,40 @@ export default function ImportarStockForm({ productos, depositos, proveedores }:
                 {proveedores.map((p) => (
                   <option key={p.id} value={p.id}>{p.nombre}</option>
                 ))}
+                <option value="_nuevo_">+ Crear nuevo proveedor…</option>
               </select>
+
+              {/* Panel inline para crear nuevo proveedor */}
+              {proveedorId === '_nuevo_' && (
+                <div className="mt-2 bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2">
+                  <p className="text-xs font-semibold text-blue-700">Nuevo proveedor</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs text-zinc-500 mb-1">Nombre *</label>
+                      <input
+                        type="text"
+                        value={nuevoProvNombre}
+                        onChange={(e) => setNuevoProvNombre(e.target.value)}
+                        placeholder="Ej: Agroquímicos Del Sur"
+                        className={field}
+                        disabled={fase === 'guardando'}
+                        autoFocus
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-zinc-500 mb-1">CUIT (opcional)</label>
+                      <input
+                        type="text"
+                        value={nuevoProvCuit}
+                        onChange={(e) => setNuevoProvCuit(e.target.value)}
+                        placeholder="30-12345678-9"
+                        className={field}
+                        disabled={fase === 'guardando'}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-1">
               <label className="block text-xs text-zinc-400">N° de factura</label>
@@ -432,6 +484,9 @@ export default function ImportarStockForm({ productos, depositos, proveedores }:
           {(proveedorId || numeroFactura.trim()) && (
             <p className="text-xs text-[#006836] bg-[#006836]/5 rounded-lg px-3 py-2">
               ✓ Se registrará como <strong>Compra</strong> — el historial de cada producto mostrará el proveedor y la factura.
+              {proveedorId === '_nuevo_' && nuevoProvNombre.trim() && (
+                <span> Se creará el proveedor <strong>"{nuevoProvNombre}"</strong>.</span>
+              )}
             </p>
           )}
         </div>
@@ -599,7 +654,7 @@ export default function ImportarStockForm({ productos, depositos, proveedores }:
               </div>
 
               {/* Precio unitario — solo visible si hay proveedor/factura */}
-              {(proveedorId || numeroFactura.trim()) && (
+              {((proveedorId && proveedorId !== '_nuevo_') || (proveedorId === '_nuevo_' && nuevoProvNombre.trim()) || numeroFactura.trim()) && (
                 <div className="space-y-1">
                   <label className="block text-xs font-medium text-zinc-500">Precio unitario $ <span className="text-zinc-400 font-normal">(opcional)</span></label>
                   <input

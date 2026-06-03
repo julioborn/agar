@@ -117,6 +117,28 @@ export async function registrarCompraDesdeImportacion(data: {
   return {};
 }
 
+export async function crearProveedorParaStock(data: {
+  nombre: string;
+  cuit?: string;
+}): Promise<{ id?: string; error?: string }> {
+  const supabase = await createClient();
+  const empresaData = await getEmpresaActiva();
+  if (!empresaData) return { error: 'Sin empresa activa' };
+
+  const { data: prov, error } = await supabase
+    .from('proveedores')
+    .insert({
+      empresa_id: empresaData.empresa.id,
+      nombre: data.nombre.trim(),
+      cuit: data.cuit?.trim() || null,
+    })
+    .select('id')
+    .single();
+
+  if (error || !prov) return { error: error?.message ?? 'Error al crear el proveedor' };
+  return { id: prov.id };
+}
+
 export async function crearProductoParaStock(data: {
   nombre: string;
   categoria: string;
