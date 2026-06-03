@@ -8,21 +8,27 @@ export interface StockItemExtraido {
   descripcion: string;
   cantidad: number;
   unidad: string;
+  precio_unitario_neto: number | null;
 }
 
 export interface StockExtraido {
+  proveedor_nombre: string | null;
+  numero_factura: string | null;
   items: StockItemExtraido[];
 }
 
-const SYSTEM_PROMPT = `Sos un asistente especializado en análisis de inventarios de insumos agropecuarios argentinos.
-Cuando recibas el contenido de un archivo con productos y cantidades de stock, extraé la información y devolvé ÚNICAMENTE un JSON con esta estructura exacta, sin texto adicional ni markdown:
+const SYSTEM_PROMPT = `Sos un asistente especializado en análisis de facturas e inventarios de insumos agropecuarios argentinos.
+Cuando recibas el contenido de un archivo (factura, remito o inventario), extraé la información y devolvé ÚNICAMENTE un JSON con esta estructura exacta, sin texto adicional ni markdown:
 
 {
+  "proveedor_nombre": "nombre del proveedor/emisor tal como aparece, o null si no se puede determinar",
+  "numero_factura": "número de factura o remito tal como aparece (ej: 0001-00012345), o null si no hay",
   "items": [
     {
       "descripcion": "nombre o descripción del producto tal como aparece en el archivo",
       "cantidad": número (mayor a 0),
-      "unidad": "L" o "kg" o "tn" o "unidad" o "sobre" o "bolsa" u otra unidad de medida
+      "unidad": "L" o "kg" o "tn" o "unidad" o "sobre" o "bolsa" u otra unidad de medida,
+      "precio_unitario_neto": número sin IVA o null si no hay precio
     }
   ]
 }
@@ -32,7 +38,8 @@ Reglas:
 2. Si el mismo producto aparece en múltiples filas, consolidá sumando las cantidades
 3. Unidades más comunes: L (litros), kg (kilogramos), tn (toneladas), unidad, sobre, bolsa
 4. Si la unidad no está clara, inferila del contexto: agroquímicos líquidos → L, sólidos → kg o tn, semillas → kg o bolsa
-5. No incluyas precios ni información económica, solo nombres y cantidades`;
+5. Los precios deben ser NETOS (sin IVA). Si no hay precios, poner null en precio_unitario_neto
+6. proveedor_nombre: buscá el nombre de la empresa/proveedor emisor del documento (encabezado, membrete, razón social)`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -109,12 +116,13 @@ async function parsearExcel(file: File): Promise<NextResponse> {
           descripcion: String(row[prodHeader.original] ?? '').trim(),
           cantidad: parseFloat(String(row[cantHeader.original] ?? '0').replace(',', '.')) || 0,
           unidad,
+          precio_unitario_neto: null,
         };
       })
       .filter((item) => item.descripcion && item.cantidad > 0);
 
     if (items.length > 0) {
-      return NextResponse.json({ stock: { items } });
+      return NextResponse.json({ stock: { proveedor_nombre: null, numero_factura: null, items } });
     }
   }
 
@@ -156,20 +164,32 @@ async function llamarClaudeConPDF(base64: string): Promise<NextResponse> {
 function interpretarRespuesta(text: string): NextResponse {
   const limpio = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
 
-  // Intento 1: parsear directamente
-  try {
-    const stock: StockExtraido = JSON.parse(limpio);
-    return NextResponse.json({ stock });
-  } catch { /* continuar */ }
-
-  // Intento 2: extraer el primer bloque JSON del texto
-  const match = limpio.match(/\{[\s\S]*\}/);
-  if (match) {
+  const parsear = (raw: string): StockExtraido | null => {
     try {
-      const stock: StockExtraido = JSON.parse(match[0]);
-      return NextResponse.json({ stock });
-    } catch { /* continuar */ }
-  }
+      const parsed = JSON.parse(raw);
+      // Backward compat: si solo tiene items (formato viejo), wrappear
+      if (Array.isArray(parsed.items)) {
+        return {
+          proveedor_nombre: parsed.proveedor_nombre ?? null,
+          numero_factura: parsed.numero_factura ?? null,
+          items: parsed.items.map((i: any) => ({
+            descripcion: i.descripcion ?? '',
+            cantidad: Number(i.cantidad) || 0,
+            unidad: i.unidad ?? 'unidad',
+            precio_unitario_neto: i.precio_unitario_neto ?? null,
+          })),
+        };
+      }
+      return null;
+    } catch { return null; }
+  };
+
+  const stock = parsear(limpio) ?? (() => {
+    const match = limpio.match(/\{[\s\S]*\}/);
+    return match ? parsear(match[0]) : null;
+  })();
+
+  if (stock) return NextResponse.json({ stock });
 
   console.error('[parsear-stock] Respuesta no parseable:', text);
   return NextResponse.json(

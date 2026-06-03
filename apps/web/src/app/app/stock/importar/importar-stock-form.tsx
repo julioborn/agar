@@ -101,6 +101,7 @@ export default function ImportarStockForm({ productos, depositos, proveedores }:
   const [observaciones, setObservaciones] = useState('');
   const [proveedorId, setProveedorId] = useState('');
   const [numeroFactura, setNumeroFactura] = useState('');
+  const [proveedorNombreIA, setProveedorNombreIA] = useState('');
   const [depositoGlobal, setDepositoGlobal] = useState(() => depositos[0]?.id ?? '');
   const [unidadGlobal, setUnidadGlobal] = useState('');
   const [items, setItems] = useState<ItemReview[]>([]);
@@ -135,6 +136,32 @@ export default function ImportarStockForm({ productos, depositos, proveedores }:
 
       const extraido: StockExtraido = json.stock;
 
+      // ── Auto-match proveedor ────────────────────────────────────────────
+      if (extraido.proveedor_nombre) {
+        const nombreIA = extraido.proveedor_nombre.trim();
+        setProveedorNombreIA(nombreIA);
+        // 1. Buscar en memoria guardada (localStorage)
+        let matchId = '';
+        try {
+          const mapa: Record<string, string> = JSON.parse(localStorage.getItem('agro_proveedor_map') ?? '{}');
+          const key = normalizar(nombreIA);
+          matchId = mapa[key] ?? '';
+        } catch { /* ignorar */ }
+
+        // 2. Si no hay en memoria, fuzzy match contra lista
+        if (!matchId) {
+          const mejor = proveedores
+            .map((p) => ({ id: p.id, score: similaridad(p.nombre, nombreIA) }))
+            .sort((a, b) => b.score - a.score)[0];
+          if (mejor && mejor.score >= 0.5) matchId = mejor.id;
+        }
+
+        if (matchId) setProveedorId(matchId);
+      }
+
+      // ── Auto-fill N° factura ────────────────────────────────────────────
+      if (extraido.numero_factura) setNumeroFactura(extraido.numero_factura);
+
       const revisados: ItemReview[] = extraido.items.map((item) => {
         const tops = mejoresMatches(item.descripcion, productos, 1);
         const productoId = (tops.length > 0 && similaridad(tops[0].nombre, item.descripcion) >= 0.5)
@@ -153,7 +180,7 @@ export default function ImportarStockForm({ productos, depositos, proveedores }:
             ? (productos.find((p) => p.id === productoId)?.unidad_base ?? inferirUnidadBase(item.unidad))
             : inferirUnidadBase(item.unidad),
           deposito_id: depositos[0]?.id ?? '',
-          precio_unitario: '',
+          precio_unitario: item.precio_unitario_neto != null ? String(item.precio_unitario_neto) : '',
         };
       });
 
@@ -240,6 +267,15 @@ export default function ImportarStockForm({ productos, depositos, proveedores }:
           });
 
       if (result.error) { setError(result.error); setFase('revision'); return; }
+
+      // Guardar mapeo nombre-IA → proveedor_id para futuros análisis
+      if (proveedorId && proveedorNombreIA) {
+        try {
+          const mapa: Record<string, string> = JSON.parse(localStorage.getItem('agro_proveedor_map') ?? '{}');
+          mapa[normalizar(proveedorNombreIA)] = proveedorId;
+          localStorage.setItem('agro_proveedor_map', JSON.stringify(mapa));
+        } catch { /* ignorar */ }
+      }
 
       router.push('/app/stock');
     } catch {
@@ -361,7 +397,14 @@ export default function ImportarStockForm({ productos, depositos, proveedores }:
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="block text-xs text-zinc-400">Proveedor</label>
+              <label className="block text-xs text-zinc-400">
+                Proveedor
+                {proveedorNombreIA && (
+                  <span className="ml-2 text-[#006836] font-medium">
+                    · IA detectó: "{proveedorNombreIA}"
+                  </span>
+                )}
+              </label>
               <select
                 value={proveedorId}
                 onChange={(e) => setProveedorId(e.target.value)}
