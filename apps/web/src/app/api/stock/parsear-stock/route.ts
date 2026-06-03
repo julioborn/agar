@@ -64,18 +64,9 @@ async function parsearPDF(file: File): Promise<NextResponse> {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  let textoExtraido = '';
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParse = require('pdf-parse') as (b: Buffer) => Promise<{ text: string }>;
-    const data = await pdfParse(buffer);
-    textoExtraido = data.text?.trim() ?? '';
-  } catch { /* fallback a visión */ }
-
-  if (textoExtraido.length > 150) {
-    return await llamarClaude(`Inventario (texto extraído del PDF):\n\n${textoExtraido}`);
-  }
-
+  // Siempre enviamos el PDF completo como documento visual.
+  // Así Claude puede leer tanto el texto como logos, membrete o nombres
+  // que aparecen en imágenes dentro de la factura.
   const base64 = buffer.toString('base64');
   return await llamarClaudeConPDF(base64);
 }

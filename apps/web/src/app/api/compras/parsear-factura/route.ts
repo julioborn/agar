@@ -74,31 +74,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ── PDF: extrae texto primero (gratis), solo usa visión si es PDF escaneado ──
+// ── PDF: siempre en modo documento visual ────────────────────────────────────
+// Claude lee texto E imágenes del PDF, captando logos, membretes y nombres
+// que aparecen como imagen en la factura (no solo texto embebido).
 
 async function parsearPDF(file: File): Promise<NextResponse> {
   const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-
-  // Paso 1: extraer texto con pdf-parse (gratis, corre en el servidor)
-  let textoExtraido = '';
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParse = require('pdf-parse') as (b: Buffer) => Promise<{ text: string }>;
-    const data = await pdfParse(buffer);
-    textoExtraido = data.text?.trim() ?? '';
-  } catch {
-    // Si pdf-parse falla (PDF protegido, raro), textoExtraido queda vacío
-  }
-
-  // Paso 2: si hay texto suficiente, mandar solo texto a Claude (70-80% más barato)
-  if (textoExtraido.length > 150) {
-    return await llamarClaude(`Factura (texto extraído del PDF):\n\n${textoExtraido}`);
-  }
-
-  // Paso 3: fallback a visión para PDFs escaneados (imagen, sin texto embebido)
-  console.log('[parsear-factura] PDF sin texto embebido, usando visión');
-  const base64 = buffer.toString('base64');
+  const base64 = Buffer.from(arrayBuffer).toString('base64');
   return await llamarClaudeConPDF(base64);
 }
 
