@@ -17,29 +17,37 @@ export interface StockExtraido {
   items: StockItemExtraido[];
 }
 
-const SYSTEM_PROMPT = `Sos un asistente especializado en análisis de facturas e inventarios de insumos agropecuarios argentinos.
-Cuando recibas el contenido de un archivo (factura, remito o inventario), extraé la información y devolvé ÚNICAMENTE un JSON con esta estructura exacta, sin texto adicional ni markdown:
+const SYSTEM_PROMPT = `Sos un asistente especializado en análisis de facturas, remitos e inventarios de insumos agropecuarios argentinos.
+Cuando recibas un documento, extraé la información y devolvé ÚNICAMENTE un JSON con esta estructura exacta, sin texto adicional ni markdown:
 
 {
-  "proveedor_nombre": "nombre del proveedor/emisor tal como aparece, o null si no se puede determinar",
+  "proveedor_nombre": "nombre del EMISOR/VENDEDOR, o null si no se puede determinar",
   "numero_factura": "número de factura o remito tal como aparece (ej: 0001-00012345), o null si no hay",
   "items": [
     {
-      "descripcion": "nombre o descripción del producto tal como aparece en el archivo",
-      "cantidad": número (mayor a 0),
-      "unidad": "L" o "kg" o "tn" o "unidad" o "sobre" o "bolsa" u otra unidad de medida,
+      "descripcion": "nombre o descripción del producto tal como aparece",
+      "cantidad": número mayor a 0,
+      "unidad": "L" o "kg" o "tn" o "unidad" o "sobre" o "bolsa" u otra,
       "precio_unitario_neto": número sin IVA o null si no hay precio
     }
   ]
 }
 
-Reglas:
+REGLA CRÍTICA — proveedor_nombre:
+El campo "proveedor_nombre" es el nombre de la empresa que EMITIÓ/VENDIÓ (el proveedor, el que cobra).
+NO es la empresa que recibe o compra los productos.
+En una factura argentina:
+- El EMISOR/VENDEDOR aparece en el ENCABEZADO superior: membrete, logo, razón social, CUIT del vendedor.
+  Suele estar en la parte de arriba de la página, a veces como imagen/logo.
+- El RECEPTOR/COMPRADOR aparece más abajo con etiquetas como "Señor:", "Sr./Sra.:", "Cliente:", "A:", "Razón social del comprador:", "CUIT del comprador:".
+Buscá el nombre en el MEMBRETE SUPERIOR (incluso si es una imagen o logo). Si no podés leerlo, devolvé null.
+NUNCA uses el nombre que aparece bajo "Señor:", "Cliente:" o "Comprador:" — ese es el receptor, no el proveedor.
+
+Reglas adicionales:
 1. Solo incluí productos con cantidad mayor a cero
-2. Si el mismo producto aparece en múltiples filas, consolidá sumando las cantidades
-3. Unidades más comunes: L (litros), kg (kilogramos), tn (toneladas), unidad, sobre, bolsa
-4. Si la unidad no está clara, inferila del contexto: agroquímicos líquidos → L, sólidos → kg o tn, semillas → kg o bolsa
-5. Los precios deben ser NETOS (sin IVA). Si no hay precios, poner null en precio_unitario_neto
-6. proveedor_nombre: buscá el nombre de la empresa/proveedor emisor del documento (encabezado, membrete, razón social)`;
+2. Si el mismo producto aparece en múltiples filas, consolidá sumando cantidades
+3. Unidades: L (litros), kg, tn, unidad, sobre, bolsa — inferir del contexto si no está claro
+4. Precios NETOS sin IVA. Si no hay precios, null en precio_unitario_neto`;
 
 export async function POST(req: NextRequest) {
   try {
