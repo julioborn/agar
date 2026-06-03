@@ -96,7 +96,7 @@ export default function ImportarStockForm({ productos, depositos }: Props) {
 
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
   const [observaciones, setObservaciones] = useState('');
-  const [depositoGlobal, setDepositoGlobal] = useState('');
+  const [depositoGlobal, setDepositoGlobal] = useState(() => depositos[0]?.id ?? '');
   const [unidadGlobal, setUnidadGlobal] = useState('');
   const [items, setItems] = useState<ItemReview[]>([]);
 
@@ -147,7 +147,7 @@ export default function ImportarStockForm({ productos, depositos }: Props) {
           nuevo_unidad_base: productoId
             ? (productos.find((p) => p.id === productoId)?.unidad_base ?? inferirUnidadBase(item.unidad))
             : inferirUnidadBase(item.unidad),
-          deposito_id: '',
+          deposito_id: depositos[0]?.id ?? '',
         };
       });
 
