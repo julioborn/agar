@@ -2,7 +2,7 @@
   "name": "AGAR",
   "short_name": "AGAR",
   "description": "Gestión agropecuaria integral",
-  "start_url": "/",
+  "start_url": "/login",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#006836",

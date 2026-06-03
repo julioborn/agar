@@ -1,17 +1,23 @@
-import Link from 'next/link';
-import Image from 'next/image';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import { getEmpresaActiva } from '@/lib/empresa-actual';
 
-export default function Home() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center">
-      <div className="max-w-md text-center">
-        <Image src="/agar6.png" alt="agar" width={220} height={220} className="mx-auto" priority />
-        <div className="flex justify-center">
-          <Link href="/login" className="px-6 py-3 bg-[#006836] text-white rounded-lg font-medium hover:bg-green-700">
-            Ingresar
-          </Link>
-        </div>
-      </div>
-    </main>
+// La raíz siempre redirige: si hay sesión va al app, si no al login.
+// Esto es especialmente importante para la PWA instalada en mobile.
+export default async function RootPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) redirect('/login');
+
+  const empresaData = await getEmpresaActiva();
+  if (!empresaData) redirect('/login');
+
+  const { rol, todasLasEmpresas } = empresaData;
+  const tieneRolAdmin = todasLasEmpresas.some(
+    (e) => e.rol === 'super_admin' || e.rol === 'admin_empresa' || e.rol === 'contador',
   );
+
+  if (rol === 'encargado_campo' && !tieneRolAdmin) redirect('/campo');
+  redirect('/app');
 }
