@@ -5,15 +5,17 @@ import { useRouter } from 'next/navigation';
 import { Upload, FileText, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CATEGORIAS, UNIDADES } from '@/app/app/productos/constants';
-import { registrarCargaStock, crearProductoParaStock } from './actions';
+import { registrarCargaStock, crearProductoParaStock, registrarCompraDesdeImportacion } from './actions';
 import type { StockExtraido } from '@/app/api/stock/parsear-stock/route';
 
 interface Producto { id: string; nombre: string; categoria: string; unidad_base: string; principio_activo: string | null; }
 interface Deposito { id: string; nombre: string; }
+interface Proveedor { id: string; nombre: string; }
 
 interface Props {
   productos: Producto[];
   depositos: Deposito[];
+  proveedores: Proveedor[];
 }
 
 type Fase = 'upload' | 'analizando' | 'revision' | 'guardando';
@@ -28,6 +30,7 @@ interface ItemReview {
   nuevo_categoria: string;
   nuevo_unidad_base: string;
   deposito_id: string;
+  precio_unitario: string;
 }
 
 function uid() { return Math.random().toString(36).slice(2, 10); }
@@ -86,7 +89,7 @@ function inferirUnidadBase(unidad: string): string {
   return 'unidad';
 }
 
-export default function ImportarStockForm({ productos, depositos }: Props) {
+export default function ImportarStockForm({ productos, depositos, proveedores }: Props) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -96,6 +99,8 @@ export default function ImportarStockForm({ productos, depositos }: Props) {
 
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
   const [observaciones, setObservaciones] = useState('');
+  const [proveedorId, setProveedorId] = useState('');
+  const [numeroFactura, setNumeroFactura] = useState('');
   const [depositoGlobal, setDepositoGlobal] = useState(() => depositos[0]?.id ?? '');
   const [unidadGlobal, setUnidadGlobal] = useState('');
   const [items, setItems] = useState<ItemReview[]>([]);
@@ -148,6 +153,7 @@ export default function ImportarStockForm({ productos, depositos }: Props) {
             ? (productos.find((p) => p.id === productoId)?.unidad_base ?? inferirUnidadBase(item.unidad))
             : inferirUnidadBase(item.unidad),
           deposito_id: depositos[0]?.id ?? '',
+          precio_unitario: '',
         };
       });
 
@@ -212,15 +218,26 @@ export default function ImportarStockForm({ productos, depositos }: Props) {
       const resolverProductoId = (item: ItemReview) =>
         item.producto_id === '_nuevo_' ? productosCreados[item._id] : item.producto_id;
 
-      const result = await registrarCargaStock({
-        fecha,
-        observaciones: observaciones.trim() || undefined,
-        items: items.map((item) => ({
-          producto_id: resolverProductoId(item),
-          cantidad: parseFloat(item.cantidad),
-          deposito_id: item.deposito_id,
-        })),
-      });
+      const resolvedItems = items.map((item) => ({
+        producto_id: resolverProductoId(item),
+        cantidad: parseFloat(item.cantidad),
+        deposito_id: item.deposito_id,
+        precio_unitario: parseFloat(item.precio_unitario || '0'),
+      }));
+
+      const result = proveedorId || numeroFactura.trim()
+        ? await registrarCompraDesdeImportacion({
+            proveedor_id: proveedorId || undefined,
+            numero_factura: numeroFactura.trim() || undefined,
+            fecha,
+            observaciones: observaciones.trim() || undefined,
+            items: resolvedItems,
+          })
+        : await registrarCargaStock({
+            fecha,
+            observaciones: observaciones.trim() || undefined,
+            items: resolvedItems,
+          });
 
       if (result.error) { setError(result.error); setFase('revision'); return; }
 
@@ -335,6 +352,45 @@ export default function ImportarStockForm({ productos, depositos }: Props) {
               disabled={fase === 'guardando'}
             />
           </div>
+        </div>
+
+        {/* Proveedor y factura — si se completan, el movimiento queda como Compra con trazabilidad */}
+        <div className="border-t border-zinc-100 pt-4 space-y-3">
+          <p className="text-xs font-medium text-zinc-500">
+            Proveedor / factura <span className="text-zinc-400 font-normal">(opcional — si lo completás, el historial muestra el proveedor)</span>
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="block text-xs text-zinc-400">Proveedor</label>
+              <select
+                value={proveedorId}
+                onChange={(e) => setProveedorId(e.target.value)}
+                className={field}
+                disabled={fase === 'guardando'}
+              >
+                <option value="">Sin proveedor</option>
+                {proveedores.map((p) => (
+                  <option key={p.id} value={p.id}>{p.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-zinc-400">N° de factura</label>
+              <input
+                type="text"
+                value={numeroFactura}
+                onChange={(e) => setNumeroFactura(e.target.value)}
+                placeholder="Ej: 0001-00012345"
+                className={field}
+                disabled={fase === 'guardando'}
+              />
+            </div>
+          </div>
+          {(proveedorId || numeroFactura.trim()) && (
+            <p className="text-xs text-[#006836] bg-[#006836]/5 rounded-lg px-3 py-2">
+              ✓ Se registrará como <strong>Compra</strong> — el historial de cada producto mostrará el proveedor y la factura.
+            </p>
+          )}
         </div>
       </div>
 
@@ -457,7 +513,7 @@ export default function ImportarStockForm({ productos, depositos }: Props) {
                 )}
               </div>
 
-              {/* Cantidad + unidad | Depósito */}
+              {/* Cantidad + unidad | Depósito | Precio */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="block text-xs font-medium text-zinc-500">Cantidad</label>
@@ -498,6 +554,23 @@ export default function ImportarStockForm({ productos, depositos }: Props) {
                   </select>
                 </div>
               </div>
+
+              {/* Precio unitario — solo visible si hay proveedor/factura */}
+              {(proveedorId || numeroFactura.trim()) && (
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-zinc-500">Precio unitario $ <span className="text-zinc-400 font-normal">(opcional)</span></label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={item.precio_unitario}
+                    onChange={(e) => updateItem(item._id, { precio_unitario: e.target.value })}
+                    placeholder="0.00"
+                    className={field}
+                    disabled={fase === 'guardando'}
+                  />
+                </div>
+              )}
 
               {/* Nuevo producto */}
               {esNuevo && (

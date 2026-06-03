@@ -12,9 +12,10 @@ export default async function ImportarStockPage() {
   const empresaData = await getEmpresaActiva();
   if (!empresaData) redirect('/login');
 
-  const [prodRes, depRes] = await Promise.all([
+  const [prodRes, depRes, provRes] = await Promise.all([
     supabase.from('productos').select('id, nombre, categoria, unidad_base, principio_activo').order('nombre'),
     supabase.from('depositos').select('id, nombre').order('nombre'),
+    supabase.from('proveedores').select('id, nombre').eq('empresa_id', empresaData.empresa.id).order('nombre'),
   ]);
 
   return (
@@ -34,6 +35,7 @@ export default async function ImportarStockPage() {
       <ImportarStockForm
         productos={prodRes.data ?? []}
         depositos={depRes.data ?? []}
+        proveedores={provRes.data ?? []}
       />
     </div>
   );
