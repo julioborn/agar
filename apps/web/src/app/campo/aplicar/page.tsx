@@ -21,8 +21,8 @@ export default async function AplicarPage({ searchParams }: Props) {
   const { data: cultivos } = await supabase
     .from('cultivos')
     .select(`
-      id, cultivo,
-      lote:lotes!inner(nombre, campo:campos!inner(nombre))
+      id, cultivo, lote_id,
+      lote:lotes!inner(id, nombre, campo:campos!inner(nombre))
     `)
     .in('estado', ['planificada', 'en_curso'])
     .order('cultivo');
@@ -66,6 +66,10 @@ export default async function AplicarPage({ searchParams }: Props) {
       <AplicarForm
         cultivos={(cultivos ?? []).map((c: any) => ({
           id: c.id,
+          lote_id: c.lote_id ?? c.lote?.id ?? '',
+          lote_nombre: c.lote?.nombre ?? '',
+          campo_nombre: c.lote?.campo?.nombre ?? '',
+          cultivo_nombre: c.cultivo,
           label: `${c.cultivo} — ${c.lote?.nombre} (${c.lote?.campo?.nombre})`,
         }))}
         depositos={depositos ?? []}

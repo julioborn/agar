@@ -5,7 +5,14 @@ import { useRouter } from 'next/navigation';
 import { Plus, Trash2, CheckCircle } from 'lucide-react';
 import { crearAplicacion } from './actions';
 
-interface Cultivo  { id: string; label: string; }
+interface Cultivo {
+  id: string;
+  lote_id: string;
+  lote_nombre: string;
+  campo_nombre: string;
+  cultivo_nombre: string;
+  label: string;
+}
 interface Deposito { id: string; nombre: string; }
 interface Producto { id: string; nombre: string; unidad_base: string; stock_actual: number; }
 
@@ -48,6 +55,17 @@ export default function AplicarForm({ cultivos, depositos, productos, cultivoPre
   const [done,    setDone]    = useState(false);
   const [error,   setError]   = useState('');
 
+  // Derivar lotes únicos de los cultivos disponibles
+  const lotes = Array.from(
+    new Map(cultivos.map((c) => [c.lote_id, { id: c.lote_id, nombre: c.lote_nombre, campo: c.campo_nombre }])).values()
+  );
+
+  const [loteId,        setLoteId]        = useState(() => {
+    if (cultivoPreseleccionado) {
+      return cultivos.find((c) => c.id === cultivoPreseleccionado)?.lote_id ?? '';
+    }
+    return lotes.length === 1 ? lotes[0].id : '';
+  });
   const [cultivoId,     setCultivoId]     = useState(cultivoPreseleccionado ?? '');
   const [fecha,         setFecha]         = useState(todayISO());
   const [tipo,          setTipo]          = useState<'fitosanitaria' | 'fertilizacion' | 'siembra' | 'otro'>('fitosanitaria');
@@ -56,6 +74,18 @@ export default function AplicarForm({ cultivos, depositos, productos, cultivoPre
   const [items, setItems] = useState<ItemForm[]>([
     { key: keyCounter++, producto_id: '', deposito_id: depositos[0]?.id ?? '', cantidad_retirada: '', cantidad_aplicada: '', cantidad_devuelta: '0', causa_perdida: '' },
   ]);
+
+  const cultivosFiltrados = loteId ? cultivos.filter((c) => c.lote_id === loteId) : cultivos;
+
+  function handleLoteChange(nuevoLoteId: string) {
+    setLoteId(nuevoLoteId);
+    // Limpiar cultivo si no pertenece al nuevo lote
+    const sigue = cultivos.find((c) => c.id === cultivoId && c.lote_id === nuevoLoteId);
+    if (!sigue) {
+      const primero = cultivos.find((c) => c.lote_id === nuevoLoteId);
+      setCultivoId(primero?.id ?? '');
+    }
+  }
 
   const productoMap = Object.fromEntries(productos.map((p) => [p.id, p]));
 
@@ -150,14 +180,34 @@ export default function AplicarForm({ cultivos, depositos, productos, cultivoPre
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Cultivo */}
+      {/* Lote + Cultivo */}
       <div className="bg-white rounded-2xl border border-zinc-200 p-4 space-y-4">
+
+        {/* Selector de lote */}
+        <div>
+          <label className="block text-sm font-semibold text-zinc-700 mb-1.5">Lote *</label>
+          <select value={loteId} onChange={(e) => handleLoteChange(e.target.value)} className={select}>
+            <option value="">Seleccioná un lote…</option>
+            {lotes.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.campo ? `${l.campo} › ` : ''}{l.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Selector de cultivo — filtrado por lote */}
         <div>
           <label className="block text-sm font-semibold text-zinc-700 mb-1.5">Cultivo *</label>
-          <select value={cultivoId} onChange={(e) => setCultivoId(e.target.value)} className={select}>
-            <option value="">Seleccioná un cultivo…</option>
-            {cultivos.map((c) => (
-              <option key={c.id} value={c.id}>{c.label}</option>
+          <select
+            value={cultivoId}
+            onChange={(e) => setCultivoId(e.target.value)}
+            className={select}
+            disabled={!loteId}
+          >
+            <option value="">{loteId ? 'Seleccioná un cultivo…' : 'Primero seleccioná un lote'}</option>
+            {cultivosFiltrados.map((c) => (
+              <option key={c.id} value={c.id}>{c.cultivo_nombre}</option>
             ))}
           </select>
         </div>
