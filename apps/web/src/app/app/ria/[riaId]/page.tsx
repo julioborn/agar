@@ -38,6 +38,7 @@ export default async function RiaDetailPage({ params }: Props) {
     { data: campanias },
     { data: proveedores },
     { data: tiposLabor },
+    { data: cultivosActivos },
   ] = await Promise.all([
     supabase
       .from('remitos_insumos')
@@ -90,6 +91,11 @@ export default async function RiaDetailPage({ params }: Props) {
       .select('id, nombre')
       .eq('empresa_id', empresa.id)
       .order('nombre'),
+    supabase
+      .from('cultivos')
+      .select('id, cultivo, lote_id, estado')
+      .in('estado', ['planificada', 'en_curso'])
+      .order('cultivo'),
   ]);
 
   // Construir lotes con cultivo activo
@@ -190,6 +196,7 @@ export default async function RiaDetailPage({ params }: Props) {
         campanias={campanias ?? []}
         proveedores={proveedores ?? []}
         tiposLabor={tiposLabor ?? []}
+        cultivosActivos={cultivosActivos ?? []}
         empresaId={empresa.id}
         empresaNombre={empresa.nombre}
         usuarioId={user.id}

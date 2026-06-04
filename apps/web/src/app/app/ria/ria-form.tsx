@@ -43,6 +43,12 @@ export interface TipoLaborOpcion {
   id: string;
   nombre: string;
 }
+export interface CultivoOpcion {
+  id: string;
+  cultivo: string;
+  lote_id: string;
+  estado: string;
+}
 
 interface InsumoLine {
   _id: string;
@@ -134,6 +140,7 @@ interface Props {
   usuarioId: string;
   riaExistente?: RiaExistente;
   basePath?: string;
+  cultivosActivos?: CultivoOpcion[];
 }
 
 // ── Constantes ─────────────────────────────────────────────────────────────────
@@ -159,7 +166,7 @@ const calc = (cant: string, costo: string) =>
 export default function RiaForm({
   mode, lotes, depositos, productos, campanias, proveedores,
   tiposLabor, empresaId, empresaNombre, usuarioId, riaExistente,
-  basePath = '/app/ria',
+  basePath = '/app/ria', cultivosActivos = [],
 }: Props) {
   const router = useRouter();
   const esReadOnly = mode === 'ver';
@@ -171,6 +178,7 @@ export default function RiaForm({
   const [superficieAfectada, setSuperficieAfectada] = useState(
     riaExistente?.superficie_afectada?.toString() ?? '',
   );
+  const [cultivoId, setCultivoIdState] = useState(riaExistente?.cultivo_id ?? '');
   const [cultivoDesc, setCultivoDesc] = useState(riaExistente?.cultivo_descripcion ?? '');
   const [observaciones, setObservaciones] = useState(riaExistente?.observaciones ?? '');
 
@@ -237,12 +245,20 @@ export default function RiaForm({
   const costoPerHa = sup > 0 ? totalRia / sup : null;
 
   // ── Auto-fill lote ────────────────────────────────────────────────────────────
+  // Cultivos filtrados por lote seleccionado
+  const cultivosDelLote = cultivosActivos.filter((c) => c.lote_id === loteId);
+
   useEffect(() => {
     if (!loteId) return;
     const lote = lotes.find((l) => l.id === loteId);
     if (!lote) return;
     if (!superficieAfectada) setSuperficieAfectada(lote.hectareas?.toString() ?? '');
-    if (!cultivoDesc && lote.cultivo_activo) setCultivoDesc(lote.cultivo_activo);
+    // Auto-seleccionar el cultivo si hay uno solo activo en el lote
+    const cultivosLote = cultivosActivos.filter((c) => c.lote_id === loteId);
+    if (cultivosLote.length === 1 && !cultivoId) {
+      setCultivoIdState(cultivosLote[0].id);
+      setCultivoDesc(cultivosLote[0].cultivo);
+    }
   }, [loteId]);
 
   // ── Stock lookup ──────────────────────────────────────────────────────────────
@@ -436,6 +452,7 @@ export default function RiaForm({
       fecha,
       loteId,
       campaniaId: campaniaId || undefined,
+      cultivoId: cultivoId || undefined,
       superficieAfectada: sup > 0 ? sup : undefined,
       cultivoDescripcion: cultivoDesc.trim() || undefined,
       observaciones: observaciones.trim() || undefined,
@@ -666,14 +683,32 @@ export default function RiaForm({
           </div>
           <div>
             <label className="block text-xs font-medium text-zinc-600 mb-1">Cultivo / Actividad</label>
-            <input
-              type="text"
-              value={cultivoDesc}
-              onChange={(e) => setCultivoDesc(e.target.value)}
-              disabled={esReadOnly}
-              placeholder="Ej: Soja 1ra, Maíz tardío…"
-              className={inputCls()}
-            />
+            {cultivosDelLote.length > 0 ? (
+              <select
+                value={cultivoId}
+                onChange={(e) => {
+                  const sel = cultivosDelLote.find((c) => c.id === e.target.value);
+                  setCultivoIdState(e.target.value);
+                  setCultivoDesc(sel?.cultivo ?? '');
+                }}
+                disabled={esReadOnly}
+                className={inputCls()}
+              >
+                <option value="">Seleccioná un cultivo…</option>
+                {cultivosDelLote.map((c) => (
+                  <option key={c.id} value={c.id}>{c.cultivo}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={cultivoDesc}
+                onChange={(e) => setCultivoDesc(e.target.value)}
+                disabled={esReadOnly}
+                placeholder={loteId ? 'Sin cultivos activos — escribí la actividad' : 'Seleccioná un lote primero'}
+                className={inputCls()}
+              />
+            )}
           </div>
         </div>
 
