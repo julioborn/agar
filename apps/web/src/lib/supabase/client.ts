@@ -15,7 +15,12 @@ function parseCookies(): Record<string, string> {
 }
 
 function writeCookie(name: string, value: string, options: Record<string, any> = {}) {
-  const maxAge = options.maxAge ?? options['max-age'] ?? ONE_YEAR_S;
+  // Siempre usamos ONE_YEAR_S — ignoramos options.maxAge porque Supabase
+  // lo setea con la expiración del JWT (~3600s) y eso hace que la cookie
+  // expire en 1 hora, perdiendo la sesión al cerrar la PWA.
+  // El middleware refresca el token en cada request; la cookie solo
+  // necesita vivir lo suficiente para sobrevivir el cierre de la app.
+  const maxAge = ONE_YEAR_S;
   const path   = options.path     ?? '/';
   const same   = options.sameSite ?? 'lax';
   const parts  = [

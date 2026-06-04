@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
             response.cookies.set(name, value, {
               ...options,
               // Forzar maxAge para que persistan en PWA al cerrar/reabrir la app
-              maxAge: options?.maxAge ?? COOKIE_MAX_AGE,
+              maxAge: COOKIE_MAX_AGE, // Siempre 1 año — ignorar el maxAge corto del JWT
               sameSite: 'lax',
               path: '/',
               secure: process.env.NODE_ENV === 'production',
