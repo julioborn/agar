@@ -19,6 +19,7 @@ export default async function CampoRiaNuevoPage() {
     { data: campanias },
     { data: proveedores },
     { data: tiposLabor },
+    { data: cultivosActivos },
   ] = await Promise.all([
     supabase
       .from('lotes')
@@ -30,32 +31,21 @@ export default async function CampoRiaNuevoPage() {
     supabase.from('campanias').select('id, nombre').eq('empresa_id', empresa.id).eq('activa', true).order('nombre'),
     supabase.from('proveedores').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
     supabase.from('tipos_labor').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
+    supabase.from('cultivos').select('id, cultivo, lote_id, estado').in('estado', ['planificada', 'en_curso']).order('cultivo'),
   ]);
 
+  // Enriquecer lotes con cultivo activo para auto-fill
+  const cultivoMap = new Map<string, string>();
+  for (const c of cultivosActivos ?? []) {
+    if (!cultivoMap.has(c.lote_id)) cultivoMap.set(c.lote_id, c.cultivo);
+  }
   const lotes = (lotesRaw ?? []).map((l: any) => ({
     id: l.id,
     nombre: l.nombre,
     hectareas: l.hectareas ?? 0,
     campo: l.campo ?? null,
-    cultivo_activo: undefined as string | undefined,
+    cultivo_activo: cultivoMap.get(l.id),
   }));
-
-  if (lotes.length > 0) {
-    const { data: cultivosActivos } = await supabase
-      .from('cultivos')
-      .select('lote_id, cultivo')
-      .in('lote_id', lotes.map((l) => l.id))
-      .in('estado', ['planificada', 'en_curso'])
-      .order('fecha_siembra', { ascending: false });
-
-    if (cultivosActivos) {
-      const map = new Map<string, string>();
-      for (const c of cultivosActivos) {
-        if (!map.has(c.lote_id)) map.set(c.lote_id, c.cultivo);
-      }
-      for (const l of lotes) l.cultivo_activo = map.get(l.id);
-    }
-  }
 
   return (
     <div className="py-4">
@@ -67,6 +57,7 @@ export default async function CampoRiaNuevoPage() {
         campanias={campanias ?? []}
         proveedores={proveedores ?? []}
         tiposLabor={tiposLabor ?? []}
+        cultivosActivos={cultivosActivos ?? []}
         empresaId={empresa.id}
         empresaNombre={empresa.nombre}
         usuarioId={user.id}

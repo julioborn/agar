@@ -37,6 +37,7 @@ export default async function CampoRiaDetailPage({ params }: Props) {
     { data: campanias },
     { data: proveedores },
     { data: tiposLabor },
+    { data: cultivosActivos },
   ] = await Promise.all([
     supabase
       .from('remitos_insumos')
@@ -57,14 +58,19 @@ export default async function CampoRiaDetailPage({ params }: Props) {
     supabase.from('campanias').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
     supabase.from('proveedores').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
     supabase.from('tipos_labor').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
+    supabase.from('cultivos').select('id, cultivo, lote_id, estado').in('estado', ['planificada', 'en_curso']).order('cultivo'),
   ]);
 
+  const cultivoMap = new Map<string, string>();
+  for (const c of cultivosActivos ?? []) {
+    if (!cultivoMap.has(c.lote_id)) cultivoMap.set(c.lote_id, c.cultivo);
+  }
   const lotes = (lotesRaw ?? []).map((l: any) => ({
     id: l.id,
     nombre: l.nombre,
     hectareas: l.hectareas ?? 0,
     campo: l.campo ?? null,
-    cultivo_activo: undefined as string | undefined,
+    cultivo_activo: cultivoMap.get(l.id),
   }));
 
   const riaExistente = {
@@ -133,6 +139,7 @@ export default async function CampoRiaDetailPage({ params }: Props) {
         campanias={campanias ?? []}
         proveedores={proveedores ?? []}
         tiposLabor={tiposLabor ?? []}
+        cultivosActivos={cultivosActivos ?? []}
         empresaId={empresa.id}
         empresaNombre={empresa.nombre}
         usuarioId={user.id}
