@@ -47,6 +47,33 @@ export interface CampaniaTemporada {
   nombre: string;
 }
 
+// Cultivos más comunes de la región pampeana / Santa Fe
+const CULTIVOS_COMUNES = [
+  // Granos gruesos
+  'Soja 1ra',
+  'Soja 2da',
+  'Maíz',
+  'Maíz tardío',
+  'Girasol',
+  'Sorgo granífero',
+  // Granos finos
+  'Trigo',
+  'Cebada',
+  'Avena',
+  'Centeno',
+  'Colza / Canola',
+  // Forrajes y pasturas
+  'Maíz silaje',
+  'Sorgo silaje',
+  'Alfalfa',
+  'Pasturas consociadas',
+  'Verdeo de invierno',
+  'Verdeo de verano',
+  // Ganadería / Tambo
+  'Pastizal natural',
+  'Verdeo avena-raigrás',
+];
+
 const ESTADOS = [
   { value: 'planificada', label: 'Planificada' },
   { value: 'en_curso',    label: 'En curso' },
@@ -75,6 +102,7 @@ export default function CultivoForm({
   const [unidadNegocioId, setUnidadNegocioId] = useState('');
   const [campaniaId, setCampaniaId] = useState('');
   const [cultivo, setCultivo] = useState('');
+  const [cultivoPersonalizado, setCultivoPersonalizado] = useState(false);
   const [productoFinal, setProductoFinal] = useState('');
   const [unidadProduccion, setUnidadProduccion] = useState('kg');
   const [fechaSiembra, setFechaSiembra] = useState('');
@@ -89,6 +117,7 @@ export default function CultivoForm({
       setUnidadNegocioId(cultivoEditando.unidad_negocio_id);
       setCampaniaId(cultivoEditando.campania_id ?? '');
       setCultivo(cultivoEditando.cultivo);
+      setCultivoPersonalizado(!CULTIVOS_COMUNES.includes(cultivoEditando.cultivo));
       setProductoFinal(cultivoEditando.producto_final ?? '');
       setUnidadProduccion(cultivoEditando.unidad_produccion ?? 'kg');
       setFechaSiembra(cultivoEditando.fecha_siembra);
@@ -101,6 +130,7 @@ export default function CultivoForm({
       setUnidadNegocioId(unidadesNegocio[0]?.id ?? '');
       setCampaniaId(campanias.find(() => true)?.id ?? '');
       setCultivo('');
+      setCultivoPersonalizado(false);
       setProductoFinal('');
       setUnidadProduccion('kg');
       setFechaSiembra('');
@@ -188,8 +218,47 @@ export default function CultivoForm({
         </div>
       )}
 
-      <Input label="Especie / cultivo" value={cultivo} onChange={(e) => setCultivo(e.target.value)}
-        placeholder="Ej: Soja, Maíz, Trigo, Alfalfa…" />
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Especie / cultivo</label>
+        {!cultivoPersonalizado ? (
+          <select
+            value={cultivo}
+            onChange={(e) => {
+              if (e.target.value === '_otro_') {
+                setCultivoPersonalizado(true);
+                setCultivo('');
+              } else {
+                setCultivo(e.target.value);
+              }
+            }}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="">Seleccioná un cultivo…</option>
+            {CULTIVOS_COMUNES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+            <option value="_otro_">+ Escribir otro cultivo…</option>
+          </select>
+        ) : (
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={cultivo}
+              onChange={(e) => setCultivo(e.target.value)}
+              placeholder="Ej: Lino, Garbanzo, Poroto…"
+              autoFocus
+              className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <button
+              type="button"
+              onClick={() => { setCultivoPersonalizado(false); setCultivo(''); }}
+              className="text-xs text-slate-400 hover:text-slate-600 px-2 whitespace-nowrap"
+            >
+              ← Ver lista
+            </button>
+          </div>
+        )}
+      </div>
 
       <Input label="Fecha de siembra" type="date" value={fechaSiembra}
         onChange={(e) => setFechaSiembra(e.target.value)} />
