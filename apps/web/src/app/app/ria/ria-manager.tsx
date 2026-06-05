@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import {
   Plus, Filter, X, ChevronDown, ChevronUp,
   FileText, CheckCircle, AlertCircle, Ban,
-  Package, Wrench, Wheat,
+  Package, Wrench, Wheat, BarChart3,
 } from 'lucide-react';
 import { anularRia } from './actions';
 import { useRouter } from 'next/navigation';
@@ -204,6 +204,13 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
                 <X className="w-3 h-3" /> Limpiar
               </button>
             )}
+            <Link
+              href="/app/ria/reportes"
+              className="inline-flex items-center gap-1.5 px-3 py-2 border border-zinc-200 text-zinc-600 text-xs font-medium rounded-xl hover:bg-zinc-50 transition-colors"
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              Reportes
+            </Link>
             <Link
               href="/app/ria/nuevo"
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#006836] hover:bg-[#005228] text-white text-xs font-semibold rounded-xl transition-colors"

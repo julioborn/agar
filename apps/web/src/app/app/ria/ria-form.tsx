@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { saveRiaBorrador, confirmarRia } from './actions';
+import RiaPdfButton from './ria-pdf-button';
 
 // ── Tipos locales ──────────────────────────────────────────────────────────────
 
@@ -50,7 +51,7 @@ export interface CultivoOpcion {
   estado: string;
 }
 
-interface InsumoLine {
+export interface InsumoLine {
   _id: string;
   depositoId: string;
   productoId: string;
@@ -64,7 +65,7 @@ interface InsumoLine {
   stockDisponible: number | null;
 }
 
-interface LaborLine {
+export interface LaborLine {
   _id: string;
   tipoLaborId: string;
   tipoLaborNombre: string;
@@ -79,7 +80,7 @@ interface LaborLine {
   obs: string;
 }
 
-interface ProduccionLine {
+export interface ProduccionLine {
   _id: string;
   productoId: string;
   productoNombre: string;
@@ -243,6 +244,32 @@ export default function RiaForm({
   const totalRia = totalInsumos + totalLabores;
   const sup = parseFloat(superficieAfectada || '0');
   const costoPerHa = sup > 0 ? totalRia / sup : null;
+
+  // ── Advertencias (warnings no bloqueantes) ───────────────────────────────────
+  const warnings = (() => {
+    const ws: string[] = [];
+    const lote = lotes.find((l) => l.id === loteId);
+    if (lote && sup > 0 && lote.hectareas > 0 && sup > lote.hectareas) {
+      ws.push(`La superficie afectada (${sup} ha) supera la superficie registrada del lote (${lote.hectareas} ha).`);
+    }
+    for (const i of insumos) {
+      if (i.productoNombre && (!i.costoUnitario || parseFloat(i.costoUnitario) === 0)) {
+        ws.push(`El insumo "${i.productoNombre}" tiene costo unitario $0. La línea quedará sin valorizar.`);
+      }
+    }
+    for (const l of labores) {
+      if (l.descripcion && (!l.tarifa || parseFloat(l.tarifa) === 0)) {
+        ws.push(`La labor "${l.descripcion}" tiene tarifa $0. Podrá corregirse posteriormente.`);
+      }
+      if (l.unidadMedida === 'has' && sup > 0) {
+        const cantLab = parseFloat(l.cantidad || '0');
+        if (cantLab > sup * 1.1) {
+          ws.push(`La labor "${l.descripcion || 'sin descripción'}" tiene ${cantLab} ha, que supera en más del 10% la superficie del lote (${sup} ha).`);
+        }
+      }
+    }
+    return ws;
+  })();
 
   // ── Auto-fill lote ────────────────────────────────────────────────────────────
   // Cultivos filtrados por lote seleccionado
@@ -600,13 +627,13 @@ export default function RiaForm({
     <div className="max-w-5xl mx-auto space-y-5">
 
       {/* Encabezado */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <Link href={basePath} className="p-2 rounded-xl hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 transition-colors">
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-bold text-zinc-900">
                 {riaExistente ? riaExistente.numero_ria : 'Nuevo RIA'}
               </h1>
@@ -617,6 +644,29 @@ export default function RiaForm({
             <p className="text-sm text-zinc-500 mt-0.5">{empresaNombre}</p>
           </div>
         </div>
+        {riaExistente && (
+          <RiaPdfButton
+            numeroRia={riaExistente.numero_ria}
+            fecha={fecha}
+            estado={riaExistente.estado}
+            empresaNombre={empresaNombre}
+            lotes={lotes}
+            loteId={loteId}
+            campanias={campanias}
+            campaniaId={campaniaId}
+            depositos={depositos}
+            superficieAfectada={superficieAfectada}
+            cultivoDesc={cultivoDesc}
+            observaciones={observaciones}
+            insumos={insumos}
+            labores={labores}
+            produccion={produccion}
+            totalInsumos={totalInsumos}
+            totalLabores={totalLabores}
+            totalRia={totalRia}
+            costoPerHa={costoPerHa}
+          />
+        )}
       </div>
 
       {/* Cabecera del remito */}
@@ -1198,6 +1248,17 @@ export default function RiaForm({
       {/* ── ACCIONES ──────────────────────────────────────────────────────────── */}
       {!esReadOnly && (
         <div className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
+          {warnings.length > 0 && (
+            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 space-y-1">
+              <p className="text-xs font-semibold text-amber-700 mb-1">Advertencias</p>
+              {warnings.map((w, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs text-amber-700">
+                  <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  <span>{w}</span>
+                </div>
+              ))}
+            </div>
+          )}
           {errorMsg && (
             <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 rounded-xl px-4 py-3 mb-4 border border-red-100">
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
