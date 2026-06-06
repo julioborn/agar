@@ -17,7 +17,16 @@ export default async function MaquinariasPage() {
   const [{ data: maquinarias }, { data: config }] = await Promise.all([
     supabase
       .from('maquinarias')
-      .select('id, nombre, tipo, marca, modelo, anio, hp, consumo_combustible_hora, costo_mantenimiento_hora, valor_adquisicion, vida_util_horas, activa')
+      .select(`
+        id, nombre, tipo, es_implemento, marca, modelo, anio, hp, activa,
+        consumo_combustible_hora, costo_mantenimiento_hora,
+        factor_carga, coef_lubricantes, costo_mano_obra_hora, coef_rm,
+        ancho_labor_m, velocidad_kmh, eficiencia_campo,
+        rendimiento_tn_h, velocidad_embolsado_m_h,
+        valor_adquisicion, valor_reposicion, valor_residual,
+        vida_util_horas, vida_util_ha, uso_anual_horas,
+        tasa_interes_anual, seguro_porcentaje
+      `)
       .eq('empresa_id', empresa.id)
       .order('nombre'),
     supabase

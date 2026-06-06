@@ -4,9 +4,24 @@ import { useState } from 'react';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
+export interface MaquinariaInitialData {
+  id: string; nombre: string; tipo: string; es_implemento: boolean;
+  marca: string | null; modelo: string | null; anio: number | null; hp: number | null;
+  consumo_combustible_hora: number; costo_mantenimiento_hora: number;
+  factor_carga: number; coef_lubricantes: number;
+  costo_mano_obra_hora: number | null; coef_rm: number;
+  ancho_labor_m: number | null; velocidad_kmh: number | null; eficiencia_campo: number;
+  rendimiento_tn_h: number | null; velocidad_embolsado_m_h: number | null;
+  valor_adquisicion: number | null; valor_reposicion: number | null;
+  valor_residual: number; vida_util_horas: number | null; vida_util_ha: number | null;
+  uso_anual_horas: number | null; tasa_interes_anual: number; seguro_porcentaje: number;
+}
+
 interface Props {
   empresaId: string;
   onSuccess: () => void;
+  onCancel?: () => void;
+  initialData?: MaquinariaInitialData;
 }
 
 const TIPOS = [
@@ -19,39 +34,41 @@ const l = 'block text-xs font-medium text-zinc-500 mb-1.5';
 const sec = 'border-t border-zinc-100 pt-4';
 const secTitle = 'text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3';
 
-export default function MaquinariaForm({ empresaId, onSuccess }: Props) {
+export default function MaquinariaForm({ empresaId, onSuccess, onCancel, initialData }: Props) {
+  const isEdit = !!initialData;
+
   // Identificación
-  const [nombre,    setNombre]    = useState('');
-  const [tipo,      setTipo]      = useState('tractor');
-  const [esImpl,    setEsImpl]    = useState(false);
-  const [marca,     setMarca]     = useState('');
-  const [modelo,    setModelo]    = useState('');
-  const [anio,      setAnio]      = useState('');
-  const [hp,        setHp]        = useState('');
+  const [nombre,    setNombre]    = useState(initialData?.nombre ?? '');
+  const [tipo,      setTipo]      = useState(initialData?.tipo ?? 'tractor');
+  const [esImpl,    setEsImpl]    = useState(initialData?.es_implemento ?? false);
+  const [marca,     setMarca]     = useState(initialData?.marca ?? '');
+  const [modelo,    setModelo]    = useState(initialData?.modelo ?? '');
+  const [anio,      setAnio]      = useState(initialData?.anio?.toString() ?? '');
+  const [hp,        setHp]        = useState(initialData?.hp?.toString() ?? '');
 
   // Costos directos básicos
-  const [consumo,     setConsumo]     = useState('');  // l/h
-  const [factorCarga, setFactorCarga] = useState('0.70');
-  const [coefLub,     setCoefLub]     = useState('0.12');
-  const [cmoHora,     setCmoHora]     = useState('');  // $/h operario
-  const [coefRM,      setCoefRM]      = useState('0.80');
+  const [consumo,     setConsumo]     = useState(initialData?.consumo_combustible_hora?.toString() ?? '');
+  const [factorCarga, setFactorCarga] = useState(initialData?.factor_carga?.toString() ?? '0.70');
+  const [coefLub,     setCoefLub]     = useState(initialData?.coef_lubricantes?.toString() ?? '0.12');
+  const [cmoHora,     setCmoHora]     = useState(initialData?.costo_mano_obra_hora?.toString() ?? '');
+  const [coefRM,      setCoefRM]      = useState(initialData?.coef_rm?.toString() ?? '0.80');
 
   // Parámetros operativos (para CdT)
-  const [anchoM,      setAnchoM]      = useState('');
-  const [velocidad,   setVelocidad]   = useState('');
-  const [eficiencia,  setEficiencia]  = useState('0.75');
-  const [rendTnH,     setRendTnH]     = useState('');  // para cosecha
-  const [velocEmb,    setVelocEmb]    = useState('');  // para embolsado
+  const [anchoM,      setAnchoM]      = useState(initialData?.ancho_labor_m?.toString() ?? '');
+  const [velocidad,   setVelocidad]   = useState(initialData?.velocidad_kmh?.toString() ?? '');
+  const [eficiencia,  setEficiencia]  = useState(initialData?.eficiencia_campo?.toString() ?? '0.75');
+  const [rendTnH,     setRendTnH]     = useState(initialData?.rendimiento_tn_h?.toString() ?? '');
+  const [velocEmb,    setVelocEmb]    = useState(initialData?.velocidad_embolsado_m_h?.toString() ?? '');
 
   // Capital
-  const [valorAdq,    setValorAdq]    = useState('');
-  const [valorRep,    setValorRep]    = useState('');
-  const [valorRes,    setValorRes]    = useState('0');
-  const [vidaHoras,   setVidaHoras]   = useState('');
-  const [vidaHa,      setVidaHa]      = useState('');
-  const [usoAnual,    setUsoAnual]    = useState('');
-  const [tasaInt,     setTasaInt]     = useState('0.08');
-  const [seguroPct,   setSeguroPct]   = useState('0');
+  const [valorAdq,    setValorAdq]    = useState(initialData?.valor_adquisicion?.toString() ?? '');
+  const [valorRep,    setValorRep]    = useState(initialData?.valor_reposicion?.toString() ?? '');
+  const [valorRes,    setValorRes]    = useState(initialData?.valor_residual?.toString() ?? '0');
+  const [vidaHoras,   setVidaHoras]   = useState(initialData?.vida_util_horas?.toString() ?? '');
+  const [vidaHa,      setVidaHa]      = useState(initialData?.vida_util_ha?.toString() ?? '');
+  const [usoAnual,    setUsoAnual]    = useState(initialData?.uso_anual_horas?.toString() ?? '');
+  const [tasaInt,     setTasaInt]     = useState(initialData?.tasa_interes_anual?.toString() ?? '0.08');
+  const [seguroPct,   setSeguroPct]   = useState(initialData?.seguro_porcentaje?.toString() ?? '0');
 
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
@@ -81,8 +98,7 @@ export default function MaquinariaForm({ empresaId, onSuccess }: Props) {
     if (!nombre.trim()) return;
     setLoading(true); setError(null);
 
-    const { error: err } = await createClient().from('maquinarias').insert({
-      empresa_id: empresaId,
+    const payload = {
       nombre: nombre.trim(),
       tipo,
       es_implemento:         esImpl,
@@ -108,7 +124,12 @@ export default function MaquinariaForm({ empresaId, onSuccess }: Props) {
       uso_anual_horas:       usoAnual      ? Number(usoAnual)   : null,
       tasa_interes_anual:    Number(tasaInt),
       seguro_porcentaje:     Number(seguroPct),
-    });
+    };
+
+    const sb = createClient();
+    const { error: err } = isEdit
+      ? await sb.from('maquinarias').update(payload).eq('id', initialData!.id)
+      : await sb.from('maquinarias').insert({ ...payload, empresa_id: empresaId });
 
     setLoading(false);
     if (err) { setError(err.message); return; }
@@ -315,11 +336,19 @@ export default function MaquinariaForm({ empresaId, onSuccess }: Props) {
 
       {error && <p className="text-xs text-red-500">{error}</p>}
 
-      <button type="submit" disabled={loading || !nombre.trim()}
-        className="inline-flex items-center gap-1.5 px-5 py-2 bg-[#006836] text-white text-sm font-semibold rounded-xl hover:bg-[#005228] disabled:opacity-50 transition-colors w-full justify-center">
-        <Check className="w-4 h-4" />
-        {loading ? 'Guardando...' : 'Agregar maquinaria'}
-      </button>
+      <div className="flex gap-3">
+        <button type="submit" disabled={loading || !nombre.trim()}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 px-5 py-2 bg-[#006836] text-white text-sm font-semibold rounded-xl hover:bg-[#005228] disabled:opacity-50 transition-colors">
+          <Check className="w-4 h-4" />
+          {loading ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Agregar maquinaria'}
+        </button>
+        {onCancel && (
+          <button type="button" onClick={onCancel}
+            className="px-4 py-2 text-sm text-zinc-500 border border-zinc-200 rounded-xl hover:bg-zinc-50 transition-colors">
+            Cancelar
+          </button>
+        )}
+      </div>
     </form>
   );
 }
