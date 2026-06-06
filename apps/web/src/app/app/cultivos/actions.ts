@@ -230,6 +230,139 @@ export async function crearLabor(data: LaborData): Promise<{ error?: string }> {
   return {};
 }
 
+// ─── Labor con costeo (Modo A / B / C) ────────────────────────────────────────
+export interface LaborCosteoData {
+  cultivo_id: string;
+  tipo_labor_id: string;
+  fecha: string;
+  tipo_ejecucion: 'propio' | 'tercero';
+  observaciones?: string;
+  modo_costeo: 'A_propio' | 'B_tercero' | 'C_manual';
+  unidad_salida: 'ha' | 'h' | 'tn' | 'm' | 'unidad';
+  magnitud_aplicada: number;
+  // Modo A
+  maquinaria_id?: string;
+  implemento_id?: string;
+  horas_trabajadas?: number;
+  // Overrides de parámetros para Modo A
+  override_ancho?: number;
+  override_velocidad?: number;
+  override_eficiencia?: number;
+  // Modo B
+  proveedor_id?: string;
+  precio_unitario?: number;
+  flete_adicional_ha?: number;
+  iva_porcentaje?: number;
+  tarifa_indice_tipo?: string;
+  tarifa_indice_valor?: number;
+  // Modo C
+  costo_total_manual?: number;
+  costo_unitario_manual?: number;
+  justificacion_modo_c?: string;
+}
+
+export async function crearLaborCosteo(data: LaborCosteoData): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autenticado' };
+
+  let costoTotal = 0;
+  let costoUnitario = 0;
+  let desgloseJson: any = null;
+  let snapshotVars: any = null;
+
+  if (data.modo_costeo === 'A_propio') {
+    if (!data.maquinaria_id) return { error: 'Seleccioná una maquinaria.' };
+
+    // Obtener empresa_id
+    const { data: maqRow } = await supabase
+      .from('maquinarias').select('empresa_id').eq('id', data.maquinaria_id).single();
+    if (!maqRow) return { error: 'Maquinaria no encontrada.' };
+
+    const { data: resultado, error: rpcErr } = await supabase.rpc('fn_calcular_costo_labor', {
+      p_maquinaria_id: data.maquinaria_id,
+      p_implemento_id: data.implemento_id ?? null,
+      p_empresa_id:    maqRow.empresa_id,
+      p_unidad_salida: data.unidad_salida,
+      p_fecha:         data.fecha,
+      p_ancho_m:       data.override_ancho       ?? null,
+      p_velocidad_kmh: data.override_velocidad   ?? null,
+      p_eficiencia:    data.override_eficiencia  ?? null,
+      p_factor_carga:  null,
+      p_rend_tn_h:     null,
+      p_veloc_emb_m_h: null,
+    });
+
+    if (rpcErr) return { error: rpcErr.message };
+    const res = resultado as any;
+    if (!res?.ok) return { error: res?.error ?? 'Error al calcular costo.' };
+
+    costoUnitario = res.costo_unitario ?? 0;
+    costoTotal = costoUnitario * data.magnitud_aplicada;
+    desgloseJson = res.desglose;
+    snapshotVars = res.parametros;
+
+  } else if (data.modo_costeo === 'B_tercero') {
+    if (!data.precio_unitario) return { error: 'Ingresá la tarifa del servicio.' };
+    const tarifa = data.precio_unitario;
+    const flete  = data.flete_adicional_ha ?? 0;
+    const iva    = data.iva_porcentaje ?? 0;
+    costoUnitario = (tarifa + flete) * (1 + iva / 100);
+    costoTotal    = costoUnitario * data.magnitud_aplicada;
+    desgloseJson  = { tarifa_base: tarifa, flete_ha: flete, iva_pct: iva };
+    snapshotVars  = { indice_tipo: data.tarifa_indice_tipo, indice_valor: data.tarifa_indice_valor };
+
+  } else {
+    // Modo C
+    if (!data.justificacion_modo_c?.trim()) return { error: 'La justificación es obligatoria en Modo C.' };
+    if (data.costo_total_manual != null) {
+      costoTotal    = data.costo_total_manual;
+      costoUnitario = data.magnitud_aplicada > 0 ? costoTotal / data.magnitud_aplicada : 0;
+    } else if (data.costo_unitario_manual != null) {
+      costoUnitario = data.costo_unitario_manual;
+      costoTotal    = costoUnitario * data.magnitud_aplicada;
+    } else {
+      return { error: 'Ingresá el costo total o el costo unitario.' };
+    }
+  }
+
+  const { error: err } = await supabase.from('labores').insert({
+    cultivo_id:           data.cultivo_id,
+    tipo_labor_id:        data.tipo_labor_id,
+    fecha:                data.fecha,
+    tipo_ejecucion:       data.tipo_ejecucion,
+    observaciones:        data.observaciones || null,
+    maquinaria_id:        data.maquinaria_id        ?? null,
+    horas_trabajadas:     data.unidad_salida === 'h' ? data.magnitud_aplicada : null,
+    proveedor_id:         data.proveedor_id          ?? null,
+    modalidad_cobro:      null,
+    precio_unitario:      data.precio_unitario       ?? null,
+    hectareas_trabajadas: data.unidad_salida === 'ha' ? data.magnitud_aplicada : null,
+    costo_total_calculado: costoTotal,
+    // Nuevos campos (mig 019)
+    modo_costeo:          data.modo_costeo,
+    unidad_salida:        data.unidad_salida,
+    magnitud_aplicada:    data.magnitud_aplicada,
+    costo_unitario_labor: costoUnitario,
+    costo_desglose_json:  desgloseJson,
+    snapshot_variables:   snapshotVars,
+    implemento_id:        data.implemento_id         ?? null,
+    flete_adicional_ha:   data.flete_adicional_ha    ?? 0,
+    iva_porcentaje:       data.iva_porcentaje         ?? 0,
+    tarifa_indice_tipo:   data.tarifa_indice_tipo    ?? null,
+    tarifa_indice_valor:  data.tarifa_indice_valor   ?? null,
+    es_costo_manual:      data.modo_costeo === 'C_manual',
+    justificacion_modo_c: data.justificacion_modo_c  ?? null,
+  });
+
+  if (err) return { error: err.message };
+
+  await recalcularCostoDirecto(supabase, data.cultivo_id);
+  revalidatePath('/app/cultivos');
+  revalidatePath(`/app/cultivos/${data.cultivo_id}`);
+  return {};
+}
+
 export async function eliminarLabor(laborId: string, cultivoId: string): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { error: err } = await supabase.from('labores').delete().eq('id', laborId);
