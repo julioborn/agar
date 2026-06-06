@@ -36,7 +36,7 @@ export default async function RiaDetailPage({ params }: Props) {
     { data: depositos },
     { data: productos },
     { data: campanias },
-    { data: proveedores },
+    { data: contratistas },
     { data: tiposLabor },
     { data: cultivosActivos },
   ] = await Promise.all([
@@ -82,9 +82,10 @@ export default async function RiaDetailPage({ params }: Props) {
       .eq('empresa_id', empresa.id)
       .order('nombre'),
     supabase
-      .from('proveedores')
+      .from('contratistas')
       .select('id, nombre')
       .eq('empresa_id', empresa.id)
+      .eq('activo', true)
       .order('nombre'),
     supabase
       .from('tipos_labor')
@@ -194,7 +195,8 @@ export default async function RiaDetailPage({ params }: Props) {
         depositos={depositos ?? []}
         productos={productos ?? []}
         campanias={campanias ?? []}
-        proveedores={proveedores ?? []}
+        proveedores={[]}
+        contratistas={contratistas ?? []}
         tiposLabor={tiposLabor ?? []}
         cultivosActivos={cultivosActivos ?? []}
         empresaId={empresa.id}

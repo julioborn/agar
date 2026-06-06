@@ -17,7 +17,7 @@ export default async function NuevoRiaPage() {
     { data: depositos },
     { data: productos },
     { data: campanias },
-    { data: proveedores },
+    { data: contratistas },
     { data: tiposLabor },
     { data: cultivosActivos },
   ] = await Promise.all([
@@ -46,9 +46,10 @@ export default async function NuevoRiaPage() {
       .eq('activa', true)
       .order('nombre'),
     supabase
-      .from('proveedores')
+      .from('contratistas')
       .select('id, nombre')
       .eq('empresa_id', empresa.id)
+      .eq('activo', true)
       .order('nombre'),
     supabase
       .from('tipos_labor')
@@ -83,7 +84,8 @@ export default async function NuevoRiaPage() {
         depositos={depositos ?? []}
         productos={productos ?? []}
         campanias={campanias ?? []}
-        proveedores={proveedores ?? []}
+        proveedores={[]}
+        contratistas={contratistas ?? []}
         tiposLabor={tiposLabor ?? []}
         cultivosActivos={cultivosActivos ?? []}
         empresaId={empresa.id}

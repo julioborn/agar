@@ -40,6 +40,10 @@ export interface ProveedorOpcion {
   id: string;
   nombre: string;
 }
+export interface ContratistasOpcion {
+  id: string;
+  nombre: string;
+}
 export interface TipoLaborOpcion {
   id: string;
   nombre: string;
@@ -135,6 +139,7 @@ interface Props {
   productos: ProductoOpcion[];
   campanias: CampaniaOpcion[];
   proveedores: ProveedorOpcion[];
+  contratistas: ContratistasOpcion[];
   tiposLabor: TipoLaborOpcion[];
   empresaId: string;
   empresaNombre: string;
@@ -165,7 +170,7 @@ const calc = (cant: string, costo: string) =>
 // ── Componente principal ───────────────────────────────────────────────────────
 
 export default function RiaForm({
-  mode, lotes, depositos, productos, campanias, proveedores,
+  mode, lotes, depositos, productos, campanias, proveedores, contratistas,
   tiposLabor, empresaId, empresaNombre, usuarioId, riaExistente,
   basePath = '/app/ria', cultivosActivos = [],
 }: Props) {
@@ -237,6 +242,7 @@ export default function RiaForm({
   const [confirming, setConfirming] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [secOpen, setSecOpen] = useState({ insumos: true, labores: true, produccion: true });
+  const [draftRecovered, setDraftRecovered] = useState(false);
 
   // Computed totals
   const totalInsumos = insumos.reduce((s, i) => s + i.subtotal, 0);
@@ -271,6 +277,49 @@ export default function RiaForm({
     return ws;
   })();
 
+  // ── Auto-save localStorage (solo modo nuevo, sin riaExistente) ───────────────
+  const LS_KEY = `ria_borrador_${empresaId}`;
+
+  // Restaurar borrador del localStorage al montar (solo modo nuevo)
+  useEffect(() => {
+    if (mode !== 'nuevo' || riaExistente) return;
+    try {
+      const saved = localStorage.getItem(LS_KEY);
+      if (!saved) return;
+      const d = JSON.parse(saved);
+      if (d.fecha)              setFecha(d.fecha);
+      if (d.loteId)             setLoteId(d.loteId);
+      if (d.campaniaId)         setCampaniaId(d.campaniaId);
+      if (d.superficieAfectada) setSuperficieAfectada(d.superficieAfectada);
+      if (d.cultivoId)          setCultivoIdState(d.cultivoId);
+      if (d.cultivoDesc)        setCultivoDesc(d.cultivoDesc);
+      if (d.observaciones)      setObservaciones(d.observaciones);
+      if (d.insumos?.length)    setInsumos(d.insumos.map((i: any) => ({ ...i, _id: nextId() })));
+      if (d.labores?.length)    setLabores(d.labores.map((l: any) => ({ ...l, _id: nextId() })));
+      if (d.produccion?.length) setProduccion(d.produccion.map((p: any) => ({ ...p, _id: nextId() })));
+      setDraftRecovered(true);
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Guardar en localStorage con debounce siempre que cambie algo (solo modo nuevo)
+  useEffect(() => {
+    if (mode !== 'nuevo' || riaExistente) return;
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(LS_KEY, JSON.stringify({
+          fecha, loteId, campaniaId, superficieAfectada, cultivoId, cultivoDesc, observaciones,
+          insumos, labores, produccion,
+        }));
+      } catch {}
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [fecha, loteId, campaniaId, superficieAfectada, cultivoId, cultivoDesc, observaciones, insumos, labores, produccion, mode, riaExistente, LS_KEY]);
+
+  function clearDraft() {
+    try { localStorage.removeItem(LS_KEY); } catch {}
+  }
+
   // ── Auto-fill lote ────────────────────────────────────────────────────────────
   // Cultivos filtrados por lote seleccionado
   const cultivosDelLote = cultivosActivos.filter((c) => c.lote_id === loteId);
@@ -303,27 +352,24 @@ export default function RiaForm({
     );
   }, []);
 
-  // ── Last cost lookup ──────────────────────────────────────────────────────────
+  // ── Last cost lookup (usa fn_precio_ultima_compra: ordena por compras.fecha DESC, confirmadas) ──
   const fetchLastCost = useCallback(async (productoId: string, lineId: string) => {
     if (!productoId) return;
     const sb = createClient();
-    const { data } = await sb
-      .from('compras_items')
-      .select('precio_unitario_ars')
-      .eq('producto_id', productoId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (data?.precio_unitario_ars) {
+    const { data: precio } = await sb.rpc('fn_precio_ultima_compra', {
+      p_producto_id: productoId,
+      p_empresa_id:  empresaId,
+    });
+    if (precio != null) {
       setInsumos((prev) =>
         prev.map((i) => {
           if (i._id !== lineId) return i;
-          const cost = data.precio_unitario_ars.toString();
+          const cost = precio.toString();
           return { ...i, costoUnitario: cost, subtotal: calc(i.cantidad, cost) };
         }),
       );
     }
-  }, []);
+  }, [empresaId]);
 
   // ── Insumo handlers ───────────────────────────────────────────────────────────
   function addInsumo() {
@@ -419,10 +465,10 @@ export default function RiaForm({
     ));
   }
 
-  function handleLaborPrestador(id: string, proveedorId: string) {
-    const prov = proveedores.find((p) => p.id === proveedorId);
+  function handleLaborPrestador(id: string, contratistaId: string) {
+    const c = contratistas.find((c) => c.id === contratistaId);
     setLabores((prev) => prev.map((l) =>
-      l._id === id ? { ...l, prestadorId: proveedorId, prestadorNombre: prov?.nombre ?? '' } : l,
+      l._id === id ? { ...l, prestadorId: contratistaId, prestadorNombre: c?.nombre ?? '' } : l,
     ));
   }
 
@@ -529,6 +575,7 @@ export default function RiaForm({
     setSaving(false);
     if (result.error) { setErrorMsg(result.error); return; }
     if (result.riaId && !riaExistente) {
+      clearDraft();
       router.push(`${basePath}/${result.riaId}`);
     } else {
       router.refresh();
@@ -558,6 +605,7 @@ export default function RiaForm({
     const confirmResult = await confirmarRia(riaId!);
     setConfirming(false);
     if (confirmResult.error) { setErrorMsg(confirmResult.error); return; }
+    clearDraft();
     router.push(`${basePath}/${riaId}`);
     router.refresh();
   }
@@ -625,6 +673,23 @@ export default function RiaForm({
 
   return (
     <div className="max-w-5xl mx-auto space-y-5">
+
+      {/* Banner: borrador recuperado */}
+      {draftRecovered && (
+        <div className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-2 text-sm text-amber-700">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            Se recuperó un borrador guardado automáticamente. Podés continuar desde donde lo dejaste.
+          </div>
+          <button
+            type="button"
+            onClick={() => { clearDraft(); setDraftRecovered(false); }}
+            className="text-xs text-amber-600 hover:text-amber-800 underline shrink-0"
+          >
+            Descartar borrador
+          </button>
+        </div>
+      )}
 
       {/* Encabezado */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -832,7 +897,22 @@ export default function RiaForm({
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div>
                       <label className="block text-xs text-zinc-500 mb-1">
-                        Cantidad * {ins.unidadBase && <span className="text-zinc-400">({ins.unidadBase})</span>}
+                        Dosis/ha {ins.unidadBase && <span className="text-zinc-400">({ins.unidadBase}/ha)</span>}
+                      </label>
+                      <input
+                        type="number"
+                        step="0.0001"
+                        min="0"
+                        value={ins.dosisPorHa}
+                        onChange={(e) => updateInsumo(ins._id, 'dosisPorHa', e.target.value)}
+                        disabled={esReadOnly}
+                        placeholder={sup > 0 ? 'Calcula cantidad total' : 'Ingresá sup. primero'}
+                        className={inputCls()}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-zinc-500 mb-1">
+                        Cantidad total * {ins.unidadBase && <span className="text-zinc-400">({ins.unidadBase})</span>}
                       </label>
                       <input
                         type="number"
@@ -842,19 +922,6 @@ export default function RiaForm({
                         onChange={(e) => updateInsumo(ins._id, 'cantidad', e.target.value)}
                         disabled={esReadOnly}
                         className={inputCls(!ins.cantidad && !esReadOnly)}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-zinc-500 mb-1">Dosis/ha (opc.)</label>
-                      <input
-                        type="number"
-                        step="0.0001"
-                        min="0"
-                        value={ins.dosisPorHa}
-                        onChange={(e) => updateInsumo(ins._id, 'dosisPorHa', e.target.value)}
-                        disabled={esReadOnly}
-                        placeholder="Calcula cantidad"
-                        className={inputCls()}
                       />
                     </div>
                     <div>
@@ -964,8 +1031,8 @@ export default function RiaForm({
                         className={inputCls()}
                       >
                         <option value="">Campo propio</option>
-                        {proveedores.map((p) => (
-                          <option key={p.id} value={p.id}>{p.nombre}</option>
+                        {contratistas.map((c) => (
+                          <option key={c.id} value={c.id}>{c.nombre}</option>
                         ))}
                       </select>
                     </div>

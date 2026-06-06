@@ -17,7 +17,7 @@ export default async function CampoRiaNuevoPage() {
     { data: depositos },
     { data: productos },
     { data: campanias },
-    { data: proveedores },
+    { data: contratistas },
     { data: tiposLabor },
     { data: cultivosActivos },
   ] = await Promise.all([
@@ -29,7 +29,7 @@ export default async function CampoRiaNuevoPage() {
     supabase.from('depositos').select('id, nombre, tipo').eq('empresa_id', empresa.id).order('nombre'),
     supabase.from('productos').select('id, nombre, categoria, unidad_base').eq('empresa_id', empresa.id).order('nombre'),
     supabase.from('campanias').select('id, nombre').eq('empresa_id', empresa.id).eq('activa', true).order('nombre'),
-    supabase.from('proveedores').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
+    supabase.from('contratistas').select('id, nombre').eq('empresa_id', empresa.id).eq('activo', true).order('nombre'),
     supabase.from('tipos_labor').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
     supabase.from('cultivos').select('id, cultivo, lote_id, estado').in('estado', ['planificada', 'en_curso']).order('cultivo'),
   ]);
@@ -55,7 +55,8 @@ export default async function CampoRiaNuevoPage() {
         depositos={depositos ?? []}
         productos={productos ?? []}
         campanias={campanias ?? []}
-        proveedores={proveedores ?? []}
+        proveedores={[]}
+        contratistas={contratistas ?? []}
         tiposLabor={tiposLabor ?? []}
         cultivosActivos={cultivosActivos ?? []}
         empresaId={empresa.id}
