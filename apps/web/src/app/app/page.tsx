@@ -5,7 +5,7 @@ import { getEmpresaActiva } from '@/lib/empresa-actual';
 import { cn } from '@/lib/utils';
 import {
   Sprout, Package, ShoppingCart, AlertTriangle,
-  MapPin, Warehouse, ArrowRight, TrendingUp, CircleDollarSign, FileUp, Building2,
+  MapPin, Warehouse, ArrowRight, TrendingUp, CircleDollarSign, FileUp, Building2, FileText,
 } from 'lucide-react';
 import { Money } from '@/lib/currency-context';
 
@@ -202,6 +202,16 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+
+          <Link href="/app/ria/nuevo" className="group col-span-2 sm:col-span-1">
+            <div className="bg-[#006836] rounded-2xl border border-[#006836] p-5 flex flex-col justify-between hover:bg-[#005228] transition-all duration-200 shadow-sm">
+              <FileText className="w-5 h-5 text-white" />
+              <div className="mt-6">
+                <p className="text-white font-semibold text-sm">Nuevo RIA</p>
+                <p className="text-white/60 text-xs mt-0.5">Remito interno agrícola</p>
+              </div>
+            </div>
+          </Link>
 
           <Link href="/app/compras/importar" className="group col-span-2 sm:col-span-1">
             <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
