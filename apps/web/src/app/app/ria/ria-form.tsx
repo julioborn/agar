@@ -67,6 +67,7 @@ export interface InsumoLine {
   productoNombre: string;
   unidadBase: string;
   stockDisponible: number | null;
+  sinPrecioCompra: boolean;   // true si el producto no tiene compras registradas
 }
 
 export interface LaborLine {
@@ -202,6 +203,7 @@ export default function RiaForm({
       productoNombre: i.productoNombre,
       unidadBase: i.unidadBase,
       stockDisponible: null,
+      sinPrecioCompra: false,
     })),
   );
 
@@ -365,8 +367,13 @@ export default function RiaForm({
         prev.map((i) => {
           if (i._id !== lineId) return i;
           const cost = precio.toString();
-          return { ...i, costoUnitario: cost, subtotal: calc(i.cantidad, cost) };
+          return { ...i, costoUnitario: cost, subtotal: calc(i.cantidad, cost), sinPrecioCompra: false };
         }),
+      );
+    } else {
+      // Sin compras registradas: marcar para que el usuario sepa que debe ingresarlo
+      setInsumos((prev) =>
+        prev.map((i) => i._id === lineId ? { ...i, sinPrecioCompra: true } : i),
       );
     }
   }, [empresaId]);
@@ -376,7 +383,7 @@ export default function RiaForm({
     setInsumos((p) => [...p, {
       _id: nextId(), depositoId: '', productoId: '', cantidad: '',
       dosisPorHa: '', costoUnitario: '', subtotal: 0, obs: '',
-      productoNombre: '', unidadBase: '', stockDisponible: null,
+      productoNombre: '', unidadBase: '', stockDisponible: null, sinPrecioCompra: false,
     }]);
   }
 
@@ -416,6 +423,7 @@ export default function RiaForm({
         productoNombre: prod?.nombre ?? '',
         unidadBase: prod?.unidad_base ?? '',
         stockDisponible: null,
+        sinPrecioCompra: false,  // se actualiza en fetchLastCost
       };
     }));
     if (productoId) {
@@ -931,11 +939,22 @@ export default function RiaForm({
                         step="0.01"
                         min="0"
                         value={ins.costoUnitario}
-                        onChange={(e) => updateInsumo(ins._id, 'costoUnitario', e.target.value)}
+                        onChange={(e) => {
+                          updateInsumo(ins._id, 'costoUnitario', e.target.value);
+                          if (ins.sinPrecioCompra)
+                            setInsumos((prev) => prev.map((i) =>
+                              i._id === ins._id ? { ...i, sinPrecioCompra: false } : i,
+                            ));
+                        }}
                         disabled={esReadOnly}
-                        placeholder="$0.00"
-                        className={inputCls()}
+                        placeholder={ins.sinPrecioCompra ? 'Ingresá el precio' : '$0.00'}
+                        className={inputCls(ins.sinPrecioCompra && !esReadOnly)}
                       />
+                      {ins.sinPrecioCompra && !esReadOnly && (
+                        <p className="text-xs text-amber-600 mt-1">
+                          Sin compras registradas — ingresá el precio manualmente.
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-xs text-zinc-500 mb-1">Subtotal $</label>
