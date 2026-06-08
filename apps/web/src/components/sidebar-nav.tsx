@@ -32,6 +32,7 @@ const navSections: NavSection[] = [
     label: 'Estructura',
     items: [
       { href: '/app/campos',      label: 'Campos y Lotes', icon: MapPin },
+      { href: '/app/campanias',   label: 'Campañas',       icon: CalendarRange },
       { href: '/app/maquinarias', label: 'Maquinaria',     icon: Tractor },
     ],
   },
@@ -56,9 +57,8 @@ const navSections: NavSection[] = [
   {
     label: 'Costos directos',
     items: [
-      { href: '/app/campanias',   label: 'Campañas',  icon: CalendarRange },
-      { href: '/app/cultivos',    label: 'Cultivos',  icon: Sprout },
-      { href: '/app/tipos-labor', label: 'Labores',   icon: Wrench },
+      { href: '/app/cultivos',    label: 'Cultivos', icon: Sprout },
+      { href: '/app/tipos-labor', label: 'Labores',  icon: Wrench },
     ],
   },
   {
