@@ -77,6 +77,11 @@ function ProductoCard({
             {p.principio_activo && (
               <p className="text-xs text-zinc-400 mt-0.5 truncate">{p.principio_activo}</p>
             )}
+            {p.nombre_factura && (
+              <p className="text-xs text-zinc-300 mt-0.5 truncate" title={p.nombre_factura}>
+                🧾 {p.nombre_factura}
+              </p>
+            )}
           </div>
           <span className={cn('shrink-0 inline-block px-2 py-0.5 rounded-full text-xs font-semibold',
             CATEGORIA_BADGE[p.categoria] ?? 'bg-zinc-100 text-zinc-500')}>

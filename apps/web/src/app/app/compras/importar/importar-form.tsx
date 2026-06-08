@@ -10,7 +10,7 @@ import { guardarCodigosProveedor, crearProductoNuevo } from './actions';
 import type { FacturaExtraida } from '@/app/api/compras/parsear-factura/route';
 
 interface Proveedor { id: string; nombre: string; cuit: string | null; }
-interface Producto  { id: string; nombre: string; categoria: string; unidad_base: string; principio_activo: string | null; }
+interface Producto  { id: string; nombre: string; nombre_factura: string | null; categoria: string; unidad_base: string; principio_activo: string | null; }
 interface Presentacion { id: string; producto_id: string; descripcion: string; factor_a_unidad_base: number; }
 interface Deposito  { id: string; nombre: string; }
 interface CodigoProveedorRaw { nombre_en_factura: string; producto_id: string; proveedor_id: string | null; codigo_externo: string | null; }
@@ -67,7 +67,15 @@ function similaridad(a: string, b: string): number {
 
 function mejoresMatches(descripcion: string, productos: Producto[], topN = 5): Producto[] {
   return productos
-    .map((p) => ({ p, score: Math.max(similaridad(p.nombre, descripcion), p.principio_activo ? similaridad(p.principio_activo, descripcion) * 0.8 : 0) }))
+    .map((p) => ({
+      p,
+      score: Math.max(
+        // nombre_factura tiene la mayor prioridad: coincidencia directa con la factura
+        p.nombre_factura ? similaridad(p.nombre_factura, descripcion) * 1.2 : 0,
+        similaridad(p.nombre, descripcion),
+        p.principio_activo ? similaridad(p.principio_activo, descripcion) * 0.8 : 0,
+      ),
+    }))
     .filter(({ score }) => score > 0.08)
     .sort((a, b) => b.score - a.score)
     .slice(0, topN)

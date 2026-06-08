@@ -10,6 +10,7 @@ export { CATEGORIAS, UNIDADES } from './constants';
 export interface ProductoRow {
   id: string;
   nombre: string;
+  nombre_factura: string | null;
   categoria: string;
   unidad_base: string;
   codigo_barras: string | null;
@@ -30,6 +31,7 @@ const field = 'w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:
 
 export default function ProductoForm({ empresaId, productoEditando, onSuccess, onCancel }: Props) {
   const [nombre,               setNombre]               = useState('');
+  const [nombreFactura,        setNombreFactura]        = useState('');
   const [categoria,            setCategoria]            = useState('fertilizante');
   const [unidadBase,           setUnidadBase]           = useState('kg');
   const [codigoBarras,         setCodigoBarras]         = useState('');
@@ -43,6 +45,7 @@ export default function ProductoForm({ empresaId, productoEditando, onSuccess, o
   useEffect(() => {
     if (productoEditando) {
       setNombre(productoEditando.nombre);
+      setNombreFactura(productoEditando.nombre_factura ?? '');
       setCategoria(productoEditando.categoria);
       setUnidadBase(productoEditando.unidad_base);
       setCodigoBarras(productoEditando.codigo_barras ?? '');
@@ -51,7 +54,7 @@ export default function ProductoForm({ empresaId, productoEditando, onSuccess, o
       setStockMinimo(productoEditando.stock_minimo?.toString() ?? '0');
       setRequiereTrazabilidad(productoEditando.requiere_trazabilidad);
     } else {
-      setNombre(''); setCategoria('fertilizante'); setUnidadBase('kg');
+      setNombre(''); setNombreFactura(''); setCategoria('fertilizante'); setUnidadBase('kg');
       setCodigoBarras(''); setCodigoInterno(''); setPrincipioActivo('');
       setStockMinimo('0'); setRequiereTrazabilidad(false);
     }
@@ -66,7 +69,9 @@ export default function ProductoForm({ empresaId, productoEditando, onSuccess, o
 
     const supabase = createClient();
     const payload = {
-      nombre: nombre.trim(), categoria, unidad_base: unidadBase,
+      nombre: nombre.trim(),
+      nombre_factura: nombreFactura.trim() || null,
+      categoria, unidad_base: unidadBase,
       codigo_barras: codigoBarras.trim() || null,
       codigo_interno: codigoInterno.trim() || null,
       principio_activo: principioActivo.trim() || null,
@@ -81,7 +86,7 @@ export default function ProductoForm({ empresaId, productoEditando, onSuccess, o
     setLoading(false);
     if (dbError) { setError(dbError.message); return; }
     if (!productoEditando) {
-      setNombre(''); setCodigoBarras(''); setCodigoInterno('');
+      setNombre(''); setNombreFactura(''); setCodigoBarras(''); setCodigoInterno('');
       setPrincipioActivo(''); setStockMinimo('0'); setRequiereTrazabilidad(false);
     }
     onSuccess();
@@ -92,11 +97,31 @@ export default function ProductoForm({ empresaId, productoEditando, onSuccess, o
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Nombre */}
+      {/* Nombre visible */}
       <div>
-        <label className="block text-xs font-medium text-zinc-500 mb-1.5">Nombre del producto</label>
-        <input type="text" placeholder="Ej: Urea granulada" value={nombre}
+        <label className="block text-xs font-medium text-zinc-500 mb-1.5">
+          Nombre del producto <span className="text-zinc-400 font-normal">(nombre visible en el sistema)</span>
+        </label>
+        <input type="text" placeholder="Ej: Glifosato 48%" value={nombre}
           onChange={(e) => setNombre(e.target.value)} required disabled={loading} className={field} />
+      </div>
+
+      {/* Nombre de factura */}
+      <div>
+        <label className="block text-xs font-medium text-zinc-500 mb-1.5">
+          Nombre en factura <span className="text-zinc-400 font-normal">(opcional — tal como aparece en las facturas del proveedor)</span>
+        </label>
+        <input
+          type="text"
+          placeholder="Ej: GLIFOSATO FORTE 48% SL COADYUVANTE ETOXILADO 12L X-12"
+          value={nombreFactura}
+          onChange={(e) => setNombreFactura(e.target.value)}
+          disabled={loading}
+          className={field}
+        />
+        <p className="text-xs text-zinc-400 mt-1">
+          Se usa internamente para encontrar el producto al importar facturas. No se muestra en reportes.
+        </p>
       </div>
 
       {/* Categoría + Unidad */}

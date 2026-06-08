@@ -14,7 +14,7 @@ export default async function ImportarFacturaPage() {
 
   const [provRes, prodRes, presRes, depRes, codRes] = await Promise.all([
     supabase.from('proveedores').select('id, nombre, cuit').order('nombre'),
-    supabase.from('productos').select('id, nombre, categoria, unidad_base, principio_activo').order('nombre'),
+    supabase.from('productos').select('id, nombre, nombre_factura, categoria, unidad_base, principio_activo').order('nombre'),
     supabase.from('presentaciones').select('id, producto_id, descripcion, factor_a_unidad_base'),
     supabase.from('depositos').select('id, nombre').order('nombre'),
     supabase.from('codigos_proveedor').select('nombre_en_factura, producto_id, proveedor_id, codigo_externo'),

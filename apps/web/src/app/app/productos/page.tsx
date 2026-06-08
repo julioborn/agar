@@ -16,7 +16,7 @@ export default async function ProductosPage() {
 
   const { data: productos } = await supabase
     .from('productos')
-    .select('id, nombre, categoria, unidad_base, codigo_barras, codigo_interno, principio_activo, stock_minimo, requiere_trazabilidad')
+    .select('id, nombre, nombre_factura, categoria, unidad_base, codigo_barras, codigo_interno, principio_activo, stock_minimo, requiere_trazabilidad')
     .order('categoria')
     .order('nombre');
 
