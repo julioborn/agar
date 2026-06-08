@@ -9,7 +9,8 @@ export const CATEGORIAS = [
 ] as const;
 
 export const UNIDADES = [
-  { value: 'kg',     label: 'kg' },
+  { value: 'kg',     label: 'kg (kilogramos)' },
+  { value: 'tn',     label: 'tn (toneladas)' },
   { value: 'L',      label: 'L (litros)' },
   { value: 'unidad', label: 'Unidad' },
 ] as const;
