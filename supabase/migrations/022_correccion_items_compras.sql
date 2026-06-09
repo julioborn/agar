@@ -73,7 +73,7 @@ BEGIN
     UPDATE stock s
     SET cantidad_actual = (
       SELECT COALESCE(SUM(
-        CASE WHEN ms.tipo LIKE 'entrada%' THEN ms.cantidad ELSE -ms.cantidad END
+        CASE WHEN ms.tipo::text LIKE 'entrada%' THEN ms.cantidad ELSE -ms.cantidad END
       ), 0)
       FROM movimientos_stock ms
       WHERE ms.deposito_id  = v_deposito_id
