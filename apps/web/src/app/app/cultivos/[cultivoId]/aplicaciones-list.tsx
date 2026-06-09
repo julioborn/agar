@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Plus, ChevronDown, ChevronUp, Calendar, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/lib/currency-context';
 import { eliminarAplicacion } from '../actions';
@@ -74,20 +73,7 @@ export default function AplicacionesList({ aplicaciones, cultivoId, costoTotal, 
     router.refresh();
   }
 
-  if (aplicaciones.length === 0) {
-    return (
-      <div className="bg-white rounded-2xl border border-zinc-100 p-10 text-center space-y-3">
-        <Calendar className="w-8 h-8 text-zinc-200 mx-auto" />
-        <p className="text-zinc-400 text-sm">No hay aplicaciones registradas todavía.</p>
-        <Link
-          href={`/app/cultivos/${cultivoId}/nueva-aplicacion`}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-50 transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5" /> Registrar primera aplicación
-        </Link>
-      </div>
-    );
-  }
+  if (aplicaciones.length === 0) return null;
 
   return (
     <div className="space-y-2">
