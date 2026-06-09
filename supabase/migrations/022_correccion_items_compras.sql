@@ -11,6 +11,7 @@ DECLARE
 
   -- (factura, patrón producto ILIKE, cantidad correcta)
   type_correction RECORD;
+  mets_rec     RECORD;
 BEGIN
 
   FOR type_correction IN
@@ -93,5 +94,62 @@ BEGIN
       type_correction.factura, type_correction.patron, v_old_qty, type_correction.nueva_qty;
 
   END LOOP;
+
+  -- ── METSULFURON 60% SUPERMET AGROTERRUM: unidad 'sobre' + cantidad 30 ──────
+  -- Sin número de factura conocido: se busca por nombre de producto en todas las compras.
+  -- Si hay más de una compra de este producto, se corrigen TODAS.
+  BEGIN
+    -- 1. Actualizar unidad_base del producto a 'sobre'
+    UPDATE productos
+    SET unidad_base = 'sobre'
+    WHERE nombre ILIKE '%METSULFURON%SUPERMET%';
+
+    FOR mets_rec IN
+      SELECT ci.id   AS item_id,
+             ci.compra_id,
+             ci.producto_id,
+             ci.deposito_destino_id AS deposito_id,
+             ci.cantidad_unidad_base AS old_qty
+      FROM compras_items ci
+      JOIN productos p ON p.id = ci.producto_id
+      WHERE p.nombre ILIKE '%METSULFURON%SUPERMET%'
+    LOOP
+      -- 2. Actualizar cantidad del ítem
+      UPDATE compras_items
+      SET cantidad_unidad_base     = 30,
+          subtotal_ars             = precio_unitario_ars             * 30,
+          subtotal_moneda_original = precio_unitario_moneda_original * 30
+      WHERE id = mets_rec.item_id;
+
+      -- 3. Actualizar movimiento de stock
+      UPDATE movimientos_stock
+      SET cantidad = 30
+      WHERE referencia_id   = mets_rec.compra_id
+        AND referencia_tipo = 'compra'
+        AND producto_id     = mets_rec.producto_id
+        AND deposito_id     = mets_rec.deposito_id;
+
+      -- 4. Recalcular stock
+      UPDATE stock s
+      SET cantidad_actual = (
+        SELECT COALESCE(SUM(
+          CASE WHEN ms.tipo::text LIKE 'entrada%' THEN ms.cantidad ELSE -ms.cantidad END
+        ), 0)
+        FROM movimientos_stock ms
+        WHERE ms.deposito_id = mets_rec.deposito_id
+          AND ms.producto_id = mets_rec.producto_id
+      )
+      WHERE s.deposito_id = mets_rec.deposito_id
+        AND s.producto_id = mets_rec.producto_id;
+
+      -- 5. Recalcular total de la compra
+      UPDATE compras
+      SET total_en_ars           = (SELECT COALESCE(SUM(subtotal_ars),             0) FROM compras_items WHERE compra_id = mets_rec.compra_id),
+          total_moneda_original  = (SELECT COALESCE(SUM(subtotal_moneda_original), 0) FROM compras_items WHERE compra_id = mets_rec.compra_id)
+      WHERE id = mets_rec.compra_id;
+
+      RAISE NOTICE '[022] METSULFURON OK: compra=%, qty: % → 30 sobres', mets_rec.compra_id, mets_rec.old_qty;
+    END LOOP;
+  END;
 
 END $$;
