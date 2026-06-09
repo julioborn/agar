@@ -23,6 +23,7 @@ interface NavItem {
 interface NavSection {
   label: string;
   items: NavItem[];
+  requiereAdmin?: boolean;  // si true, solo visible para admin_empresa y super_admin
 }
 
 // ── Estructura de navegación ───────────────────────────────────────────────────
@@ -76,6 +77,7 @@ const navSections: NavSection[] = [
   },
   {
     label: 'Reportes',
+    requiereAdmin: true,
     items: [
       { href: '/app/reportes/margenes', label: 'Reporte de márgenes', icon: BarChart3 },
     ],
@@ -160,7 +162,7 @@ export default function SidebarNav({
         </Link>
 
         {/* Secciones agrupadas */}
-        {navSections.map((section, sIdx) => (
+        {navSections.filter((s) => !s.requiereAdmin || esAdmin || esSuperAdmin).map((section, sIdx) => (
           <div key={section.label} className={cn('mt-4', sIdx === 0 && 'mt-3')}>
             {/* Encabezado de sección */}
             {!collapsed ? (
