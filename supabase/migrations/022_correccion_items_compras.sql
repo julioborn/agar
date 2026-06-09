@@ -1,8 +1,9 @@
 -- Migración 022: corrección de ítems de compras mal importados
 -- Actualiza compras_items + movimientos_stock + recalcula stock y totales de compra
 
--- Agregar 'sobre' al enum unidad_base_producto (necesario para METSULFURON)
+-- Agregar 'sobres' al enum unidad_base_producto (necesario para METSULFURON)
 ALTER TYPE unidad_base_producto ADD VALUE IF NOT EXISTS 'sobre';
+ALTER TYPE unidad_base_producto ADD VALUE IF NOT EXISTS 'sobres';
 
 DO $$
 DECLARE
@@ -30,11 +31,18 @@ BEGIN
       ('0005-00000324',   '%FOSFATO%TRIPLE%',  60000::numeric)
     ) AS t(factura, patron, nueva_qty)
   LOOP
-    -- Buscar compra por número de factura
+    -- Buscar compra por número de factura (exacto o sin sufijo de letra final, ej: -A)
     SELECT id INTO v_compra_id
     FROM compras
     WHERE numero_factura = type_correction.factura
     LIMIT 1;
+
+    IF v_compra_id IS NULL THEN
+      SELECT id INTO v_compra_id
+      FROM compras
+      WHERE numero_factura = regexp_replace(type_correction.factura, '-[A-Z]$', '')
+      LIMIT 1;
+    END IF;
 
     IF v_compra_id IS NULL THEN
       RAISE WARNING '[022] Factura no encontrada: %', type_correction.factura;
@@ -104,7 +112,7 @@ BEGIN
   BEGIN
     -- 1. Actualizar unidad_base del producto a 'sobre'
     UPDATE productos
-    SET unidad_base = 'sobre'
+    SET unidad_base = 'sobres'
     WHERE nombre ILIKE '%METSULFURON%SUPERMET%';
 
     FOR mets_rec IN

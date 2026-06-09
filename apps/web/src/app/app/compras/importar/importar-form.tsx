@@ -136,7 +136,7 @@ const UNIDAD_MAP: Record<string, string> = {
   l: 'L', lt: 'L', lts: 'L', litro: 'L', litros: 'L',
   kg: 'kg', kilo: 'kg', kilos: 'kg', kilogramo: 'kg', kilogramos: 'kg',
   tn: 'tn', ton: 'tn', tonelada: 'tn', toneladas: 'tn',
-  sobre: 'sobre', sobres: 'sobre', bolsa: 'sobre', bolsas: 'sobre',
+  sobre: 'sobres', sobres: 'sobres', bolsa: 'sobres', bolsas: 'sobres',
   unidad: 'unidad', unidades: 'unidad',
 };
 
