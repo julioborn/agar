@@ -8,7 +8,6 @@ import { Money } from '@/lib/currency-context';
 import RegistrarCosechaForm from './registrar-cosecha-form';
 import ConfigProduccionForm from './config-produccion-form';
 import AplicacionesList from './aplicaciones-list';
-import NuevaAplicacionInline from './nueva-aplicacion-inline';
 import NuevaLaborInline from './nueva-labor-inline';
 import LaborsList from './labores-list';
 import NuevaCosechaInline from './nueva-cosecha-inline';
@@ -312,17 +311,18 @@ export default async function CultivoDetallePage({ params }: Props) {
       >
         <div className="p-4 space-y-3">
           {editable && (
-            <NuevaAplicacionInline
-              cultivoId={cultivoId}
-              productos={productos ?? []}
-              depositos={depositos ?? []}
-              todayISO={todayISO}
-            />
+            <Link
+              href="/app/ria/nuevo"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#006836] text-white text-sm font-semibold rounded-xl hover:bg-[#005228] transition-colors"
+            >
+              <span className="text-base leading-none">+</span> Crear Remito Interno (RIA)
+            </Link>
           )}
           <AplicacionesList
             aplicaciones={(aplicaciones ?? []) as any}
             cultivoId={cultivoId}
             costoTotal={costoTotal}
+            editable={editable}
           />
           <RiaInsumosList rias={(riasConfirmados ?? []) as any} />
         </div>

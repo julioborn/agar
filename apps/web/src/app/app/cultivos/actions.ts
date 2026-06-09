@@ -150,6 +150,52 @@ export async function crearAplicacion(data: AplicacionData): Promise<{ error?: s
   return { aplicacionId };
 }
 
+export async function eliminarAplicacion(aplicacionId: string, cultivoId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autenticado' };
+
+  // 1. Obtener ítems para saber qué stock revertir
+  const { data: items } = await supabase
+    .from('aplicaciones_items')
+    .select('id, producto_id, deposito_origen_id')
+    .eq('aplicacion_id', aplicacionId);
+
+  for (const item of items ?? []) {
+    // 2. Eliminar movimientos_stock de la aplicación (salida_aplicacion + entrada_devolucion)
+    await supabase
+      .from('movimientos_stock')
+      .delete()
+      .eq('referencia_id', item.id)
+      .eq('referencia_tipo', 'aplicaciones_items');
+
+    // 3. Recalcular stock desde los movimientos restantes
+    const { data: movs } = await supabase
+      .from('movimientos_stock')
+      .select('tipo, cantidad')
+      .eq('producto_id', (item as any).producto_id)
+      .eq('deposito_id', (item as any).deposito_origen_id);
+
+    const nuevaCantidad = (movs ?? []).reduce((acc: number, m: any) =>
+      acc + (String(m.tipo).startsWith('entrada') ? Number(m.cantidad) : -Number(m.cantidad)), 0);
+
+    await supabase
+      .from('stock')
+      .update({ cantidad_actual: nuevaCantidad })
+      .eq('producto_id', (item as any).producto_id)
+      .eq('deposito_id', (item as any).deposito_origen_id);
+  }
+
+  // 4. Eliminar la aplicación (cascade elimina aplicaciones_items)
+  const { error } = await supabase.from('aplicaciones').delete().eq('id', aplicacionId);
+  if (error) return { error: error.message };
+
+  await recalcularCostoDirecto(supabase, cultivoId);
+  revalidatePath(`/app/cultivos/${cultivoId}`);
+  revalidatePath('/app/stock');
+  return {};
+}
+
 // ─── Labores ──────────────────────────────────────────────────────────────────
 export interface LaborData {
   cultivo_id: string;

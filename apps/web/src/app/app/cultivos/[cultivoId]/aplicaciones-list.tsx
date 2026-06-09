@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Calendar, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/lib/currency-context';
+import { eliminarAplicacion } from '../actions';
 
 const TIPO_COLOR: Record<string, string> = {
   fitosanitaria: 'bg-orange-100 text-orange-700',
@@ -43,14 +45,17 @@ interface Props {
   aplicaciones: Aplicacion[];
   cultivoId: string;
   costoTotal: number;
+  editable?: boolean;
 }
 
 const num = (n: number | null, d = 4) => n != null ? new Intl.NumberFormat('es-AR', { maximumFractionDigits: d }).format(n) : '—';
 const fmtFecha = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
 
-export default function AplicacionesList({ aplicaciones, cultivoId, costoTotal }: Props) {
+export default function AplicacionesList({ aplicaciones, cultivoId, costoTotal, editable }: Props) {
+  const router = useRouter();
   const { formatMoney } = useCurrency();
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set());
+  const [eliminando, setEliminando] = useState<string | null>(null);
 
   function toggle(id: string) {
     setAbiertos((prev) => {
@@ -58,6 +63,15 @@ export default function AplicacionesList({ aplicaciones, cultivoId, costoTotal }
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+  }
+
+  async function handleEliminar(id: string) {
+    if (!confirm('¿Eliminar esta aplicación? El stock se revertirá automáticamente.')) return;
+    setEliminando(id);
+    const result = await eliminarAplicacion(id, cultivoId);
+    setEliminando(null);
+    if (result.error) { alert('Error: ' + result.error); return; }
+    router.refresh();
   }
 
   if (aplicaciones.length === 0) {
@@ -97,8 +111,19 @@ export default function AplicacionesList({ aplicaciones, cultivoId, costoTotal }
                   {aplic.aplicaciones_items.length} producto{aplic.aplicaciones_items.length !== 1 ? 's' : ''}
                 </span>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
                 <span className="text-sm font-bold text-zinc-800">{formatMoney(total)}</span>
+                {editable && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleEliminar(aplic.id); }}
+                    disabled={eliminando === aplic.id}
+                    className="p-1 rounded-lg text-zinc-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
+                    title="Eliminar aplicación"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
                 {open
                   ? <ChevronUp className="w-4 h-4 text-zinc-400" />
                   : <ChevronDown className="w-4 h-4 text-zinc-400" />}
