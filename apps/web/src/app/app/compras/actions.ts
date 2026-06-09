@@ -93,6 +93,104 @@ export async function crearCompra(data: CompraData): Promise<{ error?: string; c
   return { compraId: compra.id };
 }
 
+export async function corregirItemsCompra(
+  correcciones: Array<{ id: string; cantidad_unidad_base: number }>
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autenticado' };
+
+  const empresaData = await getEmpresaActiva();
+  if (!empresaData) return { error: 'Sin empresa activa' };
+
+  // Obtener datos actuales de todos los ítems a corregir
+  const ids = correcciones.map((c) => c.id);
+  const { data: itemsActuales, error: fetchErr } = await supabase
+    .from('compras_items')
+    .select('id, compra_id, producto_id, deposito_destino_id, precio_unitario_ars, precio_unitario_moneda_original')
+    .in('id', ids);
+
+  if (fetchErr || !itemsActuales) return { error: fetchErr?.message ?? 'Error al obtener ítems' };
+
+  const compraIds = new Set<string>();
+  const stockRecalcKeys = new Set<string>(); // "producto_id::deposito_id"
+
+  for (const corr of correcciones) {
+    const item = itemsActuales.find((i: any) => i.id === corr.id);
+    if (!item) continue;
+
+    const nuevaCantidad = corr.cantidad_unidad_base;
+    const nuevaSubtotalArs = Number(item.precio_unitario_ars) * nuevaCantidad;
+    const nuevaSubtotalOrig = Number(item.precio_unitario_moneda_original) * nuevaCantidad;
+
+    // 1. Actualizar compras_items
+    const { error: e1 } = await supabase
+      .from('compras_items')
+      .update({
+        cantidad_unidad_base: nuevaCantidad,
+        subtotal_ars: nuevaSubtotalArs,
+        subtotal_moneda_original: nuevaSubtotalOrig,
+      })
+      .eq('id', corr.id);
+    if (e1) return { error: e1.message };
+
+    // 2. Actualizar movimientos_stock correspondiente a esta compra+producto
+    const { error: e2 } = await supabase
+      .from('movimientos_stock')
+      .update({ cantidad: nuevaCantidad })
+      .eq('referencia_id', item.compra_id)
+      .eq('referencia_tipo', 'compra')
+      .eq('producto_id', item.producto_id)
+      .eq('deposito_id', item.deposito_destino_id);
+    if (e2) return { error: e2.message };
+
+    compraIds.add(item.compra_id);
+    stockRecalcKeys.add(`${item.producto_id}::${item.deposito_destino_id}`);
+  }
+
+  // 3. Recalcular stock desde movimientos para cada producto+depósito afectado
+  for (const key of stockRecalcKeys) {
+    const [productoId, depositoId] = key.split('::');
+
+    const { data: movs } = await supabase
+      .from('movimientos_stock')
+      .select('tipo, cantidad')
+      .eq('producto_id', productoId)
+      .eq('deposito_id', depositoId);
+
+    const nuevaCantidadStock = (movs ?? []).reduce((acc: number, m: any) => {
+      const qty = Number(m.cantidad ?? 0);
+      return acc + (String(m.tipo).startsWith('entrada') ? qty : -qty);
+    }, 0);
+
+    await supabase
+      .from('stock')
+      .update({ cantidad_actual: nuevaCantidadStock })
+      .eq('producto_id', productoId)
+      .eq('deposito_id', depositoId);
+  }
+
+  // 4. Recalcular totales de cada compra afectada
+  for (const compraId of compraIds) {
+    const { data: allItems } = await supabase
+      .from('compras_items')
+      .select('subtotal_ars, subtotal_moneda_original')
+      .eq('compra_id', compraId);
+
+    const totalArs = (allItems ?? []).reduce((acc: number, i: any) => acc + Number(i.subtotal_ars ?? 0), 0);
+    const totalOrig = (allItems ?? []).reduce((acc: number, i: any) => acc + Number(i.subtotal_moneda_original ?? 0), 0);
+
+    await supabase
+      .from('compras')
+      .update({ total_en_ars: totalArs, total_moneda_original: totalOrig })
+      .eq('id', compraId);
+  }
+
+  revalidatePath('/app/compras');
+  revalidatePath('/app/stock');
+  return {};
+}
+
 export async function eliminarComprasVacias(): Promise<{ deleted: number; error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

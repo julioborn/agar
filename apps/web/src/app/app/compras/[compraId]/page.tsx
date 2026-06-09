@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { ChevronRight, FileText, Truck, Calendar, DollarSign } from 'lucide-react';
+import { ChevronRight, FileText, Truck, Calendar, DollarSign, Pencil } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 import { cn } from '@/lib/utils';
@@ -71,6 +71,12 @@ export default async function CompraDetallePage({ params }: Props) {
             {compra.estado}
           </span>
         </div>
+        <Link
+          href={`/app/compras/${compraId}/editar`}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors"
+        >
+          <Pencil className="w-3.5 h-3.5" /> Corregir ítems
+        </Link>
       </div>
 
       {/* Cabecera de la compra */}
