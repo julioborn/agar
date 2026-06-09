@@ -334,6 +334,12 @@ export default async function CultivoDetallePage({ params }: Props) {
         {/* Configuración de producción y registro */}
         {activo && (
           <div className="p-4 space-y-3">
+            {editable && (
+              <Link href="/app/ria/nuevo"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#006836] text-white text-sm font-semibold rounded-xl hover:bg-[#005228] transition-colors">
+                <span className="text-base leading-none">+</span> Crear Remito Interno (RIA)
+              </Link>
+            )}
             <ConfigProduccionForm
               cultivoId={cultivoId}
               productoFinalActual={(cultivo as any).producto_final ?? null}
