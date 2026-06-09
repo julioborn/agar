@@ -8,9 +8,7 @@ import { Money } from '@/lib/currency-context';
 import RegistrarCosechaForm from './registrar-cosecha-form';
 import ConfigProduccionForm from './config-produccion-form';
 import AplicacionesList from './aplicaciones-list';
-import NuevaLaborInline from './nueva-labor-inline';
 import LaborsList from './labores-list';
-import NuevaCosechaInline from './nueva-cosecha-inline';
 import CosechaList from './cosecha-list';
 import CollapsibleCard from './collapsible-card';
 import RiaInsumosList from './ria-insumos-list';
@@ -37,12 +35,9 @@ export default async function CultivoDetallePage({ params }: Props) {
   const empresaData = await getEmpresaActiva();
   if (!empresaData) redirect('/login');
 
-  const todayISO = new Date().toISOString().slice(0, 10);
-
   const [
-    { data: cultivo }, { data: aplicaciones }, { data: productos }, { data: depositos },
-    { data: labores }, { data: tiposLabor }, { data: maquinarias }, { data: proveedores }, { data: config },
-    { data: costosCosecha }, { data: riasConfirmados },
+    { data: cultivo }, { data: aplicaciones },
+    { data: labores }, { data: costosCosecha }, { data: riasConfirmados },
   ] = await Promise.all([
     supabase
       .from('cultivos')
@@ -72,8 +67,6 @@ export default async function CultivoDetallePage({ params }: Props) {
       `)
       .eq('cultivo_id', cultivoId)
       .order('fecha', { ascending: false }),
-    supabase.from('productos').select('id, nombre, unidad_base').order('nombre'),
-    supabase.from('depositos').select('id, nombre').order('nombre'),
     supabase.from('labores')
       .select(`id, fecha, tipo_ejecucion, observaciones, horas_trabajadas,
                modalidad_cobro, precio_unitario, hectareas_trabajadas, costo_total_calculado,
@@ -82,15 +75,6 @@ export default async function CultivoDetallePage({ params }: Props) {
                proveedor:proveedores(nombre)`)
       .eq('cultivo_id', cultivoId)
       .order('fecha', { ascending: false }),
-    supabase.from('tipos_labor').select('id, nombre')
-      .eq('empresa_id', empresaData.empresa.id).order('nombre'),
-    supabase.from('maquinarias')
-      .select('id, nombre, tipo, consumo_combustible_hora, costo_mantenimiento_hora, valor_adquisicion, vida_util_horas')
-      .eq('empresa_id', empresaData.empresa.id).eq('activa', true).order('nombre'),
-    supabase.from('proveedores').select('id, nombre')
-      .eq('empresa_id', empresaData.empresa.id).order('nombre'),
-    supabase.from('configuracion_empresa').select('precio_combustible')
-      .eq('empresa_id', empresaData.empresa.id).maybeSingle(),
     supabase.from('costos_cosecha')
       .select(`id, fecha, tipo_ejecucion, observaciones, horas_trabajadas,
                modalidad_cobro, precio_unitario, hectareas_trabajadas, toneladas_trabajadas,
@@ -260,14 +244,10 @@ export default async function CultivoDetallePage({ params }: Props) {
         </div>
         <div className="p-4 space-y-3">
           {editable && (
-            <NuevaLaborInline
-              cultivoId={cultivoId}
-              tiposLabor={(tiposLabor ?? []) as any}
-              maquinarias={(maquinarias ?? []) as any}
-              proveedores={(proveedores ?? []) as any}
-              precioCombustible={config?.precio_combustible ?? 0}
-              hectareasLote={(cultivo.lote as any)?.hectareas ?? null}
-            />
+            <Link href="/app/ria/nuevo"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors">
+              <span className="text-base leading-none">+</span> Crear Remito Interno (RIA)
+            </Link>
           )}
           <LaborsList labores={(labores ?? []) as any} cultivoId={cultivoId} />
         </div>
@@ -279,14 +259,10 @@ export default async function CultivoDetallePage({ params }: Props) {
         </div>
         <div className="p-4 space-y-3">
           {activo && (
-            <NuevaCosechaInline
-              cultivoId={cultivoId}
-              maquinarias={(maquinarias ?? []) as any}
-              proveedores={(proveedores ?? []) as any}
-              precioCombustible={config?.precio_combustible ?? 0}
-              hectareasLote={(cultivo.lote as any)?.hectareas ?? null}
-              produccionTotalKg={cultivo.produccion_total_kg ?? null}
-            />
+            <Link href="/app/ria/nuevo"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors">
+              <span className="text-base leading-none">+</span> Crear Remito Interno (RIA)
+            </Link>
           )}
           <CosechaList costosCosecha={(costosCosecha ?? []) as any} cultivoId={cultivoId} />
         </div>
