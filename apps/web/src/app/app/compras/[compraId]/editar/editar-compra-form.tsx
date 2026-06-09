@@ -26,20 +26,37 @@ interface Props {
   items: Item[];
 }
 
+const fmtNum = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 });
 const num = (n: number, d = 4) => new Intl.NumberFormat('es-AR', { maximumFractionDigits: d }).format(n);
 const fmtArs = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 });
 
+// Formatea un número para mostrar en el input (formato argentino, sin ceros finales)
+function fmtInput(n: number | string): string {
+  const v = Number(n);
+  return isNaN(v) ? String(n) : fmtNum.format(v);
+}
+
+// Parsea número argentino (coma = decimal, punto = miles) o inglés
 function parseCantidad(s: string): number {
-  const clean = s.trim().replace(/\./g, '').replace(',', '.');
-  const n = parseFloat(clean);
-  return isNaN(n) ? 0 : n;
+  const t = s.trim();
+  // Formato argentino con punto de miles y coma decimal: 1.234,56
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) {
+    return parseFloat(t.replace(/\./g, '').replace(',', '.')) || 0;
+  }
+  // Solo coma como decimal (100,5 → 100.5), a menos que sea separador de miles (100,000)
+  if (t.includes(',') && !t.includes('.')) {
+    const partes = t.split(',');
+    if (partes.length === 2 && partes[1].length === 3) return parseFloat(t.replace(',', '')) || 0;
+    return parseFloat(t.replace(',', '.')) || 0;
+  }
+  return parseFloat(t.replace(',', '')) || 0;
 }
 
 export default function EditarCompraForm({ compraId, moneda, items }: Props) {
   const router = useRouter();
 
   const [cantidades, setCantidades] = useState<Record<string, string>>(
-    Object.fromEntries(items.map((i) => [i.id, String(i.cantidad_unidad_base)]))
+    Object.fromEntries(items.map((i) => [i.id, fmtInput(i.cantidad_unidad_base)]))
   );
   const [guardando, setGuardando] = useState(false);
   const [resultado, setResultado] = useState<{ ok?: boolean; error?: string } | null>(null);
