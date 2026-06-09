@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Filter, X, BarChart2, Upload, ChevronRight } from 'lucide-react';
+import { Filter, X, BarChart2, Upload, ChevronRight, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ExportButtons from '@/components/export-buttons';
 import { CATEGORIAS } from '../productos/constants';
@@ -31,6 +31,7 @@ const numFmt = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 });
 const num = (n: number, unit: string) => `${numFmt.format(n)} ${unit}`;
 
 export default function StockManager({ stockRows, empresaNombre }: Props) {
+  const [searchText, setSearchText]     = useState('');
   const [depositoId, setDepositoId]     = useState('');
   const [categoria, setCategoria]       = useState('');
   const [soloBajoMinimo, setSoloBajoMinimo] = useState(false);
@@ -43,11 +44,12 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
   );
 
   const filtradas = useMemo(() => stockRows.filter((r) => {
+    if (searchText && !r.producto_nombre.toLowerCase().includes(searchText.toLowerCase())) return false;
     if (depositoId && r.deposito_id !== depositoId) return false;
     if (categoria && r.producto_categoria !== categoria) return false;
     if (soloBajoMinimo && !(r.cantidad_actual <= r.producto_stock_minimo && r.producto_stock_minimo > 0)) return false;
     return true;
-  }), [stockRows, depositoId, categoria, soloBajoMinimo]);
+  }), [stockRows, searchText, depositoId, categoria, soloBajoMinimo]);
 
   const deposiGroups = useMemo(() => {
     const map = new Map<string, { nombre: string; filas: StockRow[] }>();
@@ -58,7 +60,7 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
     return Array.from(map.values());
   }, [filtradas]);
 
-  const filtrosActivos = [depositoId, categoria, soloBajoMinimo ? 'bajo' : ''].filter(Boolean).length;
+  const filtrosActivos = [searchText, depositoId, categoria, soloBajoMinimo ? 'bajo' : ''].filter(Boolean).length;
   const bajoMinimo = filtradas.filter((r) => r.cantidad_actual <= r.producto_stock_minimo && r.producto_stock_minimo > 0).length;
 
   const exportData = filtradas.map((r) => ({ ...r, _estado: r.cantidad_actual <= r.producto_stock_minimo && r.producto_stock_minimo > 0 ? 'Bajo mínimo' : 'OK' }));
@@ -102,6 +104,25 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
 
       {/* Filtros */}
       <div className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">
+        {/* Buscador siempre visible */}
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
+          <input
+            type="text"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            placeholder="Buscar producto..."
+            className="w-full pl-8 pr-8 py-1.5 text-sm border border-zinc-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#006836]/40 bg-white"
+          />
+          {searchText && (
+            <button
+              onClick={() => setSearchText('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
         <div className="flex items-center justify-between mb-3">
           <button onClick={() => setShowFilters(!showFilters)}
             className={cn('inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border transition-colors',
@@ -116,7 +137,7 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
           </button>
           <div className="flex items-center gap-3">
             {filtrosActivos > 0 && (
-              <button onClick={() => { setDepositoId(''); setCategoria(''); setSoloBajoMinimo(false); }}
+              <button onClick={() => { setSearchText(''); setDepositoId(''); setCategoria(''); setSoloBajoMinimo(false); }}
                 className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-red-500 transition-colors">
                 <X className="w-3 h-3" /> Limpiar
               </button>

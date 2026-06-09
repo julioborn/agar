@@ -92,3 +92,36 @@ export async function crearCompra(data: CompraData): Promise<{ error?: string; c
 
   return { compraId: compra.id };
 }
+
+export async function eliminarComprasVacias(): Promise<{ deleted: number; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { deleted: 0, error: 'No autenticado' };
+
+  const empresaData = await getEmpresaActiva();
+  if (!empresaData) return { deleted: 0, error: 'Sin empresa activa' };
+
+  const { data: conItems } = await supabase
+    .from('compras_items')
+    .select('compra_id');
+
+  const idsConItems = new Set((conItems ?? []).map((r: any) => r.compra_id));
+
+  const { data: todasCompras } = await supabase
+    .from('compras')
+    .select('id');
+
+  const vacias = (todasCompras ?? [])
+    .map((c: any) => c.id)
+    .filter((id: string) => !idsConItems.has(id));
+
+  if (vacias.length === 0) return { deleted: 0 };
+
+  const { error } = await supabase.from('compras').delete().in('id', vacias);
+  if (error) return { deleted: 0, error: error.message };
+
+  revalidatePath('/app/compras');
+  revalidatePath('/app/stock');
+
+  return { deleted: vacias.length };
+}

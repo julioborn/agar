@@ -135,8 +135,8 @@ function mejoresMatches(descripcion: string, productos: Producto[], topN = 5): P
 const UNIDAD_MAP: Record<string, string> = {
   l: 'L', lt: 'L', lts: 'L', litro: 'L', litros: 'L',
   kg: 'kg', kilo: 'kg', kilos: 'kg', kilogramo: 'kg', kilogramos: 'kg',
-  tn: 'kg', ton: 'kg', tonelada: 'kg',
-  sobre: 'unidad', sobres: 'unidad', bolsa: 'unidad', bolsas: 'unidad',
+  tn: 'tn', ton: 'tn', tonelada: 'tn', toneladas: 'tn',
+  sobre: 'sobre', sobres: 'sobre', bolsa: 'sobre', bolsas: 'sobre',
   unidad: 'unidad', unidades: 'unidad',
 };
 

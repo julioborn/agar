@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Filter, X, ChevronDown, ChevronUp, ShoppingCart, Calendar, Truck, FileText, DollarSign } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Filter, X, ChevronDown, ChevronUp, ShoppingCart, Calendar, Truck, FileText, DollarSign, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import ExportButtons from '@/components/export-buttons';
 import { useCurrency } from '@/lib/currency-context';
+import { eliminarComprasVacias } from './actions';
 
 const ESTADO_BADGE: Record<string, string> = {
   confirmada: 'bg-[#006836]/10 text-[#006836]',
@@ -43,6 +45,7 @@ const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('es-AR',
 const fmtLong = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
 
 export default function ComprasManager({ compras, proveedores, empresaNombre }: Props) {
+  const router = useRouter();
   const { formatMoney, currency } = useCurrency();
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
@@ -50,6 +53,7 @@ export default function ComprasManager({ compras, proveedores, empresaNombre }: 
   const [estado, setEstado] = useState('');
   const [moneda, setMoneda]  = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [limpiando, setLimpiando] = useState(false);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [itemsCache, setItemsCache] = useState<Record<string, CompraItem[]>>({});
@@ -86,6 +90,17 @@ export default function ComprasManager({ compras, proveedores, empresaNombre }: 
       .eq('compra_id', compra.id);
     setItemsCache((prev) => ({ ...prev, [compra.id]: (data as any) ?? [] }));
     setLoadingId(null);
+  }
+
+  async function handleLimpiarVacias() {
+    if (!confirm('¿Eliminar todas las compras sin ítems? Esta acción no se puede deshacer.')) return;
+    setLimpiando(true);
+    const result = await eliminarComprasVacias();
+    setLimpiando(false);
+    if (result.error) { alert('Error: ' + result.error); return; }
+    if (result.deleted === 0) { alert('No hay compras vacías.'); return; }
+    alert(`Se eliminaron ${result.deleted} compra${result.deleted !== 1 ? 's' : ''} vacía${result.deleted !== 1 ? 's' : ''}.`);
+    router.refresh();
   }
 
   const exportColumns = [
@@ -148,6 +163,14 @@ export default function ComprasManager({ compras, proveedores, empresaNombre }: 
                 <X className="w-3 h-3" /> Limpiar
               </button>
             )}
+            <button
+              onClick={handleLimpiarVacias}
+              disabled={limpiando}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border border-red-200 text-red-500 bg-white hover:bg-red-50 transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              {limpiando ? 'Limpiando…' : 'Limpiar vacías'}
+            </button>
             <ExportButtons data={filtradas} columns={exportColumns}
               filename={`compras-${empresaNombre.replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}`}
               title={`Compras · ${empresaNombre}`} />

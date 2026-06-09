@@ -12,5 +12,6 @@ export const UNIDADES = [
   { value: 'kg',     label: 'kg (kilogramos)' },
   { value: 'tn',     label: 'tn (toneladas)' },
   { value: 'L',      label: 'L (litros)' },
+  { value: 'sobre',  label: 'Sobre/Bolsa' },
   { value: 'unidad', label: 'Unidad' },
 ] as const;
