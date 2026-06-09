@@ -1,6 +1,9 @@
 -- Migración 022: corrección de ítems de compras mal importados
 -- Actualiza compras_items + movimientos_stock + recalcula stock y totales de compra
 
+-- Agregar 'sobre' al enum unidad_base_producto (necesario para METSULFURON)
+ALTER TYPE unidad_base_producto ADD VALUE IF NOT EXISTS 'sobre';
+
 DO $$
 DECLARE
   v_compra_id  uuid;
