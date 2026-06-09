@@ -63,7 +63,16 @@ Reglas adicionales:
 3. Si la factura está en pesos pero indica cotización del dólar, guardá la cotización en "cotizacion_usd"
 4. Si la factura está en USD, "moneda" = "USD" y los importes van en USD
 5. "subtotal_neto" de la cabecera = suma de todos los subtotales netos de los ítems
-6. CRÍTICO — formato de números en JSON: usá SIEMPRE punto como separador decimal y SIN separador de miles.
+6. CRÍTICO — lectura de números en facturas ARGENTINAS:
+   Las facturas argentinas usan PUNTO como separador de miles y COMA como separador decimal.
+   Ejemplos de lectura correcta:
+   - "1.500,75"  → 1500.75  (mil quinientos con 75 centavos)
+   - "100,000"   → 100.0    (cien litros, la coma es decimal)
+   - "1.000"     → 1000     (mil unidades, el punto es separador de miles)
+   - "2.500,00"  → 2500.0   (dos mil quinientos)
+   - "50,500"    → 50.5     (cincuenta con medio litro)
+   NO interpretes la coma como separador de miles como se hace en inglés.
+7. CRÍTICO — formato de números en el JSON de respuesta: usá SIEMPRE punto como separador decimal y SIN separador de miles.
    ✓ Correcto: 3425.10   ✗ Incorrecto: 3.425,10 o 3.425.10 o 3425,10`;
 
 export async function POST(req: NextRequest) {

@@ -46,6 +46,56 @@ interface ItemReview {
 
 function uid() { return Math.random().toString(36).slice(2, 10); }
 
+// Parsea números argentinos: punto=miles, coma=decimal.
+// También acepta números ya en formato anglosajón (punto=decimal).
+// Ejemplos: "1.500,75" → 1500.75 | "100,000" → 100 | "1.000" → 1000
+function parseNumeroArg(raw: number | string | null | undefined): number {
+  if (raw == null) return 0;
+  const s = String(raw).trim();
+  if (s === '' || s === '-') return 0;
+
+  const tienePunto  = s.includes('.');
+  const tieneComa   = s.includes(',');
+
+  if (tieneComa && tienePunto) {
+    // Formato argentino: 1.500,75 → 1500.75
+    // El punto viene antes que la coma → punto=miles, coma=decimal
+    const idxP = s.lastIndexOf('.');
+    const idxC = s.lastIndexOf(',');
+    if (idxP < idxC) {
+      // Estilo argentino: quitar puntos (miles) y reemplazar coma por punto
+      return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
+    } else {
+      // Estilo anglosajón: quitar comas (miles), punto=decimal
+      return parseFloat(s.replace(/,/g, '')) || 0;
+    }
+  }
+
+  if (tieneComa && !tienePunto) {
+    // Solo coma: puede ser decimal argentino (100,5) o miles anglosajón (1,000)
+    const partes = s.split(',');
+    // Si la parte después de la coma tiene exactamente 3 dígitos → es miles anglosajón
+    if (partes.length === 2 && partes[1].length === 3 && !partes[1].includes('.')) {
+      return parseFloat(s.replace(',', '')) || 0;  // 100,000 → 100000 (anglosajón)
+    }
+    // De lo contrario es decimal argentino: 100,75 → 100.75
+    return parseFloat(s.replace(',', '.')) || 0;
+  }
+
+  if (tienePunto && !tieneComa) {
+    // Solo punto: puede ser miles argentino (1.000) o decimal anglosajón (100.75)
+    const partes = s.split('.');
+    // Si la parte decimal tiene exactamente 3 dígitos → es separador de miles argentino
+    if (partes.length === 2 && partes[1].length === 3) {
+      return parseFloat(s.replace('.', '')) || 0;  // 1.000 → 1000
+    }
+    // De lo contrario es decimal: 100.75 → 100.75
+    return parseFloat(s) || 0;
+  }
+
+  return parseFloat(s) || 0;
+}
+
 function normalizar(s: string) {
   return s.toLowerCase()
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -193,10 +243,10 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
           _id: uid(),
           descripcion_factura: item.descripcion,
           codigo_proveedor_ext: item.codigo_proveedor,
-          cantidad: String(item.cantidad),
+          cantidad: String(parseNumeroArg(item.cantidad)),
           unidad: item.unidad,
-          precio_unitario_neto: String(item.precio_unitario_neto),
-          subtotal_neto: item.subtotal_neto,
+          precio_unitario_neto: String(parseNumeroArg(item.precio_unitario_neto)),
+          subtotal_neto: parseNumeroArg(item.subtotal_neto),
           producto_id: productoId,
           nuevo_nombre: item.descripcion,
           nuevo_categoria: inferirCategoria(item.descripcion),
