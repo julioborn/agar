@@ -130,11 +130,11 @@ export default async function CultivoDetallePage({ params }: Props) {
 
   const costoLaboresTotal      = (labores ?? []).reduce((acc, l: any) => acc + Number(l.costo_total_calculado ?? 0), 0);
   const costoCosechaTotal      = (costosCosecha ?? []).reduce((acc, c: any) => acc + Number(c.costo_total_calculado ?? 0), 0);
-  const costoInsumosTotalDisplay = (aplicaciones ?? []).reduce((acc, a: any) =>
+  const costoAplicacionesTotal = (aplicaciones ?? []).reduce((acc, a: any) =>
     acc + ((a.aplicaciones_items ?? []) as any[]).reduce((s: number, it: any) => s + Number(it.costo_imputado_ars ?? 0), 0), 0);
   const costoRiaTotal = (riasConfirmados ?? []).reduce((acc, r: any) =>
     acc + ((r.remitos_insumos ?? []) as any[]).reduce((s: number, i: any) => s + Number(i.subtotal ?? 0), 0), 0);
-  const costoInsumosTotalDisplay = costoInsumosTotalDisplay + costoRiaTotal;
+  const costoInsumosTotalDisplay = costoAplicacionesTotal + costoRiaTotal;
   const totalTrabajosServicios = costoLaboresTotal + costoCosechaTotal;
 
   const cantLabores     = (labores ?? []).length;
