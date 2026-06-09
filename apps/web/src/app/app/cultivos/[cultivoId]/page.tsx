@@ -14,6 +14,7 @@ import LaborsList from './labores-list';
 import NuevaCosechaInline from './nueva-cosecha-inline';
 import CosechaList from './cosecha-list';
 import CollapsibleCard from './collapsible-card';
+import RiaInsumosList from './ria-insumos-list';
 
 const ESTADO_STYLE: Record<string, string> = {
   planificada: 'bg-blue-500/20 text-blue-100',
@@ -42,7 +43,7 @@ export default async function CultivoDetallePage({ params }: Props) {
   const [
     { data: cultivo }, { data: aplicaciones }, { data: productos }, { data: depositos },
     { data: labores }, { data: tiposLabor }, { data: maquinarias }, { data: proveedores }, { data: config },
-    { data: costosCosecha },
+    { data: costosCosecha }, { data: riasConfirmados },
   ] = await Promise.all([
     supabase
       .from('cultivos')
@@ -99,6 +100,19 @@ export default async function CultivoDetallePage({ params }: Props) {
                proveedor:proveedores(nombre)`)
       .eq('cultivo_id', cultivoId)
       .order('fecha', { ascending: false }),
+    supabase
+      .from('remitos_internos')
+      .select(`
+        id, numero_ria, fecha, observaciones, superficie_afectada,
+        remitos_insumos(
+          id, cantidad, dosis_por_ha, costo_unitario, subtotal,
+          producto:productos(nombre, unidad_base),
+          deposito:depositos(nombre)
+        )
+      `)
+      .eq('cultivo_id', cultivoId)
+      .eq('estado', 'confirmado')
+      .order('fecha', { ascending: false }),
   ]);
 
   if (!cultivo) notFound();
@@ -116,13 +130,17 @@ export default async function CultivoDetallePage({ params }: Props) {
 
   const costoLaboresTotal      = (labores ?? []).reduce((acc, l: any) => acc + Number(l.costo_total_calculado ?? 0), 0);
   const costoCosechaTotal      = (costosCosecha ?? []).reduce((acc, c: any) => acc + Number(c.costo_total_calculado ?? 0), 0);
-  const costoAplicacionesTotal = (aplicaciones ?? []).reduce((acc, a: any) =>
+  const costoInsumosTotalDisplay = (aplicaciones ?? []).reduce((acc, a: any) =>
     acc + ((a.aplicaciones_items ?? []) as any[]).reduce((s: number, it: any) => s + Number(it.costo_imputado_ars ?? 0), 0), 0);
+  const costoRiaTotal = (riasConfirmados ?? []).reduce((acc, r: any) =>
+    acc + ((r.remitos_insumos ?? []) as any[]).reduce((s: number, i: any) => s + Number(i.subtotal ?? 0), 0), 0);
+  const costoInsumosTotalDisplay = costoInsumosTotalDisplay + costoRiaTotal;
   const totalTrabajosServicios = costoLaboresTotal + costoCosechaTotal;
 
   const cantLabores     = (labores ?? []).length;
   const cantCosechas    = (costosCosecha ?? []).length;
   const cantAplicaciones = (aplicaciones ?? []).length;
+  const cantRias        = (riasConfirmados ?? []).length;
 
   const activo   = cultivo.estado !== 'cancelada';
   const editable = cultivo.estado === 'en_curso' || cultivo.estado === 'planificada';
@@ -196,7 +214,7 @@ export default async function CultivoDetallePage({ params }: Props) {
       </div>
 
       {/* ── Resumen de costos por categoría ───────────────────────────── */}
-      {(totalTrabajosServicios > 0 || costoAplicacionesTotal > 0) && (
+      {(totalTrabajosServicios > 0 || costoInsumosTotalDisplay > 0) && (
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-white rounded-xl border border-indigo-100 px-4 py-3 shadow-sm text-center">
             <p className="text-xs text-zinc-400 mb-1">Trabajos y servicios</p>
@@ -207,7 +225,7 @@ export default async function CultivoDetallePage({ params }: Props) {
           <div className="bg-white rounded-xl border border-orange-100 px-4 py-3 shadow-sm text-center">
             <p className="text-xs text-zinc-400 mb-1">Uso de productos</p>
             <p className="text-base font-bold text-orange-600">
-              {costoAplicacionesTotal > 0 ? <Money ars={costoAplicacionesTotal} /> : '—'}
+              {costoInsumosTotalDisplay > 0 ? <Money ars={costoInsumosTotalDisplay} /> : '—'}
             </p>
           </div>
           <div className="bg-white rounded-xl border border-zinc-200 px-4 py-3 shadow-sm text-center">
@@ -283,12 +301,13 @@ export default async function CultivoDetallePage({ params }: Props) {
         subtitle="Agroquímicos, fertilizantes y otros insumos · descuenta del stock"
         borderColor="border-orange-100"
         badge={
-          costoAplicacionesTotal > 0
-            ? <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg"><Money ars={costoAplicacionesTotal} /></span>
+          costoInsumosTotalDisplay > 0
+            ? <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg"><Money ars={costoInsumosTotalDisplay} /></span>
             : undefined
         }
         stats={[
           { label: 'Aplicaciones', value: cantAplicaciones > 0 ? String(cantAplicaciones) : 'Sin registros' },
+          ...(cantRias > 0 ? [{ label: 'Vía RIA', value: String(cantRias) }] : []),
         ]}
       >
         <div className="p-4 space-y-3">
@@ -305,6 +324,7 @@ export default async function CultivoDetallePage({ params }: Props) {
             cultivoId={cultivoId}
             costoTotal={costoTotal}
           />
+          <RiaInsumosList rias={(riasConfirmados ?? []) as any} />
         </div>
       </CollapsibleCard>
 
@@ -415,7 +435,7 @@ export default async function CultivoDetallePage({ params }: Props) {
                   <span className="text-zinc-300 text-xs">−</span> Uso de productos
                 </span>
                 <span className="font-medium text-red-500">
-                  {costoAplicacionesTotal > 0 ? <Money ars={costoAplicacionesTotal} /> : '—'}
+                  {costoInsumosTotalDisplay > 0 ? <Money ars={costoInsumosTotalDisplay} /> : '—'}
                 </span>
               </div>
               <div className="flex justify-between items-center px-4 py-2.5 border-t border-zinc-200 bg-zinc-50">
