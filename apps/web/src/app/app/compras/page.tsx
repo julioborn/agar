@@ -58,7 +58,12 @@ export default async function ComprasPage() {
         </div>
       </div>
 
-      <ComprasManager compras={compras} proveedores={provRes.data ?? []} empresaNombre={empresa.nombre} />
+      <ComprasManager
+        compras={compras}
+        proveedores={provRes.data ?? []}
+        empresaNombre={empresa.nombre}
+        esAdmin={user.email === 'juliobornes10@gmail.com'}
+      />
     </div>
   );
 }

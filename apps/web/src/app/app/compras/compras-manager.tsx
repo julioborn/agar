@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Filter, X, ChevronDown, ChevronUp, ShoppingCart, Calendar, Truck, FileText, DollarSign, Trash2 } from 'lucide-react';
+import { Filter, X, ChevronDown, ChevronUp, ShoppingCart, Calendar, Truck, FileText, DollarSign, Trash2, Pencil } from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import ExportButtons from '@/components/export-buttons';
@@ -38,14 +39,14 @@ interface CompraItem {
   deposito_destino: { nombre: string } | null;
 }
 
-interface Props { compras: Compra[]; proveedores: { id: string; nombre: string }[]; empresaNombre: string }
+interface Props { compras: Compra[]; proveedores: { id: string; nombre: string }[]; empresaNombre: string; esAdmin?: boolean }
 
 const num = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
 const num4 = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 });
 const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 const fmtLong = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
 
-export default function ComprasManager({ compras, proveedores, empresaNombre }: Props) {
+export default function ComprasManager({ compras, proveedores, empresaNombre, esAdmin = false }: Props) {
   const router = useRouter();
   const { formatMoney, currency } = useCurrency();
   const [fechaDesde, setFechaDesde] = useState('');
@@ -310,6 +311,18 @@ export default function ComprasManager({ compras, proveedores, empresaNombre }: 
                           </div>
                         </div>
                       </div>
+
+                      {/* Botón editar */}
+                      {esAdmin && (
+                        <div className="flex justify-end">
+                          <Link
+                            href={`/app/compras/${c.id}/editar`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-[#006836]/30 text-[#006836] bg-[#006836]/5 hover:bg-[#006836]/10 rounded-xl transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" /> Editar factura
+                          </Link>
+                        </div>
+                      )}
 
                       {/* Ítems */}
                       {isLoading ? (
