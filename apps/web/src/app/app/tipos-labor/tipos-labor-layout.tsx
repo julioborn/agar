@@ -6,8 +6,8 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
-interface TipoLabor { id: string; nombre: string; descripcion: string | null; }
-interface Props { tiposLabor: TipoLabor[]; empresaId: string; }
+interface TipoLabor { id: string; nombre: string; descripcion: string | null; uta_equivalencia: number | null; }
+interface Props { tiposLabor: TipoLabor[]; empresaId: string; precioGasoil?: number; litrosPorUta?: number; }
 
 const CATEGORIAS_LABOR = [
   'Laboreo', 'Siembra', 'Aplicacion', 'Fertilizacion', 'Cosecha',
@@ -43,15 +43,18 @@ function buildDesc(cat: string, etapa: string) {
 
 const field = 'w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#006836]/40 disabled:opacity-50';
 
-export default function TiposLaborLayout({ tiposLabor, empresaId }: Props) {
+export default function TiposLaborLayout({ tiposLabor, empresaId, precioGasoil = 0, litrosPorUta = 35 }: Props) {
   const router = useRouter();
   const supabase = createClient();
+
+  const numFmt = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
 
   // New form
   const [formOpen, setFormOpen] = useState(false);
   const [newNombre, setNewNombre] = useState('');
-  const [newCat,    setNewCat]    = useState('Siembra');
+  const [newCat,    setNewCat]    = useState('Laboreo');
   const [newEtapa,  setNewEtapa]  = useState('');
+  const [newUta,    setNewUta]    = useState('');
   const [saving,    setSaving]    = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -60,6 +63,7 @@ export default function TiposLaborLayout({ tiposLabor, empresaId }: Props) {
   const [editNombre,  setEditNombre]  = useState('');
   const [editCat,     setEditCat]     = useState('');
   const [editEtapa,   setEditEtapa]   = useState('');
+  const [editUta,     setEditUta]     = useState('');
   const [editLoading, setEditLoading] = useState(false);
 
   // Delete confirm
@@ -73,15 +77,18 @@ export default function TiposLaborLayout({ tiposLabor, empresaId }: Props) {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!newNombre.trim()) return;
+    const uta = parseFloat(newUta || '0');
+    if (uta <= 0) { setSaveError('Ingresá un valor UTA mayor a 0.'); return; }
     setSaving(true); setSaveError(null);
     const { error } = await supabase.from('tipos_labor').insert({
       empresa_id: empresaId,
       nombre: newNombre.trim(),
       descripcion: buildDesc(newCat, newEtapa),
+      uta_equivalencia: uta,
     });
     setSaving(false);
     if (error) { setSaveError(error.message); return; }
-    setNewNombre(''); setNewEtapa(''); setNewCat('Siembra'); setFormOpen(false);
+    setNewNombre(''); setNewEtapa(''); setNewCat('Laboreo'); setNewUta(''); setFormOpen(false);
     router.refresh();
   }
 
@@ -90,6 +97,7 @@ export default function TiposLaborLayout({ tiposLabor, empresaId }: Props) {
     setEditNombre(t.nombre);
     setEditCat(parseCat(t.descripcion));
     setEditEtapa(parseEtapa(t.descripcion));
+    setEditUta(t.uta_equivalencia != null ? String(t.uta_equivalencia) : '');
     setConfirmId(null);
   }
 
@@ -100,6 +108,7 @@ export default function TiposLaborLayout({ tiposLabor, empresaId }: Props) {
     await supabase.from('tipos_labor').update({
       nombre: editNombre.trim(),
       descripcion: buildDesc(editCat, editEtapa),
+      uta_equivalencia: parseFloat(editUta || '0'),
     }).eq('id', editId);
     setEditLoading(false);
     setEditId(null);
@@ -214,8 +223,25 @@ export default function TiposLaborLayout({ tiposLabor, empresaId }: Props) {
                     onChange={(e) => setNewEtapa(e.target.value)} disabled={saving} className={field} />
                 </div>
               </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 mb-1.5">
+                  Equivalencia UTA * <span className="text-zinc-400 font-normal">(ej: 1.2 para Rastra desencontrada)</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input type="number" inputMode="decimal" min="0.01" step="0.01"
+                    placeholder="Ej: 1.2" value={newUta}
+                    onChange={(e) => setNewUta(e.target.value)} required disabled={saving}
+                    className={`${field} w-32`} />
+                  <span className="text-sm text-zinc-500">UTA / ha</span>
+                  {parseFloat(newUta || '0') > 0 && precioGasoil > 0 && (
+                    <span className="text-xs text-[#006836] font-medium">
+                      = ${numFmt.format(parseFloat(newUta) * litrosPorUta * precioGasoil)}/ha
+                    </span>
+                  )}
+                </div>
+              </div>
               {saveError && <p className="text-xs text-red-500">{saveError}</p>}
-              <button type="submit" disabled={saving || !newNombre.trim()}
+              <button type="submit" disabled={saving || !newNombre.trim() || !newUta}
                 className="inline-flex items-center gap-1.5 px-5 py-2 bg-[#006836] text-white text-sm font-semibold rounded-xl hover:bg-[#005228] disabled:opacity-50 transition-colors w-full justify-center">
                 <Check className="w-4 h-4" />
                 {saving ? 'Guardando...' : 'Agregar'}
@@ -317,6 +343,18 @@ export default function TiposLaborLayout({ tiposLabor, empresaId }: Props) {
                                 disabled={editLoading} className={field} />
                             </div>
                             <div className="flex items-center gap-2">
+                              <input type="number" inputMode="decimal" min="0.01" step="0.01"
+                                placeholder="UTA / ha" value={editUta}
+                                onChange={(e) => setEditUta(e.target.value)}
+                                disabled={editLoading} className={`${field} w-28`} />
+                              <span className="text-xs text-zinc-500">UTA</span>
+                              {parseFloat(editUta || '0') > 0 && precioGasoil > 0 && (
+                                <span className="text-xs text-[#006836] font-medium">
+                                  = ${numFmt.format(parseFloat(editUta) * litrosPorUta * precioGasoil)}/ha
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
                               <button type="submit" disabled={editLoading || !editNombre.trim()}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#006836] text-white text-xs font-semibold rounded-lg hover:bg-[#005228] disabled:opacity-50 transition-colors">
                                 <Check className="w-3 h-3" />
@@ -352,10 +390,17 @@ export default function TiposLaborLayout({ tiposLabor, empresaId }: Props) {
                                 <p className="text-xs text-zinc-400 mt-0.5">{etapa}</p>
                               )}
                             </div>
-                            {etapa && (
-                              <span className={cn('shrink-0 hidden sm:inline-block px-2 py-0.5 rounded-full text-xs font-medium', s.badge)}>
-                                {etapa}
-                              </span>
+                            {t.uta_equivalencia != null && t.uta_equivalencia > 0 && (
+                              <div className="shrink-0 text-right hidden sm:block">
+                                <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-[#006836]/10 text-[#006836]">
+                                  {t.uta_equivalencia} UTA
+                                </span>
+                                {precioGasoil > 0 && (
+                                  <p className="text-xs text-zinc-400 mt-0.5">
+                                    ${numFmt.format(t.uta_equivalencia * litrosPorUta * precioGasoil)}/ha
+                                  </p>
+                                )}
+                              </div>
                             )}
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                               <button onClick={() => startEdit(t)}

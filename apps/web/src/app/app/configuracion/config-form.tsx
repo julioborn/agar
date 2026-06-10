@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, RefreshCw, Fuel, CircleDollarSign } from 'lucide-react';
+import { Check, RefreshCw, Fuel, CircleDollarSign, Tractor } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
   initialTipo: string;
   initialCotizUsd: number | null;
   cotizBNA: number | null;
+  initialLitrosPorUta: number;
 }
 
 const TIPOS_COMBUSTIBLE = [
@@ -20,13 +21,19 @@ const TIPOS_COMBUSTIBLE = [
 
 const field = 'w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#006836]/40 disabled:opacity-50';
 
-export default function ConfigForm({ empresaId, initialPrecio, initialTipo, initialCotizUsd, cotizBNA }: Props) {
+export default function ConfigForm({ empresaId, initialPrecio, initialTipo, initialCotizUsd, cotizBNA, initialLitrosPorUta }: Props) {
   // — Combustible —
   const [precio,       setPrecio]      = useState(initialPrecio > 0 ? String(initialPrecio) : '');
   const [tipo,         setTipo]        = useState(initialTipo);
   const [savingComb,   setSavingComb]  = useState(false);
   const [savedComb,    setSavedComb]   = useState(false);
   const [errorComb,    setErrorComb]   = useState<string | null>(null);
+
+  // — UTA —
+  const [litrosUta,    setLitrosUta]   = useState(initialLitrosPorUta > 0 ? String(initialLitrosPorUta) : '35');
+  const [savingUta,    setSavingUta]   = useState(false);
+  const [savedUta,     setSavedUta]    = useState(false);
+  const [errorUta,     setErrorUta]    = useState<string | null>(null);
 
   // — Cotización USD —
   const [cotizUsd,     setCotizUsd]    = useState(initialCotizUsd ? String(initialCotizUsd) : '');
@@ -49,6 +56,22 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
     if (err) { setErrorComb(err.message); return; }
     setSavedComb(true);
     setTimeout(() => setSavedComb(false), 2500);
+  }
+
+  async function handleSaveUta(e: React.FormEvent) {
+    e.preventDefault();
+    const litros = Number(litrosUta);
+    if (!litrosUta || litros <= 0) { setErrorUta('Ingresá un valor válido mayor a 0.'); return; }
+    setSavingUta(true); setErrorUta(null);
+
+    const { error: err } = await createClient()
+      .from('configuracion_empresa')
+      .upsert({ empresa_id: empresaId, litros_por_uta: litros }, { onConflict: 'empresa_id' });
+
+    setSavingUta(false);
+    if (err) { setErrorUta(err.message); return; }
+    setSavedUta(true);
+    setTimeout(() => setSavedUta(false), 2500);
   }
 
   async function handleSaveCotizacion(e: React.FormEvent) {
@@ -119,6 +142,61 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
               {savingComb ? 'Guardando...' : 'Guardar'}
             </button>
             {savedComb && (
+              <span className="text-xs text-[#006836] flex items-center gap-1">
+                <Check className="w-3.5 h-3.5" /> Guardado
+              </span>
+            )}
+          </div>
+        </div>
+      </form>
+
+      {/* ── Valor UTA ───────────────────────────────────────────────── */}
+      <form onSubmit={handleSaveUta} className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-100">
+          <div className="w-8 h-8 rounded-lg bg-[#006836]/10 flex items-center justify-center">
+            <Tractor className="w-4 h-4 text-[#006836]" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-zinc-800">Valor UTA</p>
+            <p className="text-xs text-zinc-400">Litros de gasoil equivalentes a 1 Unidad de Trabajo Agrícola</p>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-zinc-500 mb-1.5">
+              1 UTA = ? litros de gasoil
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number" inputMode="decimal" min="0.1" step="0.1"
+                value={litrosUta} onChange={(e) => setLitrosUta(e.target.value)}
+                placeholder="35" disabled={savingUta}
+                className={`${field} w-32`}
+              />
+              <span className="text-sm text-zinc-500">litros / UTA</span>
+            </div>
+          </div>
+
+          {Number(litrosUta) > 0 && Number(precio) > 0 && (
+            <div className="rounded-lg bg-[#006836]/5 border border-[#006836]/15 px-3 py-2 text-xs text-[#006836]">
+              <span className="font-medium">Costo por UTA:</span>{' '}
+              {num.format(Number(litrosUta))} L × ${num.format(Number(precio))}/L ={' '}
+              <strong>${num.format(Number(litrosUta) * Number(precio))}/UTA</strong>
+            </div>
+          )}
+
+          {errorUta && <p className="text-xs text-red-500">{errorUta}</p>}
+
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="submit" disabled={savingUta || !litrosUta}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#006836] text-white text-sm font-semibold rounded-xl hover:bg-[#005228] disabled:opacity-50 transition-colors"
+            >
+              <Check className="w-4 h-4" />
+              {savingUta ? 'Guardando...' : 'Guardar'}
+            </button>
+            {savedUta && (
               <span className="text-xs text-[#006836] flex items-center gap-1">
                 <Check className="w-3.5 h-3.5" /> Guardado
               </span>

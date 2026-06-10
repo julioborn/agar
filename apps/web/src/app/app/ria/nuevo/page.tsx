@@ -20,6 +20,7 @@ export default async function NuevoRiaPage() {
     { data: contratistas },
     { data: tiposLabor },
     { data: cultivosActivos },
+    { data: config },
   ] = await Promise.all([
     supabase
       .from('lotes')
@@ -53,7 +54,7 @@ export default async function NuevoRiaPage() {
       .order('nombre'),
     supabase
       .from('tipos_labor')
-      .select('id, nombre')
+      .select('id, nombre, uta_equivalencia')
       .eq('empresa_id', empresa.id)
       .order('nombre'),
     supabase
@@ -61,6 +62,11 @@ export default async function NuevoRiaPage() {
       .select('id, cultivo, lote_id, estado')
       .in('estado', ['planificada', 'en_curso'])
       .order('cultivo'),
+    supabase
+      .from('configuracion_empresa')
+      .select('precio_combustible, litros_por_uta')
+      .eq('empresa_id', empresa.id)
+      .maybeSingle(),
   ]);
 
   // Enriquecer lotes con cultivo activo (para auto-fill de descripcion)
@@ -86,11 +92,13 @@ export default async function NuevoRiaPage() {
         campanias={campanias ?? []}
         proveedores={[]}
         contratistas={contratistas ?? []}
-        tiposLabor={tiposLabor ?? []}
+        tiposLabor={(tiposLabor as any) ?? []}
         cultivosActivos={cultivosActivos ?? []}
         empresaId={empresa.id}
         empresaNombre={empresa.nombre}
         usuarioId={user.id}
+        precioGasoil={config?.precio_combustible ?? 0}
+        litrosPorUta={config?.litros_por_uta ?? 35}
       />
     </div>
   );

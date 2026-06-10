@@ -14,11 +14,18 @@ export default async function TiposLaborPage() {
 
   const { empresa } = empresaData;
 
-  const { data: tiposLabor } = await supabase
-    .from('tipos_labor')
-    .select('id, nombre, descripcion')
-    .eq('empresa_id', empresa.id)
-    .order('nombre');
+  const [{ data: tiposLabor }, { data: config }] = await Promise.all([
+    supabase
+      .from('tipos_labor')
+      .select('id, nombre, descripcion, uta_equivalencia')
+      .eq('empresa_id', empresa.id)
+      .order('nombre'),
+    supabase
+      .from('configuracion_empresa')
+      .select('precio_combustible, litros_por_uta')
+      .eq('empresa_id', empresa.id)
+      .maybeSingle(),
+  ]);
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
@@ -34,7 +41,12 @@ export default async function TiposLaborPage() {
         </div>
       </div>
 
-      <TiposLaborLayout tiposLabor={tiposLabor ?? []} empresaId={empresa.id} />
+      <TiposLaborLayout
+        tiposLabor={(tiposLabor as any) ?? []}
+        empresaId={empresa.id}
+        precioGasoil={config?.precio_combustible ?? 0}
+        litrosPorUta={config?.litros_por_uta ?? 35}
+      />
     </div>
   );
 }

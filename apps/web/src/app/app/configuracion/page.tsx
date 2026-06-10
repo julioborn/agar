@@ -30,7 +30,7 @@ export default async function ConfiguracionPage() {
   const [configRes, cotizBNA] = await Promise.all([
     supabase
       .from('configuracion_empresa')
-      .select('precio_combustible, tipo_combustible, cotizacion_usd, cotizacion_usd_fecha')
+      .select('precio_combustible, tipo_combustible, cotizacion_usd, cotizacion_usd_fecha, litros_por_uta')
       .eq('empresa_id', empresa.id)
       .maybeSingle(),
     fetchCotizBNA(),
@@ -66,6 +66,7 @@ export default async function ConfiguracionPage() {
             initialTipo={config?.tipo_combustible ?? 'gasoil'}
             initialCotizUsd={config?.cotizacion_usd ?? null}
             cotizBNA={cotizBNA}
+            initialLitrosPorUta={config?.litros_por_uta ?? 35}
           />
         </div>
       </div>

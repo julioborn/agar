@@ -47,6 +47,7 @@ export interface ContratistasOpcion {
 export interface TipoLaborOpcion {
   id: string;
   nombre: string;
+  uta_equivalencia?: number | null;
 }
 export interface CultivoOpcion {
   id: string;
@@ -148,6 +149,8 @@ interface Props {
   riaExistente?: RiaExistente;
   basePath?: string;
   cultivosActivos?: CultivoOpcion[];
+  precioGasoil?: number;
+  litrosPorUta?: number;
 }
 
 // ── Constantes ─────────────────────────────────────────────────────────────────
@@ -174,6 +177,7 @@ export default function RiaForm({
   mode, lotes, depositos, productos, campanias, proveedores, contratistas,
   tiposLabor, empresaId, empresaNombre, usuarioId, riaExistente,
   basePath = '/app/ria', cultivosActivos = [],
+  precioGasoil = 0, litrosPorUta = 35,
 }: Props) {
   const router = useRouter();
   const esReadOnly = mode === 'ver';
@@ -442,10 +446,12 @@ export default function RiaForm({
 
   // ── Labor handlers ────────────────────────────────────────────────────────────
   function addLabor() {
+    const lote = lotes.find((l) => l.id === loteId);
+    const ha = lote?.hectareas ?? 0;
     setLabores((p) => [...p, {
       _id: nextId(), tipoLaborId: '', tipoLaborNombre: '', descripcion: '',
       prestadorId: '', prestadorNombre: '', unidadMedida: 'has',
-      cantidad: '', tarifa: '', subtotal: 0, fechaEjecucion: '', obs: '',
+      cantidad: ha > 0 ? String(ha) : '', tarifa: '', subtotal: 0, fechaEjecucion: '', obs: '',
     }]);
   }
 
@@ -469,9 +475,23 @@ export default function RiaForm({
 
   function handleLaborTipo(id: string, tipoId: string) {
     const tipo = tiposLabor.find((t) => t.id === tipoId);
-    setLabores((prev) => prev.map((l) =>
-      l._id === id ? { ...l, tipoLaborId: tipoId, tipoLaborNombre: tipo?.nombre ?? '' } : l,
-    ));
+    const uta = tipo?.uta_equivalencia ?? 0;
+    const calcTarifa = uta > 0 && litrosPorUta > 0 && precioGasoil > 0
+      ? String((uta * litrosPorUta * precioGasoil).toFixed(2))
+      : '';
+    setLabores((prev) => prev.map((l) => {
+      if (l._id !== id) return l;
+      const newTarifa = calcTarifa || l.tarifa;
+      const cant = parseFloat(l.cantidad || '0');
+      const tar = parseFloat(newTarifa || '0');
+      return {
+        ...l,
+        tipoLaborId: tipoId,
+        tipoLaborNombre: tipo?.nombre ?? '',
+        tarifa: newTarifa,
+        subtotal: cant > 0 && tar > 0 ? cant * tar : l.subtotal,
+      };
+    }));
   }
 
   function handleLaborPrestador(id: string, contratistaId: string) {
@@ -1108,6 +1128,18 @@ export default function RiaForm({
                         disabled={esReadOnly}
                         className={inputCls()}
                       />
+                      {(() => {
+                        const tipo = tiposLabor.find((t) => t.id === lab.tipoLaborId);
+                        const uta = tipo?.uta_equivalencia ?? 0;
+                        if (uta > 0 && litrosPorUta > 0 && precioGasoil > 0) {
+                          return (
+                            <p className="text-xs text-[#006836] mt-1">
+                              {uta} UTA × {litrosPorUta} L × ${precioGasoil.toFixed(2)}/L
+                            </p>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
 
