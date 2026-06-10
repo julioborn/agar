@@ -152,6 +152,7 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
   const [archivo, setArchivo] = useState<File | null>(null);
   const [factura, setFactura] = useState<FacturaExtraida | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [monedaDetectada, setMonedaDetectada] = useState<string | null>(null);
 
   // Cabecera editable
   const [proveedorId, setProveedorId] = useState('');
@@ -207,6 +208,7 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
       setNroFactura(f.numero_factura ?? '');
       setMoneda(f.moneda ?? 'ARS');
       setCotizacion(f.cotizacion_usd ? String(f.cotizacion_usd) : '');
+      setMonedaDetectada(f.moneda ?? null);
 
       // Buscar proveedor por nombre
       const provMatch = proveedores.find(
@@ -492,6 +494,35 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
 
     return (
       <div className="space-y-5">
+
+        {/* Banner de moneda detectada */}
+        {monedaDetectada === 'USD' ? (
+          <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-2xl px-5 py-4">
+            <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800">La IA detectó que esta factura está en <span className="uppercase">USD</span></p>
+              <p className="text-sm text-amber-700 mt-0.5">
+                Verificá el campo <strong>Moneda</strong> y completá la <strong>cotización del dólar</strong> antes de confirmar.
+                Si en realidad está en pesos, cambiá la moneda a ARS.
+              </p>
+            </div>
+          </div>
+        ) : monedaDetectada === 'ARS' ? (
+          <div className="flex items-center gap-3 bg-[#006836]/5 border border-[#006836]/20 rounded-2xl px-5 py-3">
+            <CheckCircle2 className="w-4 h-4 text-[#006836] shrink-0" />
+            <p className="text-sm text-[#006836]">
+              La IA detectó que esta factura está en <strong>ARS (pesos)</strong>. Si no es correcto, cambiá la moneda abajo.
+            </p>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 bg-zinc-50 border border-zinc-200 rounded-2xl px-5 py-3">
+            <AlertCircle className="w-4 h-4 text-zinc-400 shrink-0" />
+            <p className="text-sm text-zinc-500">
+              La IA no pudo determinar la moneda con certeza — verificá el campo <strong>Moneda</strong> antes de confirmar.
+            </p>
+          </div>
+        )}
+
         {/* Cabecera */}
         <div className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-4">
           <div className="flex items-center gap-2">
