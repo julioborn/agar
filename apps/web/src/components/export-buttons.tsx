@@ -30,20 +30,31 @@ const DATE_FMT   = (d: Date) =>
 const TIME_FMT   = (d: Date) =>
   d.toLocaleTimeString('es-AR', { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
 
-async function loadLogoBase64(): Promise<string | null> {
+async function loadCircularLogoBase64(): Promise<string | null> {
   try {
     const res = await fetch('/agar-final.png');
     if (!res.ok) return null;
     const blob = await res.blob();
     return new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload  = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
+      const img = new Image();
+      const url = URL.createObjectURL(blob);
+      img.onload = () => {
+        const size = Math.min(img.width, img.height);
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d')!;
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(img, -(img.width - size) / 2, -(img.height - size) / 2);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('img load')); };
+      img.src = url;
     });
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 export default function ExportButtons({ data, columns, filename, title, className }: Props) {
@@ -62,7 +73,7 @@ export default function ExportButtons({ data, columns, filename, title, classNam
     setLoadingXlsx(true);
     try {
       const ExcelJS    = await import('exceljs');
-      const logoBase64 = await loadLogoBase64();
+      const logoBase64 = await loadCircularLogoBase64();
 
       const wb = new ExcelJS.Workbook();
       wb.creator  = 'AgroSistema';
@@ -169,7 +180,7 @@ export default function ExportButtons({ data, columns, filename, title, classNam
     try {
       const { default: jsPDF } = await import('jspdf');
       const autoTable          = (await import('jspdf-autotable')).default;
-      const logoBase64         = await loadLogoBase64();
+      const logoBase64         = await loadCircularLogoBase64();
 
       const doc   = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       const pageW = doc.internal.pageSize.getWidth();
