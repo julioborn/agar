@@ -17,7 +17,7 @@ const fmtDate = (d: string) =>
 
 async function loadLogoBase64(): Promise<string | null> {
   try {
-    const res = await fetch('/agar6.png');
+    const res = await fetch('/agar-final.png');
     if (!res.ok) return null;
     const blob = await res.blob();
     return new Promise<string>((resolve, reject) => {
@@ -82,7 +82,7 @@ export default function RiaPdfButton({
       doc.setFillColor(GREEN_RGB[0], GREEN_RGB[1], GREEN_RGB[2]);
       doc.rect(0, 0, pageW, 34, 'F');
 
-      if (logoBase64) doc.addImage(logoBase64, 'PNG', 8, 5, 28, 16);
+      if (logoBase64) doc.addImage(logoBase64, 'PNG', 8, 4, 18, 18);
 
       const titleX = logoBase64 ? 42 : 12;
       doc.setTextColor(255, 255, 255);

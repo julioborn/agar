@@ -32,7 +32,7 @@ const TIME_FMT   = (d: Date) =>
 
 async function loadLogoBase64(): Promise<string | null> {
   try {
-    const res = await fetch('/agar6.png');
+    const res = await fetch('/agar-final.png');
     if (!res.ok) return null;
     const blob = await res.blob();
     return new Promise<string>((resolve, reject) => {
@@ -76,7 +76,7 @@ export default function ExportButtons({ data, columns, filename, title, classNam
       /* Logo (rows 1-3) */
       if (logoBase64) {
         const logoId = wb.addImage({ base64: logoBase64.replace(/^data:image\/\w+;base64,/, ''), extension: 'png' });
-        ws.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 150, height: 56 } });
+        ws.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 56, height: 56 } });
       }
       ws.addRow([]); // row 1
       ws.addRow([]); // row 2
@@ -181,7 +181,7 @@ export default function ExportButtons({ data, columns, filename, title, classNam
 
       /* Logo */
       if (logoBase64) {
-        doc.addImage(logoBase64, 'PNG', 8, 4, 38, 22);
+        doc.addImage(logoBase64, 'PNG', 8, 4, 18, 18);
       }
 
       /* Título */
