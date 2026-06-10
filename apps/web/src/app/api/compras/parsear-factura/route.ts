@@ -14,6 +14,7 @@ export interface ItemExtraido {
 }
 
 export interface FacturaExtraida {
+  tipo_documento: 'factura' | 'remito';
   proveedor_nombre: string;
   proveedor_cuit: string | null;
   fecha: string;
@@ -25,17 +26,18 @@ export interface FacturaExtraida {
 }
 
 // Prompt con cache_control: se cachea en Anthropic (gratis en lecturas repetidas)
-const SYSTEM_PROMPT = `Sos un asistente especializado en análisis de facturas de insumos agropecuarios argentinas.
-Cuando recibas una factura, extraé la información y devolvé ÚNICAMENTE un JSON con esta estructura exacta, sin texto adicional ni markdown:
+const SYSTEM_PROMPT = `Sos un asistente especializado en análisis de documentos de compra de insumos agropecuarios argentinos.
+Cuando recibas un documento, extraé la información y devolvé ÚNICAMENTE un JSON con esta estructura exacta, sin texto adicional ni markdown:
 
 {
+  "tipo_documento": "factura" o "remito",
   "proveedor_nombre": "nombre del EMISOR/VENDEDOR (ver regla crítica abajo)",
   "proveedor_cuit": "CUIT del EMISOR sin guiones ni espacios, o null",
   "fecha": "YYYY-MM-DD",
-  "numero_factura": "número como aparece en la factura",
+  "numero_factura": "número como aparece en el documento",
   "moneda": "ARS" o "USD",
   "cotizacion_usd": número o null,
-  "subtotal_neto": número sin IVA en la moneda de la factura,
+  "subtotal_neto": número sin IVA en la moneda del documento,
   "items": [
     {
       "codigo_proveedor": "código del artículo o null",
@@ -47,6 +49,12 @@ Cuando recibas una factura, extraé la información y devolvé ÚNICAMENTE un JS
     }
   ]
 }
+
+REGLA — tipo_documento:
+- "factura" si el encabezado del documento dice FACTURA (A, B, C, E, M, etc.) o TICKET FISCAL.
+- "remito" si dice REMITO, NOTA DE ENTREGA, REMITO DE ENTREGA, X, REMITO X, o similar.
+  Los remitos típicamente no tienen IVA discriminado y sirven para acreditar entrega de mercadería.
+  Si hay dudas, preferí "factura".
 
 REGLA CRÍTICA — proveedor_nombre y proveedor_cuit:
 Son los datos del EMISOR (quien VENDE y emite la factura), NO del comprador.

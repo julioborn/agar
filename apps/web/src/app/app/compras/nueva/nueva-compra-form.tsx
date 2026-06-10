@@ -41,6 +41,7 @@ export default function NuevaCompraForm({ proveedores, productos, presentaciones
   // Cabecera
   const [proveedorId, setProveedorId] = useState('');
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [tipoDoc, setTipoDoc] = useState<'factura' | 'remito'>('factura');
   const [nroFactura, setNroFactura] = useState('');
   const [moneda, setMoneda] = useState<'ARS' | 'USD'>('ARS');
   const [cotizacion, setCotizacion] = useState('');
@@ -148,6 +149,7 @@ export default function NuevaCompraForm({ proveedores, productos, presentaciones
     const result = await crearCompra({
       proveedor_id: proveedorId || null,
       fecha,
+      tipo_documento: tipoDoc,
       numero_factura: nroFactura || null,
       moneda,
       cotizacion_usd: moneda === 'USD' ? cotizNum : null,
@@ -186,7 +188,16 @@ export default function NuevaCompraForm({ proveedores, productos, presentaciones
           <Input id="comp-fecha" label="Fecha" type="date" value={fecha}
             onChange={(e) => setFecha(e.target.value)} required disabled={loading} />
 
-          <Input id="comp-nro" label="N° de factura" placeholder="Opcional"
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700">Tipo de documento</label>
+            <select value={tipoDoc} onChange={(e) => setTipoDoc(e.target.value as 'factura' | 'remito')} disabled={loading}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50">
+              <option value="factura">Factura</option>
+              <option value="remito">Remito</option>
+            </select>
+          </div>
+
+          <Input id="comp-nro" label={tipoDoc === 'remito' ? 'N° de remito' : 'N° de factura'} placeholder="Opcional"
             value={nroFactura} onChange={(e) => setNroFactura(e.target.value)} disabled={loading} />
 
           <div className="space-y-1">

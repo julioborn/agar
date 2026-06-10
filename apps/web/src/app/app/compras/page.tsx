@@ -18,14 +18,15 @@ export default async function ComprasPage() {
   const [comprasRes, provRes] = await Promise.all([
     supabase
       .from('compras')
-      .select('id, fecha, numero_factura, moneda, cotizacion_usd, total_moneda_original, total_en_ars, estado, proveedor:proveedores(id, nombre)')
+      .select('id, fecha, tipo_documento, numero_factura, moneda, cotizacion_usd, total_moneda_original, total_en_ars, estado, proveedor:proveedores(id, nombre)')
       .order('fecha', { ascending: false })
       .order('created_at', { ascending: false }),
     supabase.from('proveedores').select('id, nombre').order('nombre'),
   ]);
 
   const compras = (comprasRes.data ?? []).map((c: any) => ({
-    id: c.id, fecha: c.fecha, numero_factura: c.numero_factura,
+    id: c.id, fecha: c.fecha, tipo_documento: c.tipo_documento ?? 'factura',
+    numero_factura: c.numero_factura,
     moneda: c.moneda, cotizacion_usd: c.cotizacion_usd,
     total_moneda_original: c.total_moneda_original, total_en_ars: c.total_en_ars,
     estado: c.estado, proveedor_nombre: c.proveedor?.nombre ?? '',

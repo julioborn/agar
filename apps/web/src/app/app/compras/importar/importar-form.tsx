@@ -156,6 +156,7 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
   // Cabecera editable
   const [proveedorId, setProveedorId] = useState('');
   const [fecha, setFecha] = useState('');
+  const [tipoDoc, setTipoDoc] = useState<'factura' | 'remito'>('factura');
   const [nroFactura, setNroFactura] = useState('');
   const [moneda, setMoneda] = useState<'ARS' | 'USD'>('ARS');
   const [cotizacion, setCotizacion] = useState('');
@@ -202,6 +203,7 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
 
       // Inicializar cabecera
       setFecha(f.fecha ?? '');
+      setTipoDoc(f.tipo_documento ?? 'factura');
       setNroFactura(f.numero_factura ?? '');
       setMoneda(f.moneda ?? 'ARS');
       setCotizacion(f.cotizacion_usd ? String(f.cotizacion_usd) : '');
@@ -366,6 +368,7 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
       const result = await crearCompra({
         proveedor_id: proveedorId || null,
         fecha,
+        tipo_documento: tipoDoc,
         numero_factura: nroFactura || null,
         moneda,
         cotizacion_usd: moneda === 'USD' ? cotizNum : null,
@@ -510,7 +513,15 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
             </div>
 
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-zinc-500">N° de factura</label>
+              <label className="block text-xs font-medium text-zinc-500">Tipo de documento</label>
+              <select value={tipoDoc} onChange={(e) => setTipoDoc(e.target.value as 'factura' | 'remito')} className={field} disabled={fase === 'guardando'}>
+                <option value="factura">Factura</option>
+                <option value="remito">Remito</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-zinc-500">{tipoDoc === 'remito' ? 'N° de remito' : 'N° de factura'}</label>
               <input type="text" value={nroFactura} onChange={(e) => setNroFactura(e.target.value)} className={field} disabled={fase === 'guardando'} />
             </div>
 

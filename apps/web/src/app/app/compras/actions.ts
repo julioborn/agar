@@ -19,6 +19,7 @@ export interface ItemData {
 export interface CompraData {
   proveedor_id: string | null;
   fecha: string;
+  tipo_documento: 'factura' | 'remito';
   numero_factura: string | null;
   moneda: 'ARS' | 'USD';
   cotizacion_usd: number | null;
@@ -42,6 +43,7 @@ export async function crearCompra(data: CompraData): Promise<{ error?: string; c
       empresa_id: empresaData.empresa.id,
       proveedor_id: data.proveedor_id || null,
       fecha: data.fecha,
+      tipo_documento: data.tipo_documento,
       numero_factura: data.numero_factura || null,
       moneda: data.moneda,
       cotizacion_usd: data.cotizacion_usd,

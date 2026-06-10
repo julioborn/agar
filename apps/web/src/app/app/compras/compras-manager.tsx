@@ -20,6 +20,7 @@ const ESTADO_LABEL: Record<string, string> = {
 
 interface Compra {
   id: string; fecha: string; numero_factura: string | null;
+  tipo_documento: string;
   moneda: string; cotizacion_usd: number | null;
   total_moneda_original: number | null; total_en_ars: number | null;
   estado: string; proveedor_nombre: string;
@@ -219,11 +220,14 @@ export default function ComprasManager({ compras, proveedores, empresaNombre }: 
                       isOpen ? 'bg-[#006836]/5' : 'hover:bg-zinc-50'
                     )}
                   >
-                    {/* Fecha + factura */}
+                    {/* Fecha + nro documento */}
                     <div className="w-28 shrink-0">
                       <p className="text-sm font-semibold text-zinc-800">{fmt(c.fecha)}</p>
                       {c.numero_factura && (
-                        <p className="text-xs text-zinc-400 font-mono mt-0.5">{c.numero_factura}</p>
+                        <p className="text-xs text-zinc-400 font-mono mt-0.5">
+                          <span className="text-zinc-300">{c.tipo_documento === 'remito' ? 'Rem.' : 'Fac.'} </span>
+                          {c.numero_factura}
+                        </p>
                       )}
                     </div>
 
@@ -301,7 +305,7 @@ export default function ComprasManager({ compras, proveedores, empresaNombre }: 
                         <div className="flex items-start gap-2">
                           <FileText className="w-3.5 h-3.5 text-zinc-400 mt-0.5 shrink-0" />
                           <div>
-                            <p className="text-xs text-zinc-400">N° Factura</p>
+                            <p className="text-xs text-zinc-400">{c.tipo_documento === 'remito' ? 'N° Remito' : 'N° Factura'}</p>
                             <p className="text-sm font-medium text-zinc-800 font-mono">{c.numero_factura ?? '—'}</p>
                           </div>
                         </div>

@@ -21,7 +21,7 @@ export default async function CompraDetallePage({ params }: Props) {
 
   const { data: compra } = await supabase
     .from('compras')
-    .select('*, proveedor:proveedores(nombre)')
+    .select('*, tipo_documento, proveedor:proveedores(nombre)')
     .eq('id', compraId)
     .single();
 
@@ -64,7 +64,9 @@ export default async function CompraDetallePage({ params }: Props) {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
-            {compra.numero_factura ? `Factura ${compra.numero_factura}` : `Compra del ${fechaDisplay}`}
+            {compra.numero_factura
+              ? `${(compra as any).tipo_documento === 'remito' ? 'Remito' : 'Factura'} ${compra.numero_factura}`
+              : `Compra del ${fechaDisplay}`}
           </h1>
           <span className={cn('mt-1.5 inline-block px-2 py-0.5 rounded-full text-xs font-medium',
             compra.estado === 'confirmada' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700')}>
@@ -113,7 +115,7 @@ export default async function CompraDetallePage({ params }: Props) {
           <div className="flex items-start gap-2">
             <FileText className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
             <div>
-              <p className="text-slate-400 text-xs">N° Factura</p>
+              <p className="text-slate-400 text-xs">{(compra as any).tipo_documento === 'remito' ? 'N° Remito' : 'N° Factura'}</p>
               <p className="font-medium text-slate-800">{compra.numero_factura ?? '—'}</p>
             </div>
           </div>
