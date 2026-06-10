@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, FileText, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Upload, FileText, Loader2, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CATEGORIAS, UNIDADES } from '@/app/app/productos/constants';
 import { registrarCargaStock, crearProductoParaStock, crearProveedorParaStock, registrarCompraDesdeImportacion } from './actions';
@@ -203,6 +203,10 @@ export default function ImportarStockForm({ productos, depositos, proveedores }:
 
   function updateItem(id: string, patch: Partial<ItemReview>) {
     setItems((prev) => prev.map((i) => i._id === id ? { ...i, ...patch } : i));
+  }
+
+  function removeItem(id: string) {
+    setItems((prev) => prev.filter((i) => i._id !== id));
   }
 
   function aplicarDepositoGlobal() {
@@ -571,18 +575,29 @@ export default function ImportarStockForm({ productos, depositos, proveedores }:
                 'bg-white border-zinc-100'
               )}
             >
-              {/* Header: descripción del archivo + badge */}
+              {/* Header: descripción del archivo + badge + botón eliminar */}
               <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-semibold text-zinc-800 leading-tight">{item.descripcion_archivo}</p>
-                {esNuevo && (
-                  <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Nuevo</span>
-                )}
-                {!esNuevo && !esSinAsignar && (
-                  <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-[#006836]/10 text-[#006836]">Asignado</span>
-                )}
-                {esSinAsignar && (
-                  <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-600">Sin asignar</span>
-                )}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {esNuevo && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Nuevo</span>
+                  )}
+                  {!esNuevo && !esSinAsignar && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#006836]/10 text-[#006836]">Asignado</span>
+                  )}
+                  {esSinAsignar && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-600">Sin asignar</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeItem(item._id)}
+                    disabled={fase === 'guardando'}
+                    className="p-1 rounded-lg text-zinc-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
+                    title="Quitar de la importación"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
               {/* Selector de producto */}

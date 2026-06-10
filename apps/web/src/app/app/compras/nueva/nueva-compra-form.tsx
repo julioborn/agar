@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { crearCompra } from '../actions';
+import { crearProductoNuevo } from '../importar/actions';
+import { CATEGORIAS, UNIDADES } from '@/app/app/productos/constants';
 
 interface Proveedor { id: string; nombre: string; }
 interface Producto  { id: string; nombre: string; unidad_base: string; }
@@ -15,7 +17,10 @@ interface Deposito  { id: string; nombre: string; }
 
 interface ItemDraft {
   _id: string;
-  producto_id: string;
+  producto_id: string;   // '' | uuid | '_nuevo_'
+  nuevo_nombre: string;
+  nuevo_categoria: string;
+  nuevo_unidad_base: string;
   presentacion_id: string;
   cantidad: string;
   precio_unitario: string;
@@ -32,7 +37,7 @@ interface Props {
 function uid() { return Math.random().toString(36).slice(2); }
 
 function itemVacio(): ItemDraft {
-  return { _id: uid(), producto_id: '', presentacion_id: '', cantidad: '', precio_unitario: '', deposito_id: '' };
+  return { _id: uid(), producto_id: '', nuevo_nombre: '', nuevo_categoria: 'agroquimico', nuevo_unidad_base: 'L', presentacion_id: '', cantidad: '', precio_unitario: '', deposito_id: '' };
 }
 
 export default function NuevaCompraForm({ proveedores, productos, presentaciones, depositos }: Props) {
@@ -53,6 +58,7 @@ export default function NuevaCompraForm({ proveedores, productos, presentaciones
 
   // ── helpers de cálculo ──────────────────────────────────────────────────────
   function getPresentaciones(productoId: string) {
+    if (productoId === '_nuevo_' || !productoId) return [];
     return presentaciones.filter((p) => p.producto_id === productoId);
   }
 
@@ -111,12 +117,29 @@ export default function NuevaCompraForm({ proveedores, productos, presentaciones
     }
     for (const item of items) {
       if (!item.producto_id)     { setError('Todos los ítems deben tener un producto.'); return; }
+      if (item.producto_id === '_nuevo_' && !item.nuevo_nombre.trim()) { setError('Ingresá el nombre del nuevo producto.'); return; }
       if (!item.cantidad || parseFloat(item.cantidad) <= 0) { setError('La cantidad de cada ítem debe ser mayor a cero.'); return; }
       if (!item.precio_unitario || parseFloat(item.precio_unitario) <= 0) { setError('El precio unitario de cada ítem debe ser mayor a cero.'); return; }
       if (!item.deposito_id)     { setError('Seleccioná el depósito de destino para cada ítem.'); return; }
     }
 
     setLoading(true);
+
+    // Crear productos nuevos si los hay
+    const productosCreados: Record<string, string> = {};
+    for (const item of items.filter((i) => i.producto_id === '_nuevo_')) {
+      const res = await crearProductoNuevo({
+        nombre: item.nuevo_nombre.trim(),
+        categoria: item.nuevo_categoria,
+        unidad_base: item.nuevo_unidad_base,
+      });
+      if (res.error || !res.id) { setError(res.error ?? 'Error al crear producto'); setLoading(false); return; }
+      productosCreados[item._id] = res.id;
+    }
+
+    const resolverProductoId = (item: ItemDraft) =>
+      item.producto_id === '_nuevo_' ? productosCreados[item._id] : item.producto_id;
+
     const cotizNum = parseFloat(cotizacion) || null;
 
     const itemsData = items.map((item) => {
@@ -134,7 +157,7 @@ export default function NuevaCompraForm({ proveedores, productos, presentaciones
       const subtotal_ars = moneda === 'USD' ? subtotal_orig * cotizReal : subtotal_orig;
 
       return {
-        producto_id: item.producto_id,
+        producto_id: resolverProductoId(item),
         presentacion_id: item.presentacion_id || null,
         cantidad_presentacion: presentacion ? cantNum : null,
         cantidad_unidad_base,
@@ -260,7 +283,38 @@ export default function NuevaCompraForm({ proveedores, productos, presentaciones
                         className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50">
                         <option value="">Seleccionar...</option>
                         {productos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                        <optgroup label="─────────────">
+                          <option value="_nuevo_">+ Crear nuevo producto…</option>
+                        </optgroup>
                       </select>
+                      {item.producto_id === '_nuevo_' && (
+                        <div className="mt-1.5 bg-blue-50 border border-blue-200 rounded-lg p-2 space-y-1.5">
+                          <input
+                            type="text"
+                            placeholder="Nombre del producto *"
+                            value={item.nuevo_nombre}
+                            onChange={(e) => updateItem(item._id, 'nuevo_nombre', e.target.value)}
+                            disabled={loading}
+                            className="w-full rounded border border-blue-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          />
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <select
+                              value={item.nuevo_categoria}
+                              onChange={(e) => updateItem(item._id, 'nuevo_categoria', e.target.value)}
+                              disabled={loading}
+                              className="rounded border border-blue-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400">
+                              {CATEGORIAS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                            </select>
+                            <select
+                              value={item.nuevo_unidad_base}
+                              onChange={(e) => updateItem(item._id, 'nuevo_unidad_base', e.target.value)}
+                              disabled={loading}
+                              className="rounded border border-blue-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400">
+                              {UNIDADES.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 py-2">
                       <select value={item.presentacion_id}
