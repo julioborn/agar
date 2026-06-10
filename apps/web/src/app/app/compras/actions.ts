@@ -193,6 +193,140 @@ export async function corregirItemsCompra(
   return {};
 }
 
+export async function editarCompraCompleta(
+  compraId: string,
+  cabecera: {
+    proveedor_id: string | null;
+    fecha: string;
+    tipo_documento: 'factura' | 'remito';
+    numero_factura: string | null;
+    cotizacion_usd: number | null;
+  },
+  items: Array<{
+    id: string;
+    cantidad_unidad_base: number;
+    precio_unitario_moneda_original: number;
+    precio_unitario_ars: number;
+    deposito_destino_id: string;
+  }>
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autenticado' };
+  if (user.email !== 'juliobornes10@gmail.com') return { error: 'Sin permiso.' };
+
+  const empresaData = await getEmpresaActiva();
+  if (!empresaData) return { error: 'Sin empresa activa' };
+
+  // 1. Obtener los movimientos actuales para saber depósitos/productos anteriores
+  const { data: movsActuales } = await supabase
+    .from('movimientos_stock')
+    .select('id, producto_id, deposito_id')
+    .eq('referencia_id', compraId)
+    .eq('referencia_tipo', 'compra');
+
+  // 2. Actualizar cabecera
+  const { error: eHeader } = await supabase
+    .from('compras')
+    .update({
+      proveedor_id: cabecera.proveedor_id || null,
+      fecha: cabecera.fecha,
+      tipo_documento: cabecera.tipo_documento,
+      numero_factura: cabecera.numero_factura || null,
+      cotizacion_usd: cabecera.cotizacion_usd || null,
+    })
+    .eq('id', compraId);
+  if (eHeader) return { error: eHeader.message };
+
+  // 3. Actualizar cada ítem y su movimiento de stock
+  const stockRecalcKeys = new Set<string>();
+
+  // Agregar claves de depósitos ANTERIORES para recalcular
+  for (const mov of movsActuales ?? []) {
+    stockRecalcKeys.add(`${mov.producto_id}::${mov.deposito_id}`);
+  }
+
+  for (const item of items) {
+    const subtotalArs = item.precio_unitario_ars * item.cantidad_unidad_base;
+    const subtotalOrig = item.precio_unitario_moneda_original * item.cantidad_unidad_base;
+
+    const { error: eItem } = await supabase
+      .from('compras_items')
+      .update({
+        cantidad_unidad_base: item.cantidad_unidad_base,
+        precio_unitario_moneda_original: item.precio_unitario_moneda_original,
+        precio_unitario_ars: item.precio_unitario_ars,
+        subtotal_ars: subtotalArs,
+        subtotal_moneda_original: subtotalOrig,
+        deposito_destino_id: item.deposito_destino_id,
+      })
+      .eq('id', item.id);
+    if (eItem) return { error: eItem.message };
+
+    // Obtener producto_id del ítem
+    const { data: itemData } = await supabase
+      .from('compras_items')
+      .select('producto_id')
+      .eq('id', item.id)
+      .single();
+
+    if (itemData) {
+      // Actualizar movimiento de stock (cantidad + depósito)
+      await supabase
+        .from('movimientos_stock')
+        .update({
+          cantidad: item.cantidad_unidad_base,
+          deposito_id: item.deposito_destino_id,
+        })
+        .eq('referencia_id', compraId)
+        .eq('referencia_tipo', 'compra')
+        .eq('producto_id', itemData.producto_id);
+
+      // Agregar clave del depósito NUEVO para recalcular
+      stockRecalcKeys.add(`${itemData.producto_id}::${item.deposito_destino_id}`);
+    }
+  }
+
+  // 4. Recalcular stock para todos los depósitos afectados
+  for (const key of stockRecalcKeys) {
+    const [productoId, depositoId] = key.split('::');
+    const { data: movs } = await supabase
+      .from('movimientos_stock')
+      .select('tipo, cantidad')
+      .eq('producto_id', productoId)
+      .eq('deposito_id', depositoId);
+
+    const nuevaCantidad = (movs ?? []).reduce((acc: number, m: any) => {
+      const qty = Number(m.cantidad ?? 0);
+      return acc + (String(m.tipo).startsWith('entrada') ? qty : -qty);
+    }, 0);
+
+    await supabase
+      .from('stock')
+      .upsert({ producto_id: productoId, deposito_id: depositoId, cantidad_actual: nuevaCantidad },
+        { onConflict: 'producto_id,deposito_id' });
+  }
+
+  // 5. Recalcular totales de la compra
+  const { data: allItems } = await supabase
+    .from('compras_items')
+    .select('subtotal_ars, subtotal_moneda_original')
+    .eq('compra_id', compraId);
+
+  const totalArs = (allItems ?? []).reduce((acc: number, i: any) => acc + Number(i.subtotal_ars ?? 0), 0);
+  const totalOrig = (allItems ?? []).reduce((acc: number, i: any) => acc + Number(i.subtotal_moneda_original ?? 0), 0);
+
+  await supabase
+    .from('compras')
+    .update({ total_en_ars: totalArs, total_moneda_original: totalOrig })
+    .eq('id', compraId);
+
+  revalidatePath('/app/compras');
+  revalidatePath(`/app/compras/${compraId}`);
+  revalidatePath('/app/stock');
+  return {};
+}
+
 export async function eliminarComprasVacias(): Promise<{ deleted: number; error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

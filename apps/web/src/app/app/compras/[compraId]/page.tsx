@@ -75,9 +75,9 @@ export default async function CompraDetallePage({ params }: Props) {
         </div>
         <Link
           href={`/app/compras/${compraId}/editar`}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-[#006836]/30 text-[#006836] bg-[#006836]/5 hover:bg-[#006836]/10 rounded-xl transition-colors"
         >
-          <Pencil className="w-3.5 h-3.5" /> Corregir ítems
+          <Pencil className="w-3.5 h-3.5" /> Editar factura
         </Link>
       </div>
 

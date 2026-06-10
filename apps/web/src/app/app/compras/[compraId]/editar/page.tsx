@@ -13,54 +13,67 @@ export default async function EditarCompraPage({ params }: Props) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
+  if (user.email !== 'juliobornes10@gmail.com') redirect(`/app/compras/${compraId}`);
 
   const empresaData = await getEmpresaActiva();
   if (!empresaData) redirect('/login');
 
   const { data: compra } = await supabase
     .from('compras')
-    .select('id, numero_factura, fecha, moneda, proveedor:proveedores(nombre)')
+    .select('id, numero_factura, fecha, moneda, cotizacion_usd, tipo_documento, proveedor_id, proveedor:proveedores(nombre)')
     .eq('id', compraId)
     .single();
 
   if (!compra) notFound();
 
-  const { data: items } = await supabase
-    .from('compras_items')
-    .select(`
-      id,
-      cantidad_unidad_base,
-      cantidad_presentacion,
-      precio_unitario_moneda_original,
-      precio_unitario_ars,
-      subtotal_moneda_original,
-      subtotal_ars,
-      producto:productos(id, nombre, unidad_base),
-      presentacion:presentaciones(descripcion),
-      deposito_destino:depositos!deposito_destino_id(nombre)
-    `)
-    .eq('compra_id', compraId)
-    .order('id');
-
-  const fechaDisplay = new Date((compra as any).fecha + 'T00:00:00').toLocaleDateString('es-AR', {
-    day: '2-digit', month: 'long', year: 'numeric',
-  });
+  const [{ data: items }, { data: proveedores }, { data: depositos }] = await Promise.all([
+    supabase
+      .from('compras_items')
+      .select(`
+        id,
+        cantidad_unidad_base,
+        cantidad_presentacion,
+        precio_unitario_moneda_original,
+        precio_unitario_ars,
+        subtotal_moneda_original,
+        subtotal_ars,
+        deposito_destino_id,
+        producto:productos(id, nombre, unidad_base),
+        presentacion:presentaciones(descripcion),
+        deposito_destino:depositos!deposito_destino_id(nombre)
+      `)
+      .eq('compra_id', compraId)
+      .order('id'),
+    supabase
+      .from('proveedores')
+      .select('id, nombre')
+      .eq('empresa_id', empresaData.empresa.id)
+      .eq('activo', true)
+      .order('nombre'),
+    supabase
+      .from('depositos')
+      .select('id, nombre')
+      .eq('empresa_id', empresaData.empresa.id)
+      .order('nombre'),
+  ]);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6 p-6">
       <div>
         <h1 className="text-2xl font-bold text-zinc-900">
-          Corregir ítems · {(compra as any).numero_factura ?? fechaDisplay}
+          Editar factura · {(compra as any).numero_factura ?? compra.fecha}
         </h1>
         <p className="text-sm text-zinc-400 mt-1">
-          {((compra as any).proveedor as any)?.nombre ?? '—'} · Modificá las cantidades y guardá para actualizar el stock automáticamente.
+          Modificá cabecera e ítems. El stock se recalcula automáticamente al guardar.
         </p>
       </div>
 
       <EditarCompraForm
         compraId={compraId}
-        moneda={(compra as any).moneda}
+        compra={compra as any}
         items={(items ?? []) as any}
+        proveedores={proveedores ?? []}
+        depositos={depositos ?? []}
       />
     </div>
   );
