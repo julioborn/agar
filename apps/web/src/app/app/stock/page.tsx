@@ -14,7 +14,7 @@ export default async function StockPage() {
 
   const { empresa } = empresaData;
 
-  const [{ data: rawStock }, { data: ultimasCompras }] = await Promise.all([
+  const [{ data: rawStock }, { data: ultimasCompras }, { data: preciosRia }] = await Promise.all([
     supabase
       .from('stock')
       .select(`
@@ -28,9 +28,16 @@ export default async function StockPage() {
       .from('compras_items')
       .select('producto_id, precio_unitario_ars, compra:compras!inner(fecha)')
       .order('fecha', { referencedTable: 'compras', ascending: false }),
+    // Precio del último RIA confirmado por producto (fallback si no hay compra)
+    supabase
+      .from('remitos_insumos')
+      .select('producto_id, costo_unitario, remito:remitos_internos!inner(fecha, estado)')
+      .eq('remito.estado', 'confirmado')
+      .gt('costo_unitario', 0)
+      .order('fecha', { referencedTable: 'remitos_internos', ascending: false }),
   ]);
 
-  // Precio de la última compra por producto (la primera aparición = la más reciente)
+  // Precio de la última compra por producto
   const precioUltimo: Record<string, number> = {};
   for (const item of ultimasCompras ?? []) {
     if (!precioUltimo[(item as any).producto_id]) {
@@ -38,18 +45,31 @@ export default async function StockPage() {
     }
   }
 
-  const stockRows = (rawStock ?? []).map((r: any) => ({
-    id: r.id,
-    cantidad_actual: r.cantidad_actual ?? 0,
-    producto_id: r.producto?.id ?? '',
-    producto_nombre: r.producto?.nombre ?? '—',
-    producto_categoria: r.producto?.categoria ?? '',
-    producto_unidad_base: r.producto?.unidad_base ?? '',
-    producto_stock_minimo: r.producto?.stock_minimo ?? 0,
-    deposito_id: r.deposito?.id ?? '',
-    deposito_nombre: r.deposito?.nombre ?? '—',
-    precio_ultimo: precioUltimo[r.producto?.id ?? ''] ?? null,
-  }));
+  // Precio del último RIA (fallback)
+  const precioRia: Record<string, number> = {};
+  for (const item of preciosRia ?? []) {
+    if (!precioRia[(item as any).producto_id]) {
+      precioRia[(item as any).producto_id] = Number((item as any).costo_unitario ?? 0);
+    }
+  }
+
+  const stockRows = (rawStock ?? []).map((r: any) => {
+    const pid = r.producto?.id ?? '';
+    const precio = precioUltimo[pid] || precioRia[pid] || null;
+    return {
+      id: r.id,
+      cantidad_actual: r.cantidad_actual ?? 0,
+      producto_id: pid,
+      producto_nombre: r.producto?.nombre ?? '—',
+      producto_categoria: r.producto?.categoria ?? '',
+      producto_unidad_base: r.producto?.unidad_base ?? '',
+      producto_stock_minimo: r.producto?.stock_minimo ?? 0,
+      deposito_id: r.deposito?.id ?? '',
+      deposito_nombre: r.deposito?.nombre ?? '—',
+      precio_ultimo: precio,
+      precio_fuente: precioUltimo[pid] ? 'compra' : precioRia[pid] ? 'ria' : null,
+    };
+  });
 
   return (
     <div className="max-w-5xl mx-auto space-y-5">

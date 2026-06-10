@@ -24,6 +24,7 @@ interface StockRow {
   producto_unidad_base: string; producto_stock_minimo: number;
   deposito_id: string; deposito_nombre: string;
   precio_ultimo: number | null;
+  precio_fuente: 'compra' | 'ria' | null;
 }
 
 interface Props { stockRows: StockRow[]; empresaNombre: string }
@@ -236,8 +237,17 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
                           <td className={cn('px-4 py-3 text-right font-semibold', bajo ? 'text-red-600' : 'text-zinc-800')}>
                             {num(row.cantidad_actual, row.producto_unidad_base)}
                           </td>
-                          <td className="px-4 py-3 text-right text-zinc-500 text-sm">
-                            {row.precio_ultimo != null ? ars.format(row.precio_ultimo) : '—'}
+                          <td className="px-4 py-3 text-right text-sm">
+                            {row.precio_ultimo != null ? (
+                              <span className={row.precio_fuente === 'ria' ? 'text-indigo-600' : 'text-zinc-500'}>
+                                {ars.format(row.precio_ultimo)}
+                                {row.precio_fuente === 'ria' && (
+                                  <span className="ml-1 text-xs text-indigo-400">RIA</span>
+                                )}
+                              </span>
+                            ) : (
+                              <span className="text-red-400 font-medium">Sin precio</span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-right text-zinc-400">
                             {row.producto_stock_minimo > 0 ? num(row.producto_stock_minimo, row.producto_unidad_base) : '—'}

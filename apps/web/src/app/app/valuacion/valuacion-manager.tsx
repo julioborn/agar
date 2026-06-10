@@ -32,13 +32,14 @@ interface Props {
   productos: any[];
   stockValuacion: any[];
   empresaId: string;
+  productosSinPrecio: { id: string; nombre: string; unidad_base: string; categoria: string }[];
 }
 
 type Tab = 'criterios' | 'reposicion' | 'informe';
 
 export default function ValuacionManager({
   configuraciones: initConfig, precios: initPrecios,
-  productos, stockValuacion, empresaId,
+  productos, stockValuacion, empresaId, productosSinPrecio,
 }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('criterios');
@@ -64,6 +65,30 @@ export default function ValuacionManager({
   const [precioDesde, setPrecioDesde] = useState(today());
   const [precioHasta, setPrecioHasta] = useState('');
   const [precioObs, setPrecioObs] = useState('');
+
+  // ── Sin precio ──────────────────────────────────────────────────────────────
+  const [precioRapido, setPrecioRapido] = useState<Record<string, string>>({});
+  const [guardandoPrecio, setGuardandoPrecio] = useState<string | null>(null);
+  const [precioOkIds, setPrecioOkIds] = useState<Set<string>>(new Set());
+
+  async function handleGuardarPrecioRapido(producto: { id: string; nombre: string }) {
+    const val = parseFloat(precioRapido[producto.id] || '');
+    if (!val || val <= 0) return;
+    setGuardandoPrecio(producto.id);
+    const { error: e } = await createClient().from('precios_reposicion').insert({
+      empresa_id: empresaId,
+      producto_id: producto.id,
+      precio_ars: val,
+      vigencia_desde: today(),
+      vigencia_hasta: null,
+      observaciones: 'Carga manual desde alerta de precio',
+    });
+    setGuardandoPrecio(null);
+    if (!e) {
+      setPrecioOkIds((prev) => new Set([...prev, producto.id]));
+      router.refresh();
+    }
+  }
 
   // ── Informe filter ──────────────────────────────────────────────────────────
   const [categoriaFilter, setCategoriaFilter] = useState('');
@@ -178,8 +203,61 @@ export default function ValuacionManager({
 
   const criterioLabel = (v: string) => CRITERIOS.find((c) => c.value === v)?.label ?? v;
 
+  const sinPrecioPendientes = productosSinPrecio.filter((p) => !precioOkIds.has(p.id));
+
   return (
     <div className="space-y-5">
+
+      {/* ── Alerta: productos sin precio ─────────────────────────────────── */}
+      {sinPrecioPendientes.length > 0 && (
+        <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5 space-y-4">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl leading-none">⚠️</span>
+            <div>
+              <p className="font-semibold text-amber-800">
+                {sinPrecioPendientes.length} producto{sinPrecioPendientes.length !== 1 ? 's' : ''} en stock sin precio asignado
+              </p>
+              <p className="text-sm text-amber-700 mt-0.5">
+                Estos productos no tienen precio de compra, ni de RIA, ni de reposición.
+                Ingresá un precio de referencia para que el sistema pueda valuar el stock correctamente.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {sinPrecioPendientes.map((prod) => (
+              <div key={prod.id} className="bg-white rounded-xl border border-amber-200 px-4 py-3 flex items-center gap-3 flex-wrap">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-zinc-800">{prod.nombre}</p>
+                  <p className="text-xs text-zinc-400">{prod.unidad_base} · {prod.categoria}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-zinc-400">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      placeholder="Precio ARS"
+                      value={precioRapido[prod.id] ?? ''}
+                      onChange={(e) => setPrecioRapido((prev) => ({ ...prev, [prod.id]: e.target.value }))}
+                      className="pl-6 pr-3 py-1.5 w-36 text-sm border border-amber-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-400"
+                    />
+                  </div>
+                  <button
+                    onClick={() => handleGuardarPrecioRapido(prod)}
+                    disabled={!precioRapido[prod.id] || guardandoPrecio === prod.id}
+                    className="px-3 py-1.5 bg-amber-600 text-white text-xs font-semibold rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                  >
+                    {guardandoPrecio === prod.id ? 'Guardando…' : 'Guardar'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden shadow-sm">
         <div className="flex border-b border-zinc-100">

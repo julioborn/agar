@@ -16,6 +16,9 @@ export default async function ValuacionPage() {
     { data: precios },
     { data: productos },
     { data: stockData },
+    { data: stockActual },
+    { data: comprasItems },
+    { data: riaInsumos },
   ] = await Promise.all([
     supabase
       .from('config_valuacion')
@@ -37,7 +40,34 @@ export default async function ValuacionPage() {
 
     // Valuación comparativa via RPC (fn_valuacion_stock)
     supabase.rpc('fn_valuacion_stock', { p_empresa_id: empresa.id }),
+
+    // Productos actualmente en stock
+    supabase
+      .from('stock')
+      .select('producto:productos(id, nombre, unidad_base, categoria), cantidad_actual')
+      .gt('cantidad_actual', 0),
+
+    // IDs de productos con precio de compra
+    supabase.from('compras_items').select('producto_id').gt('precio_unitario_ars', 0),
+
+    // IDs de productos con precio de RIA
+    supabase
+      .from('remitos_insumos')
+      .select('producto_id')
+      .gt('costo_unitario', 0),
   ]);
+
+  // Productos en stock sin precio de ninguna fuente (compra, RIA, reposición)
+  const idsConPrecio = new Set([
+    ...(comprasItems ?? []).map((r: any) => r.producto_id),
+    ...(riaInsumos ?? []).map((r: any) => r.producto_id),
+    ...(precios ?? []).map((r: any) => r.producto_id),
+  ]);
+
+  const productosSinPrecio = (stockActual ?? [])
+    .map((r: any) => r.producto)
+    .filter((p: any) => p && !idsConPrecio.has(p.id))
+    .filter((p: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.id === p.id) === i); // dedup
 
   return (
     <div className="p-6 space-y-6">
@@ -57,6 +87,7 @@ export default async function ValuacionPage() {
         productos={(productos as any[]) ?? []}
         stockValuacion={(stockData as any[]) ?? []}
         empresaId={empresa.id}
+        productosSinPrecio={(productosSinPrecio as any[]) ?? []}
       />
     </div>
   );
