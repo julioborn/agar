@@ -57,6 +57,7 @@ export interface RiaPdfData {
     productoNombre: string;
     unidadBase: string;
     cantidad: number;
+    dosisPorHa: number | null;
     costoUnitario: number;
     subtotal: number;
   }[];
@@ -184,17 +185,18 @@ export async function generateRiaPdf(data: RiaPdfData): Promise<void> {
     y = sectionTitle('INSUMOS UTILIZADOS', y);
     autoTable(doc, {
       startY: y,
-      head: [['Depósito', 'Producto', 'Cantidad', 'Unidad', 'Costo/u $', 'Subtotal $']],
+      head: [['Depósito', 'Producto', 'Cantidad', 'Unidad', 'Dosis/ha', 'Costo/u $', 'Subtotal $']],
       body: [
         ...insumos.map((i) => [
           i.depositoNombre,
           i.productoNombre,
           num.format(i.cantidad),
           i.unidadBase,
+          i.dosisPorHa != null ? num.format(i.dosisPorHa) : '—',
           num.format(i.costoUnitario),
           num.format(i.subtotal),
         ]),
-        ['', '', '', '',
+        ['', '', '', '', '',
           { content: 'TOTAL INSUMOS', styles: { fontStyle: 'bold', halign: 'right' as const } },
           { content: `$${num.format(totalInsumos)}`, styles: { fontStyle: 'bold', halign: 'right' as const } },
         ],
@@ -202,11 +204,12 @@ export async function generateRiaPdf(data: RiaPdfData): Promise<void> {
       styles: { fontSize: 7.5, cellPadding: 2 },
       headStyles: { fillColor: GREEN_RGB, textColor: [255, 255, 255] as [number, number, number], fontStyle: 'bold', fontSize: 8 },
       columnStyles: {
-        0: { cellWidth: 32 },
+        0: { cellWidth: 30 },
         2: { halign: 'right' as const, cellWidth: 18 },
-        3: { cellWidth: 14 },
-        4: { halign: 'right' as const, cellWidth: 22 },
-        5: { halign: 'right' as const, cellWidth: 24 },
+        3: { cellWidth: 12 },
+        4: { halign: 'right' as const, cellWidth: 16 },
+        5: { halign: 'right' as const, cellWidth: 20 },
+        6: { halign: 'right' as const, cellWidth: 22 },
       },
       alternateRowStyles: { fillColor: [240, 247, 243] as [number, number, number] },
       margin: { left: 12, right: 12 },
@@ -399,6 +402,7 @@ export default function RiaPdfButton({
           productoNombre: i.productoNombre || '—',
           unidadBase: i.unidadBase,
           cantidad: parseFloat(i.cantidad || '0'),
+          dosisPorHa: i.dosisPorHa ? parseFloat(i.dosisPorHa) : null,
           costoUnitario: parseFloat(i.costoUnitario || '0'),
           subtotal: i.subtotal,
         })),

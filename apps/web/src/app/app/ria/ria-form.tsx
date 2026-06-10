@@ -406,12 +406,19 @@ export default function RiaForm({
           key === 'costoUnitario' ? val as string : i.costoUnitario,
         );
       }
+      if (key === 'cantidad' && sup > 0) {
+        const cant = parseFloat(val as string || '0');
+        updated.dosisPorHa = cant > 0 ? String(parseFloat((cant / sup).toFixed(4))) : '';
+      }
       if (key === 'dosisPorHa' && sup > 0) {
         const dosis = parseFloat(val as string || '0');
         if (dosis > 0) {
           const newCant = (dosis * sup).toString();
           updated.cantidad = newCant;
           updated.subtotal = calc(newCant, i.costoUnitario);
+        } else {
+          updated.cantidad = '';
+          updated.subtotal = 0;
         }
       }
       return updated;

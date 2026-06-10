@@ -49,6 +49,7 @@ interface RiaRow {
 interface InsumoRow {
   id: string;
   cantidad: number;
+  dosis_por_ha: number | null;
   costo_unitario: number;
   subtotal: number;
   observaciones: string | null;
@@ -132,7 +133,7 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
     const sb = createClient();
     const [{ data: ins }, { data: lab }, { data: prod }] = await Promise.all([
       sb.from('remitos_insumos').select(`
-        id, cantidad, costo_unitario, subtotal, observaciones,
+        id, cantidad, dosis_por_ha, costo_unitario, subtotal, observaciones,
         producto:productos(nombre, unidad_base),
         deposito:depositos(nombre)
       `).eq('remito_id', riaId),
@@ -211,6 +212,7 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
             productoNombre: i.producto?.nombre ?? '—',
             unidadBase: i.producto?.unidad_base ?? '',
             cantidad: i.cantidad,
+            dosisPorHa: i.dosis_por_ha ?? null,
             costoUnitario: i.costo_unitario,
             subtotal: i.subtotal,
           })),
@@ -600,6 +602,7 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
                                           <th className="text-left px-3 py-2 font-medium text-zinc-500">Producto</th>
                                           <th className="text-left px-3 py-2 font-medium text-zinc-500">Depósito</th>
                                           <th className="text-right px-3 py-2 font-medium text-zinc-500">Cant.</th>
+                                          <th className="text-right px-3 py-2 font-medium text-zinc-500">Dosis/ha</th>
                                           <th className="text-right px-3 py-2 font-medium text-zinc-500">$/u</th>
                                           <th className="text-right px-3 py-2 font-medium text-zinc-500">Subtotal</th>
                                         </tr>
@@ -610,6 +613,7 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
                                             <td className="px-3 py-2 font-medium text-zinc-800">{i.producto?.nombre}</td>
                                             <td className="px-3 py-2 text-zinc-500">{i.deposito?.nombre ?? '—'}</td>
                                             <td className="px-3 py-2 text-right text-zinc-700">{num.format(i.cantidad)} {i.producto?.unidad_base}</td>
+                                            <td className="px-3 py-2 text-right text-zinc-500">{i.dosis_por_ha != null ? num.format(i.dosis_por_ha) : '—'}</td>
                                             <td className="px-3 py-2 text-right text-zinc-600">${num.format(i.costo_unitario)}</td>
                                             <td className="px-3 py-2 text-right font-semibold text-zinc-900">${num.format(i.subtotal)}</td>
                                           </tr>
