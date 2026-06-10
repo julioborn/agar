@@ -67,7 +67,7 @@ export default async function StockPage() {
       deposito_id: r.deposito?.id ?? '',
       deposito_nombre: r.deposito?.nombre ?? '—',
       precio_ultimo: precio,
-      precio_fuente: precioUltimo[pid] ? 'compra' : precioRia[pid] ? 'ria' : null,
+      precio_fuente: (precioUltimo[pid] ? 'compra' : precioRia[pid] ? 'ria' : null) as 'compra' | 'ria' | null,
     };
   });
 
