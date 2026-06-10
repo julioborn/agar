@@ -9,9 +9,8 @@ import {
   FileText, CheckCircle, AlertCircle, Ban,
   Package, Wrench, Wheat, BarChart3,
 } from 'lucide-react';
-import { anularRia, sincronizarRiasConCultivos } from './actions';
+import { anularRia } from './actions';
 import { useRouter } from 'next/navigation';
-import { RefreshCw } from 'lucide-react';
 
 const ESTADO_STYLE: Record<string, string> = {
   borrador:   'bg-amber-100 text-amber-700',
@@ -87,19 +86,6 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
   const [estado, setEstado] = useState('');
   const [campaniaId, setCampaniaId] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [sincronizando, setSincronizando] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ cultivosCreados: number; cultivosActualizados: number; riasSincronizados: number } | null>(null);
-
-  async function handleSincronizar() {
-    if (!confirm('Esto realizará dos acciones:\n1. Crear cultivos en /cultivos para RIAs sin cultivo vinculado (agrupados por lote + descripción).\n2. Completar fecha de siembra de cultivos incompletos usando la fecha del primer RIA vinculado.\n\n¿Continuar?')) return;
-    setSincronizando(true);
-    setSyncResult(null);
-    const result = await sincronizarRiasConCultivos();
-    setSincronizando(false);
-    if (result.error) { alert('Error: ' + result.error); return; }
-    setSyncResult({ cultivosCreados: result.cultivosCreados, cultivosActualizados: result.cultivosActualizados ?? 0, riasSincronizados: result.riasSincronizados });
-    router.refresh();
-  }
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detailCache, setDetailCache] = useState<Record<string, { insumos: InsumoRow[]; labores: LaborRow[]; produccion: ProduccionRow[] }>>({});
@@ -218,16 +204,7 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
                 <X className="w-3 h-3" /> Limpiar
               </button>
             )}
-            <button
-              onClick={handleSincronizar}
-              disabled={sincronizando}
-              className="inline-flex items-center gap-1.5 px-3 py-2 border border-indigo-200 text-indigo-600 bg-indigo-50 text-xs font-medium rounded-xl hover:bg-indigo-100 transition-colors disabled:opacity-50"
-              title="Crear cultivos en /cultivos para RIAs que tengan descripción pero sin cultivo vinculado"
-            >
-              <RefreshCw className={cn('w-3.5 h-3.5', sincronizando && 'animate-spin')} />
-              {sincronizando ? 'Sincronizando…' : 'Sincronizar → Cultivos'}
-            </button>
-            <Link
+<Link
               href="/app/ria/reportes"
               className="inline-flex items-center gap-1.5 px-3 py-2 border border-zinc-200 text-zinc-600 text-xs font-medium rounded-xl hover:bg-zinc-50 transition-colors"
             >
@@ -244,21 +221,7 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
           </div>
         </div>
 
-        {syncResult && (
-          <div className="mt-3 px-4 py-2.5 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700 flex items-start gap-2">
-            <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <div>
-              {syncResult.cultivosCreados === 0 && syncResult.cultivosActualizados === 0
-                ? 'Todo al día — no había cultivos pendientes de sincronizar ni completar.'
-                : <>
-                    {syncResult.cultivosCreados > 0 && <p>✓ Se crearon <strong>{syncResult.cultivosCreados}</strong> cultivo{syncResult.cultivosCreados !== 1 ? 's' : ''} nuevos vinculados a <strong>{syncResult.riasSincronizados}</strong> RIA{syncResult.riasSincronizados !== 1 ? 's' : ''}.</p>}
-                    {syncResult.cultivosActualizados > 0 && <p>✓ Se completó la fecha de siembra en <strong>{syncResult.cultivosActualizados}</strong> cultivo{syncResult.cultivosActualizados !== 1 ? 's' : ''} incompletos.</p>}
-                  </>}
-            </div>
-          </div>
-        )}
-
-        {showFilters && (
+{showFilters && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3 border-t border-zinc-100 mt-3">
             <div>
               <label className="block text-xs text-zinc-400 mb-1.5">Estado</label>
