@@ -7,9 +7,9 @@ import { cn } from '@/lib/utils';
 import {
   Plus, Filter, X, ChevronDown, ChevronUp,
   FileText, CheckCircle, AlertCircle, Ban,
-  Package, Wrench, Wheat, BarChart3,
+  Package, Wrench, Wheat, BarChart3, Trash2,
 } from 'lucide-react';
-import { anularRia } from './actions';
+import { anularRia, eliminarRia } from './actions';
 import { useRouter } from 'next/navigation';
 
 const ESTADO_STYLE: Record<string, string> = {
@@ -95,6 +95,10 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
   const [motivoAnulacion, setMotivoAnulacion] = useState('');
   const [anulError, setAnulError] = useState('');
 
+  const [eliminando, setEliminando] = useState<string | null>(null);
+  const [elimLoading, setElimLoading] = useState(false);
+  const [elimError, setElimError] = useState('');
+
   const filtradas = useMemo(() => rias.filter((r) => {
     if (estado && r.estado !== estado) return false;
     if (campaniaId && r.campania?.id !== campaniaId) return false;
@@ -139,6 +143,16 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
       },
     }));
     setLoadingId(null);
+  }
+
+  async function handleEliminar(riaId: string) {
+    setElimLoading(true);
+    setElimError('');
+    const result = await eliminarRia(riaId);
+    setElimLoading(false);
+    if (result.error) { setElimError(result.error); return; }
+    setEliminando(null);
+    router.refresh();
   }
 
   async function handleAnular(riaId: string) {
@@ -365,6 +379,12 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
                                 </button>
                               </>
                             )}
+                            <button
+                              onClick={() => { setEliminando(ria.id); setElimError(''); }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-red-300 text-red-700 rounded-xl hover:bg-red-50 transition-colors ml-auto"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Eliminar
+                            </button>
                           </div>
 
                           {/* Modal de anulación */}
@@ -391,6 +411,35 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
                                 </button>
                                 <button
                                   onClick={() => setAnulando(null)}
+                                  className="px-3 py-1.5 text-xs text-zinc-500 hover:text-zinc-700 border border-zinc-200 rounded-lg"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Modal de eliminación */}
+                          {eliminando === ria.id && (
+                            <div className="rounded-xl border border-red-300 bg-red-50 p-4 space-y-3">
+                              <p className="text-sm font-semibold text-red-700">Eliminar {ria.numero_ria}</p>
+                              <p className="text-xs text-red-600">
+                                Esta acción eliminará el RIA permanentemente y revertirá todos los movimientos de stock asociados.
+                                {ria.estado === 'confirmado' && ' Los insumos egresados volverán al depósito.'}
+                                {' '}Esta operación no se puede deshacer.
+                              </p>
+                              {elimError && <p className="text-xs text-red-600">{elimError}</p>}
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleEliminar(ria.id)}
+                                  disabled={elimLoading}
+                                  className="px-4 py-1.5 bg-red-700 hover:bg-red-800 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
+                                >
+                                  {elimLoading ? 'Eliminando…' : 'Confirmar eliminación'}
+                                </button>
+                                <button
+                                  onClick={() => setEliminando(null)}
+                                  disabled={elimLoading}
                                   className="px-3 py-1.5 text-xs text-zinc-500 hover:text-zinc-700 border border-zinc-200 rounded-lg"
                                 >
                                   Cancelar
