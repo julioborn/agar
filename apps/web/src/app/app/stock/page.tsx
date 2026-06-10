@@ -14,15 +14,29 @@ export default async function StockPage() {
 
   const { empresa } = empresaData;
 
-  const { data: rawStock } = await supabase
-    .from('stock')
-    .select(`
-      id,
-      cantidad_actual,
-      producto:productos(id, nombre, categoria, unidad_base, stock_minimo),
-      deposito:depositos(id, nombre)
-    `)
-    .order('cantidad_actual', { ascending: false });
+  const [{ data: rawStock }, { data: ultimasCompras }] = await Promise.all([
+    supabase
+      .from('stock')
+      .select(`
+        id,
+        cantidad_actual,
+        producto:productos(id, nombre, categoria, unidad_base, stock_minimo),
+        deposito:depositos(id, nombre)
+      `)
+      .order('cantidad_actual', { ascending: false }),
+    supabase
+      .from('compras_items')
+      .select('producto_id, precio_unitario_ars, compra:compras!inner(fecha)')
+      .order('fecha', { referencedTable: 'compras', ascending: false }),
+  ]);
+
+  // Precio de la última compra por producto (la primera aparición = la más reciente)
+  const precioUltimo: Record<string, number> = {};
+  for (const item of ultimasCompras ?? []) {
+    if (!precioUltimo[(item as any).producto_id]) {
+      precioUltimo[(item as any).producto_id] = Number((item as any).precio_unitario_ars ?? 0);
+    }
+  }
 
   const stockRows = (rawStock ?? []).map((r: any) => ({
     id: r.id,
@@ -34,6 +48,7 @@ export default async function StockPage() {
     producto_stock_minimo: r.producto?.stock_minimo ?? 0,
     deposito_id: r.deposito?.id ?? '',
     deposito_nombre: r.deposito?.nombre ?? '—',
+    precio_ultimo: precioUltimo[r.producto?.id ?? ''] ?? null,
   }));
 
   return (

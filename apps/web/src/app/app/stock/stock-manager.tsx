@@ -23,12 +23,14 @@ interface StockRow {
   producto_id: string; producto_nombre: string; producto_categoria: string;
   producto_unidad_base: string; producto_stock_minimo: number;
   deposito_id: string; deposito_nombre: string;
+  precio_ultimo: number | null;
 }
 
 interface Props { stockRows: StockRow[]; empresaNombre: string }
 
 const numFmt = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 });
 const num = (n: number, unit: string) => `${numFmt.format(n)} ${unit}`;
+const ars = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 });
 
 export default function StockManager({ stockRows, empresaNombre }: Props) {
   const [searchText, setSearchText]     = useState('');
@@ -70,6 +72,7 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
     { header: 'Categoría', key: 'producto_categoria', width: 18, format: (v: string) => CATEGORIA_LABEL[v] ?? v },
     { header: 'Stock actual', key: 'cantidad_actual', width: 14, format: (v: number) => numFmt.format(v) },
     { header: 'Unidad', key: 'producto_unidad_base', width: 10 },
+    { header: 'Precio unit. (última compra)', key: 'precio_ultimo', width: 22, format: (v: number | null) => v != null ? ars.format(v) : '' },
     { header: 'Stock mínimo', key: 'producto_stock_minimo', width: 14, format: (v: number) => v > 0 ? numFmt.format(v) : '' },
     { header: 'Estado', key: '_estado', width: 14 },
   ];
@@ -208,6 +211,7 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
                       <th className="text-left px-4 py-2.5 font-medium text-zinc-500">Producto</th>
                       <th className="text-left px-4 py-2.5 font-medium text-zinc-500">Categoría</th>
                       <th className="text-right px-4 py-2.5 font-medium text-zinc-500">Stock actual</th>
+                      <th className="text-right px-4 py-2.5 font-medium text-zinc-500">Precio unit.</th>
                       <th className="text-right px-4 py-2.5 font-medium text-zinc-500">Mínimo</th>
                       <th className="text-left px-4 py-2.5 font-medium text-zinc-500">Estado</th>
                     </tr>
@@ -231,6 +235,9 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
                           </td>
                           <td className={cn('px-4 py-3 text-right font-semibold', bajo ? 'text-red-600' : 'text-zinc-800')}>
                             {num(row.cantidad_actual, row.producto_unidad_base)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-zinc-500 text-sm">
+                            {row.precio_ultimo != null ? ars.format(row.precio_ultimo) : '—'}
                           </td>
                           <td className="px-4 py-3 text-right text-zinc-400">
                             {row.producto_stock_minimo > 0 ? num(row.producto_stock_minimo, row.producto_unidad_base) : '—'}
