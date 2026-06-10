@@ -219,6 +219,83 @@ export async function confirmarRia(riaId: string) {
   return { ok: true };
 }
 
+export async function eliminarRia(riaId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autenticado.' };
+  if (user.email !== 'juliobornes10@gmail.com') return { error: 'Sin permiso.' };
+
+  // Obtener el estado y cultivo_id del RIA
+  const { data: remito } = await supabase
+    .from('remitos_internos')
+    .select('estado, cultivo_id')
+    .eq('id', riaId)
+    .single();
+
+  if (!remito) return { error: 'RIA no encontrado.' };
+
+  // Para confirmados/anulados: revertir movimientos de stock
+  const { data: movs } = await supabase
+    .from('movimientos_stock')
+    .select('id, producto_id, deposito_id')
+    .eq('referencia_id', riaId);
+
+  if (movs && movs.length > 0) {
+    // Borrar los movimientos
+    await supabase.from('movimientos_stock').delete().eq('referencia_id', riaId);
+
+    // Recalcular stock para cada producto+depósito afectado
+    const pares = [...new Map(movs.map((m: any) => [`${m.producto_id}::${m.deposito_id}`, m])).values()];
+    for (const m of pares as any[]) {
+      const { data: restantes } = await supabase
+        .from('movimientos_stock')
+        .select('tipo, cantidad')
+        .eq('producto_id', m.producto_id)
+        .eq('deposito_id', m.deposito_id);
+
+      const nueva = (restantes ?? []).reduce((acc: number, r: any) =>
+        acc + (String(r.tipo).startsWith('entrada') ? Number(r.cantidad) : -Number(r.cantidad)), 0);
+
+      await supabase.from('stock')
+        .update({ cantidad_actual: nueva })
+        .eq('producto_id', m.producto_id)
+        .eq('deposito_id', m.deposito_id);
+    }
+  }
+
+  // Recalcular costo del cultivo si aplica
+  if ((remito as any).cultivo_id) {
+    const cultivoId = (remito as any).cultivo_id;
+    const [{ data: aplicsIds }, { data: labores }, { data: cosechas }] = await Promise.all([
+      supabase.from('aplicaciones').select('id').eq('cultivo_id', cultivoId),
+      supabase.from('labores').select('costo_total_calculado').eq('cultivo_id', cultivoId),
+      supabase.from('costos_cosecha').select('costo_total_calculado').eq('cultivo_id', cultivoId),
+    ]);
+    let costoAplic = 0;
+    if (aplicsIds && aplicsIds.length > 0) {
+      const { data: items } = await supabase.from('aplicaciones_items').select('costo_imputado_ars')
+        .in('aplicacion_id', aplicsIds.map((a: any) => a.id));
+      costoAplic = (items ?? []).reduce((s: number, i: any) => s + Number(i.costo_imputado_ars ?? 0), 0);
+    }
+    const costoLab = (labores ?? []).reduce((s: number, l: any) => s + Number(l.costo_total_calculado ?? 0), 0);
+    const costoCos = (cosechas ?? []).reduce((s: number, c: any) => s + Number(c.costo_total_calculado ?? 0), 0);
+    // RIA ya eliminado, su costo ya no cuenta
+    await supabase.from('cultivos').update({ costo_directo_ars: costoAplic + costoLab + costoCos }).eq('id', cultivoId);
+  }
+
+  // Eliminar registros del RIA (insumos, labores, producción y cabecera)
+  await supabase.from('remitos_insumos').delete().eq('remito_id', riaId);
+  await supabase.from('remitos_labores').delete().eq('remito_id', riaId);
+  await supabase.from('remitos_produccion').delete().eq('remito_id', riaId);
+  const { error } = await supabase.from('remitos_internos').delete().eq('id', riaId);
+  if (error) return { error: error.message };
+
+  revalidatePath('/app/ria');
+  revalidatePath('/app/stock');
+  revalidatePath('/app/cultivos');
+  return {};
+}
+
 export async function anularRia(riaId: string, motivo: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
