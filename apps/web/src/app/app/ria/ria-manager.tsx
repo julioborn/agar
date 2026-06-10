@@ -88,17 +88,17 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
   const [campaniaId, setCampaniaId] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ cultivosCreados: number; riasSincronizados: number } | null>(null);
+  const [syncResult, setSyncResult] = useState<{ cultivosCreados: number; cultivosActualizados: number; riasSincronizados: number } | null>(null);
 
   async function handleSincronizar() {
-    if (!confirm('¿Crear cultivos en /cultivos para todos los RIAs confirmados que tengan una descripción de cultivo pero no estén vinculados?\n\nSe agrupan por lote + descripción (un cultivo por combinación).')) return;
+    if (!confirm('Esto realizará dos acciones:\n1. Crear cultivos en /cultivos para RIAs sin cultivo vinculado (agrupados por lote + descripción).\n2. Completar fecha de siembra de cultivos incompletos usando la fecha del primer RIA vinculado.\n\n¿Continuar?')) return;
     setSincronizando(true);
     setSyncResult(null);
     const result = await sincronizarRiasConCultivos();
     setSincronizando(false);
     if (result.error) { alert('Error: ' + result.error); return; }
-    setSyncResult({ cultivosCreados: result.cultivosCreados, riasSincronizados: result.riasSincronizados });
-    if (result.cultivosCreados > 0) router.refresh();
+    setSyncResult({ cultivosCreados: result.cultivosCreados, cultivosActualizados: result.cultivosActualizados ?? 0, riasSincronizados: result.riasSincronizados });
+    router.refresh();
   }
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -245,11 +245,16 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
         </div>
 
         {syncResult && (
-          <div className="mt-3 px-4 py-2.5 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700 flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 shrink-0" />
-            {syncResult.cultivosCreados === 0
-              ? 'No hay RIAs pendientes de sincronizar.'
-              : `Se crearon ${syncResult.cultivosCreados} cultivo${syncResult.cultivosCreados !== 1 ? 's' : ''} y se vincularon ${syncResult.riasSincronizados} RIA${syncResult.riasSincronizados !== 1 ? 's' : ''}. Ahora aparecen en /cultivos.`}
+          <div className="mt-3 px-4 py-2.5 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700 flex items-start gap-2">
+            <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div>
+              {syncResult.cultivosCreados === 0 && syncResult.cultivosActualizados === 0
+                ? 'Todo al día — no había cultivos pendientes de sincronizar ni completar.'
+                : <>
+                    {syncResult.cultivosCreados > 0 && <p>✓ Se crearon <strong>{syncResult.cultivosCreados}</strong> cultivo{syncResult.cultivosCreados !== 1 ? 's' : ''} nuevos vinculados a <strong>{syncResult.riasSincronizados}</strong> RIA{syncResult.riasSincronizados !== 1 ? 's' : ''}.</p>}
+                    {syncResult.cultivosActualizados > 0 && <p>✓ Se completó la fecha de siembra en <strong>{syncResult.cultivosActualizados}</strong> cultivo{syncResult.cultivosActualizados !== 1 ? 's' : ''} incompletos.</p>}
+                  </>}
+            </div>
           </div>
         )}
 

@@ -239,19 +239,24 @@ export async function anularRia(riaId: string, motivo: string) {
 
 export async function sincronizarRiasConCultivos(): Promise<{
   cultivosCreados: number;
+  cultivosActualizados: number;
   riasSincronizados: number;
   error?: string;
 }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { cultivosCreados: 0, riasSincronizados: 0, error: 'No autenticado.' };
+  if (!user) return { cultivosCreados: 0, cultivosActualizados: 0, riasSincronizados: 0, error: 'No autenticado.' };
 
   const empresaData = await getEmpresaActiva();
-  if (!empresaData) return { cultivosCreados: 0, riasSincronizados: 0, error: 'Sin empresa activa.' };
+  if (!empresaData) return { cultivosCreados: 0, cultivosActualizados: 0, riasSincronizados: 0, error: 'Sin empresa activa.' };
   const { empresa } = empresaData;
 
-  // RIAs confirmados sin cultivo_id pero con descripción
-  const { data: rias } = await supabase
+  let cultivosCreados = 0;
+  let cultivosActualizados = 0;
+  let riasSincronizados = 0;
+
+  // ── Paso 1: crear cultivos para RIAs sin cultivo_id ────────────────────────
+  const { data: riasSinVincular } = await supabase
     .from('remitos_internos')
     .select('id, lote_id, campania_id, cultivo_descripcion, fecha')
     .eq('empresa_id', empresa.id)
@@ -259,43 +264,72 @@ export async function sincronizarRiasConCultivos(): Promise<{
     .is('cultivo_id', null)
     .not('cultivo_descripcion', 'is', null);
 
-  if (!rias || rias.length === 0) return { cultivosCreados: 0, riasSincronizados: 0 };
+  if (riasSinVincular && riasSinVincular.length > 0) {
+    // Agrupar por (lote_id, cultivo_descripcion normalizado)
+    const grupos = new Map<string, typeof riasSinVincular>();
+    for (const ria of riasSinVincular) {
+      const key = `${ria.lote_id}::${((ria as any).cultivo_descripcion ?? '').toLowerCase().trim()}`;
+      if (!grupos.has(key)) grupos.set(key, []);
+      grupos.get(key)!.push(ria as any);
+    }
 
-  // Agrupar por (lote_id, cultivo_descripcion normalizado)
-  const grupos = new Map<string, typeof rias>();
-  for (const ria of rias) {
-    const key = `${ria.lote_id}::${((ria as any).cultivo_descripcion ?? '').toLowerCase().trim()}`;
-    if (!grupos.has(key)) grupos.set(key, []);
-    grupos.get(key)!.push(ria as any);
+    for (const [, grupo] of grupos) {
+      // Usar el RIA más antiguo del grupo como fecha de siembra
+      const ordenado = [...grupo].sort((a, b) => ((a as any).fecha ?? '') < ((b as any).fecha ?? '') ? -1 : 1);
+      const primer = ordenado[0] as any;
+
+      const { data: nuevoCultivo } = await supabase
+        .from('cultivos')
+        .insert({
+          empresa_id: empresa.id,
+          lote_id: primer.lote_id,
+          campania_id: primer.campania_id ?? null,
+          cultivo: (primer.cultivo_descripcion ?? '').trim(),
+          estado: 'en_curso',
+          fecha_siembra: primer.fecha ?? null,
+        })
+        .select('id')
+        .single();
+
+      if (!nuevoCultivo) continue;
+      cultivosCreados++;
+
+      const ids = grupo.map((r: any) => r.id);
+      await supabase.from('remitos_internos').update({ cultivo_id: nuevoCultivo.id }).in('id', ids);
+      riasSincronizados += ids.length;
+    }
   }
 
-  let cultivosCreados = 0;
-  let riasSincronizados = 0;
+  // ── Paso 2: completar cultivos ya existentes con fecha_siembra vacía ────────
+  const { data: cultivosIncompletos } = await supabase
+    .from('cultivos')
+    .select('id')
+    .eq('empresa_id', empresa.id)
+    .is('fecha_siembra', null);
 
-  for (const [, grupo] of grupos) {
-    const primer = grupo[0] as any;
-    const { data: nuevoCultivo } = await supabase
-      .from('cultivos')
-      .insert({
-        empresa_id: empresa.id,
-        lote_id: primer.lote_id,
-        campania_id: primer.campania_id ?? null,
-        cultivo: (primer.cultivo_descripcion ?? '').trim(),
-        estado: 'en_curso',
-        fecha_siembra: null,
-      })
-      .select('id')
-      .single();
+  if (cultivosIncompletos && cultivosIncompletos.length > 0) {
+    for (const cultivo of cultivosIncompletos) {
+      // Buscar el RIA confirmado más antiguo vinculado a este cultivo
+      const { data: primerRia } = await supabase
+        .from('remitos_internos')
+        .select('fecha, superficie_afectada, campania_id')
+        .eq('cultivo_id', cultivo.id)
+        .eq('estado', 'confirmado')
+        .order('fecha', { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
-    if (!nuevoCultivo) continue;
-    cultivosCreados++;
+      if (!primerRia) continue;
 
-    const ids = grupo.map((r: any) => r.id);
-    await supabase.from('remitos_internos').update({ cultivo_id: nuevoCultivo.id }).in('id', ids);
-    riasSincronizados += ids.length;
+      const patch: Record<string, any> = { fecha_siembra: (primerRia as any).fecha };
+      if ((primerRia as any).campania_id) patch.campania_id = (primerRia as any).campania_id;
+
+      await supabase.from('cultivos').update(patch).eq('id', cultivo.id);
+      cultivosActualizados++;
+    }
   }
 
   revalidatePath('/app/ria');
   revalidatePath('/app/cultivos');
-  return { cultivosCreados, riasSincronizados };
+  return { cultivosCreados, cultivosActualizados, riasSincronizados };
 }
