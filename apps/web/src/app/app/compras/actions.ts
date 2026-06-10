@@ -327,6 +327,57 @@ export async function editarCompraCompleta(
   return {};
 }
 
+export async function eliminarCompra(compraId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autenticado' };
+  if (user.email !== 'juliobornes10@gmail.com') return { error: 'Sin permiso.' };
+
+  // 1. Obtener movimientos para saber qué stock recalcular
+  const { data: movs } = await supabase
+    .from('movimientos_stock')
+    .select('producto_id, deposito_id')
+    .eq('referencia_id', compraId)
+    .eq('referencia_tipo', 'compra');
+
+  // 2. Eliminar movimientos de stock de esta compra
+  await supabase
+    .from('movimientos_stock')
+    .delete()
+    .eq('referencia_id', compraId)
+    .eq('referencia_tipo', 'compra');
+
+  // 3. Recalcular stock para cada producto+depósito afectado
+  const keys = new Set<string>();
+  for (const m of movs ?? []) keys.add(`${m.producto_id}::${m.deposito_id}`);
+
+  for (const key of keys) {
+    const [productoId, depositoId] = key.split('::');
+    const { data: restantes } = await supabase
+      .from('movimientos_stock')
+      .select('tipo, cantidad')
+      .eq('producto_id', productoId)
+      .eq('deposito_id', depositoId);
+
+    const nueva = (restantes ?? []).reduce((acc: number, m: any) =>
+      acc + (String(m.tipo).startsWith('entrada') ? Number(m.cantidad) : -Number(m.cantidad)), 0);
+
+    await supabase.from('stock')
+      .update({ cantidad_actual: nueva })
+      .eq('producto_id', productoId)
+      .eq('deposito_id', depositoId);
+  }
+
+  // 4. Eliminar ítems y cabecera (ON DELETE CASCADE debería hacerlo, pero lo hacemos explícito)
+  await supabase.from('compras_items').delete().eq('compra_id', compraId);
+  const { error } = await supabase.from('compras').delete().eq('id', compraId);
+  if (error) return { error: error.message };
+
+  revalidatePath('/app/compras');
+  revalidatePath('/app/stock');
+  return {};
+}
+
 export async function eliminarComprasVacias(): Promise<{ deleted: number; error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

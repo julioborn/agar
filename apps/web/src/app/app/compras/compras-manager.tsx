@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import ExportButtons from '@/components/export-buttons';
 import { useCurrency } from '@/lib/currency-context';
-import { eliminarComprasVacias } from './actions';
+import { eliminarComprasVacias, eliminarCompra } from './actions';
 
 const ESTADO_BADGE: Record<string, string> = {
   confirmada: 'bg-[#006836]/10 text-[#006836]',
@@ -61,6 +61,10 @@ export default function ComprasManager({ compras, proveedores, empresaNombre, es
   const [itemsCache, setItemsCache] = useState<Record<string, CompraItem[]>>({});
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
+  const [eliminandoId, setEliminandoId] = useState<string | null>(null);
+  const [elimLoading, setElimLoading] = useState(false);
+  const [elimError, setElimError] = useState<string | null>(null);
+
   const filtradas = useMemo(() => compras.filter((c) => {
     if (fechaDesde && c.fecha < fechaDesde) return false;
     if (fechaHasta && c.fecha > fechaHasta) return false;
@@ -92,6 +96,17 @@ export default function ComprasManager({ compras, proveedores, empresaNombre, es
       .eq('compra_id', compra.id);
     setItemsCache((prev) => ({ ...prev, [compra.id]: (data as any) ?? [] }));
     setLoadingId(null);
+  }
+
+  async function handleEliminar(compraId: string) {
+    setElimLoading(true);
+    setElimError(null);
+    const result = await eliminarCompra(compraId);
+    setElimLoading(false);
+    if (result.error) { setElimError(result.error); return; }
+    setEliminandoId(null);
+    setExpandedId(null);
+    router.refresh();
   }
 
   async function handleLimpiarVacias() {
@@ -312,15 +327,50 @@ export default function ComprasManager({ compras, proveedores, empresaNombre, es
                         </div>
                       </div>
 
-                      {/* Botón editar */}
+                      {/* Acciones admin */}
                       {esAdmin && (
-                        <div className="flex justify-end">
+                        <div className="flex items-center gap-2 justify-end">
                           <Link
                             href={`/app/compras/${c.id}/editar`}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-[#006836]/30 text-[#006836] bg-[#006836]/5 hover:bg-[#006836]/10 rounded-xl transition-colors"
                           >
                             <Pencil className="w-3.5 h-3.5" /> Editar factura
                           </Link>
+                          <button
+                            onClick={() => { setEliminandoId(c.id); setElimError(null); }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-red-300 text-red-700 hover:bg-red-50 rounded-xl transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Eliminar
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Confirmación eliminación */}
+                      {eliminandoId === c.id && (
+                        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 space-y-2">
+                          <p className="text-sm font-semibold text-red-700">
+                            ¿Eliminar {c.numero_factura ?? `compra del ${fmt(c.fecha)}`}?
+                          </p>
+                          <p className="text-xs text-red-600">
+                            Se eliminarán todos los ítems y se revertirán los movimientos de stock. Esta acción no se puede deshacer.
+                          </p>
+                          {elimError && <p className="text-xs text-red-600 font-medium">{elimError}</p>}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEliminar(c.id)}
+                              disabled={elimLoading}
+                              className="px-4 py-1.5 bg-red-700 hover:bg-red-800 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
+                            >
+                              {elimLoading ? 'Eliminando…' : 'Confirmar eliminación'}
+                            </button>
+                            <button
+                              onClick={() => setEliminandoId(null)}
+                              disabled={elimLoading}
+                              className="px-3 py-1.5 text-xs text-zinc-500 hover:text-zinc-700 border border-zinc-200 rounded-lg"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
                         </div>
                       )}
 
