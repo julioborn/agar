@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Plus, Pencil, Trash2, Check, X, Info } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X, Info, CheckCircle2 } from 'lucide-react';
+import { guardarPrecioYActualizarRias } from './actions';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import ExportButtons from '@/components/export-buttons';
@@ -70,24 +71,24 @@ export default function ValuacionManager({
   const [precioRapido, setPrecioRapido] = useState<Record<string, string>>({});
   const [guardandoPrecio, setGuardandoPrecio] = useState<string | null>(null);
   const [precioOkIds, setPrecioOkIds] = useState<Set<string>>(new Set());
+  const [resultadoUpdate, setResultadoUpdate] = useState<{ rias: number; cultivos: number } | null>(null);
 
   async function handleGuardarPrecioRapido(producto: { id: string; nombre: string }) {
     const val = parseFloat(precioRapido[producto.id] || '');
     if (!val || val <= 0) return;
     setGuardandoPrecio(producto.id);
-    const { error: e } = await createClient().from('precios_reposicion').insert({
-      empresa_id: empresaId,
-      producto_id: producto.id,
-      precio_ars: val,
-      vigencia_desde: today(),
-      vigencia_hasta: null,
-      observaciones: 'Carga manual desde alerta de precio',
-    });
+    setResultadoUpdate(null);
+
+    const result = await guardarPrecioYActualizarRias(producto.id, val, empresaId);
+
     setGuardandoPrecio(null);
-    if (!e) {
-      setPrecioOkIds((prev) => new Set([...prev, producto.id]));
-      router.refresh();
+    if (result.error) { alert('Error: ' + result.error); return; }
+
+    setPrecioOkIds((prev) => new Set([...prev, producto.id]));
+    if (result.riasActualizados > 0) {
+      setResultadoUpdate({ rias: result.riasActualizados, cultivos: result.cultivosActualizados });
     }
+    router.refresh();
   }
 
   // ── Informe filter ──────────────────────────────────────────────────────────
@@ -223,6 +224,14 @@ export default function ValuacionManager({
               </p>
             </div>
           </div>
+
+          {resultadoUpdate && (
+            <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-2.5 text-sm text-green-700">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              Se actualizaron <strong>{resultadoUpdate.rias}</strong> ítem{resultadoUpdate.rias !== 1 ? 's' : ''} de RIA
+              {resultadoUpdate.cultivos > 0 && <> y el costo de <strong>{resultadoUpdate.cultivos}</strong> cultivo{resultadoUpdate.cultivos !== 1 ? 's' : ''}</>}.
+            </div>
+          )}
 
           <div className="space-y-2">
             {sinPrecioPendientes.map((prod) => (

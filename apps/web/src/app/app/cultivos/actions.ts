@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 
 // ─── Helper compartido ────────────────────────────────────────────────────────
 async function recalcularCostoDirecto(supabase: Awaited<ReturnType<typeof createClient>>, cultivoId: string) {
-  // Costo de aplicaciones
+  // Costo de aplicaciones directas
   const { data: aplicsIds } = await supabase
     .from('aplicaciones').select('id').eq('cultivo_id', cultivoId);
 
@@ -28,7 +28,18 @@ async function recalcularCostoDirecto(supabase: Awaited<ReturnType<typeof create
     .from('costos_cosecha').select('costo_total_calculado').eq('cultivo_id', cultivoId);
   const costoCosecha = (cosechas ?? []).reduce((acc: number, c: any) => acc + Number(c.costo_total_calculado ?? 0), 0);
 
-  const total = costoAplicaciones + costoLabores + costoCosecha;
+  // Costo de insumos vía RIA confirmados
+  const { data: remitosIds } = await supabase
+    .from('remitos_internos').select('id').eq('cultivo_id', cultivoId).eq('estado', 'confirmado');
+  let costoRia = 0;
+  if (remitosIds && remitosIds.length > 0) {
+    const { data: riaItems } = await supabase
+      .from('remitos_insumos').select('subtotal')
+      .in('remito_id', remitosIds.map((r: any) => r.id));
+    costoRia = (riaItems ?? []).reduce((acc: number, i: any) => acc + Number(i.subtotal ?? 0), 0);
+  }
+
+  const total = costoAplicaciones + costoLabores + costoCosecha + costoRia;
   await supabase.from('cultivos').update({ costo_directo_ars: total }).eq('id', cultivoId);
   return total;
 }
