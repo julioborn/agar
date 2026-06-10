@@ -110,31 +110,36 @@ export default function CultivosManager({ cultivos, lotes, unidadesNegocio, camp
 
       {/* ── Nuevo cultivo (colapsable) ────────────────────────────────── */}
       <div className={cn(
-        'bg-white rounded-2xl border overflow-hidden transition-all',
-        formOpen ? 'border-[#006836]/30 shadow-sm' : 'border-zinc-100',
+        'rounded-2xl border overflow-hidden transition-all',
+        formOpen ? 'bg-white border-[#006836]/30 shadow-sm' : 'bg-[#006836] border-[#006836]',
       )}>
         <button
           type="button"
           onClick={() => { setFormOpen((v) => !v); setEditando(null); }}
-          className="w-full flex items-center justify-between px-5 py-4 hover:bg-zinc-50 transition-colors text-left"
+          className={cn(
+            'w-full flex items-center justify-between px-5 py-4 transition-colors text-left',
+            formOpen ? 'hover:bg-zinc-50' : 'hover:bg-[#005228]',
+          )}
         >
           <div className="flex items-center gap-2.5">
             <div className={cn(
               'w-8 h-8 rounded-xl flex items-center justify-center transition-colors',
-              formOpen ? 'bg-[#006836]' : 'bg-[#006836]/10',
+              formOpen ? 'bg-[#006836]' : 'bg-white/20',
             )}>
-              <Plus className={cn('w-4 h-4', formOpen ? 'text-white' : 'text-[#006836]')} />
+              <Plus className="w-4 h-4 text-white" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-zinc-800">
+              <p className={cn('text-sm font-semibold', formOpen ? 'text-zinc-800' : 'text-white')}>
                 {editando ? 'Editar cultivo' : 'Nuevo cultivo'}
               </p>
-              <p className="text-xs text-zinc-400">Registrar siembra o planificación</p>
+              <p className={cn('text-xs', formOpen ? 'text-zinc-400' : 'text-white/70')}>
+                Registrar siembra o planificación
+              </p>
             </div>
           </div>
           {formOpen
             ? <ChevronUp className="w-4 h-4 text-zinc-400" />
-            : <ChevronDown className="w-4 h-4 text-zinc-400" />}
+            : <ChevronDown className="w-4 h-4 text-white/70" />}
         </button>
 
         {formOpen && (
