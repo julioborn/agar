@@ -187,6 +187,7 @@ export default function RiaForm({
   );
   const [cultivoId, setCultivoIdState] = useState(riaExistente?.cultivo_id ?? '');
   const [cultivoDesc, setCultivoDesc] = useState(riaExistente?.cultivo_descripcion ?? '');
+  const [crearCultivo, setCrearCultivo] = useState(false);
   const [observaciones, setObservaciones] = useState(riaExistente?.observaciones ?? '');
 
   // Lines state
@@ -536,6 +537,7 @@ export default function RiaForm({
       cultivoId: cultivoId || undefined,
       superficieAfectada: sup > 0 ? sup : undefined,
       cultivoDescripcion: cultivoDesc.trim() || undefined,
+      crearNuevoCultivo: crearCultivo && !cultivoId && !!cultivoDesc.trim(),
       observaciones: observaciones.trim() || undefined,
       insumos: insumos.map((i) => ({
         depositoId: i.depositoId,
@@ -823,14 +825,29 @@ export default function RiaForm({
                 ))}
               </select>
             ) : (
-              <input
-                type="text"
-                value={cultivoDesc}
-                onChange={(e) => setCultivoDesc(e.target.value)}
-                disabled={esReadOnly}
-                placeholder={loteId ? 'Sin cultivos activos — escribí la actividad' : 'Seleccioná un lote primero'}
-                className={inputCls()}
-              />
+              <>
+                <input
+                  type="text"
+                  value={cultivoDesc}
+                  onChange={(e) => { setCultivoDesc(e.target.value); if (!e.target.value.trim()) setCrearCultivo(false); }}
+                  disabled={esReadOnly}
+                  placeholder={loteId ? 'Sin cultivos activos — escribí la actividad' : 'Seleccioná un lote primero'}
+                  className={inputCls()}
+                />
+                {!esReadOnly && cultivoDesc.trim() && !cultivoId && (
+                  <label className="inline-flex items-center gap-2 mt-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={crearCultivo}
+                      onChange={(e) => setCrearCultivo(e.target.checked)}
+                      className="w-3.5 h-3.5 accent-[#006836] rounded"
+                    />
+                    <span className="text-xs text-zinc-500">
+                      Crear <strong>"{cultivoDesc.trim()}"</strong> como cultivo en el sistema
+                    </span>
+                  </label>
+                )}
+              </>
             )}
           </div>
         </div>

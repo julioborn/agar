@@ -9,8 +9,9 @@ import {
   FileText, CheckCircle, AlertCircle, Ban,
   Package, Wrench, Wheat, BarChart3,
 } from 'lucide-react';
-import { anularRia } from './actions';
+import { anularRia, sincronizarRiasConCultivos } from './actions';
 import { useRouter } from 'next/navigation';
+import { RefreshCw } from 'lucide-react';
 
 const ESTADO_STYLE: Record<string, string> = {
   borrador:   'bg-amber-100 text-amber-700',
@@ -86,6 +87,19 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
   const [estado, setEstado] = useState('');
   const [campaniaId, setCampaniaId] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [sincronizando, setSincronizando] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ cultivosCreados: number; riasSincronizados: number } | null>(null);
+
+  async function handleSincronizar() {
+    if (!confirm('¿Crear cultivos en /cultivos para todos los RIAs confirmados que tengan una descripción de cultivo pero no estén vinculados?\n\nSe agrupan por lote + descripción (un cultivo por combinación).')) return;
+    setSincronizando(true);
+    setSyncResult(null);
+    const result = await sincronizarRiasConCultivos();
+    setSincronizando(false);
+    if (result.error) { alert('Error: ' + result.error); return; }
+    setSyncResult({ cultivosCreados: result.cultivosCreados, riasSincronizados: result.riasSincronizados });
+    if (result.cultivosCreados > 0) router.refresh();
+  }
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detailCache, setDetailCache] = useState<Record<string, { insumos: InsumoRow[]; labores: LaborRow[]; produccion: ProduccionRow[] }>>({});
@@ -204,6 +218,15 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
                 <X className="w-3 h-3" /> Limpiar
               </button>
             )}
+            <button
+              onClick={handleSincronizar}
+              disabled={sincronizando}
+              className="inline-flex items-center gap-1.5 px-3 py-2 border border-indigo-200 text-indigo-600 bg-indigo-50 text-xs font-medium rounded-xl hover:bg-indigo-100 transition-colors disabled:opacity-50"
+              title="Crear cultivos en /cultivos para RIAs que tengan descripción pero sin cultivo vinculado"
+            >
+              <RefreshCw className={cn('w-3.5 h-3.5', sincronizando && 'animate-spin')} />
+              {sincronizando ? 'Sincronizando…' : 'Sincronizar → Cultivos'}
+            </button>
             <Link
               href="/app/ria/reportes"
               className="inline-flex items-center gap-1.5 px-3 py-2 border border-zinc-200 text-zinc-600 text-xs font-medium rounded-xl hover:bg-zinc-50 transition-colors"
@@ -220,6 +243,15 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
             </Link>
           </div>
         </div>
+
+        {syncResult && (
+          <div className="mt-3 px-4 py-2.5 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700 flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 shrink-0" />
+            {syncResult.cultivosCreados === 0
+              ? 'No hay RIAs pendientes de sincronizar.'
+              : `Se crearon ${syncResult.cultivosCreados} cultivo${syncResult.cultivosCreados !== 1 ? 's' : ''} y se vincularon ${syncResult.riasSincronizados} RIA${syncResult.riasSincronizados !== 1 ? 's' : ''}. Ahora aparecen en /cultivos.`}
+          </div>
+        )}
 
         {showFilters && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3 border-t border-zinc-100 mt-3">

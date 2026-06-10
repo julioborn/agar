@@ -250,10 +250,17 @@ export default function CultivosManager({ cultivos, lotes, unidadesNegocio, camp
                       <p className="text-xs text-[#006836] font-medium mt-0.5">{c.campania_nombre}</p>
                     )}
                   </div>
-                  <span className={cn('shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold', ESTADO_BADGE[c.estado] ?? 'bg-zinc-100 text-zinc-500')}>
-                    <span className={cn('w-1.5 h-1.5 rounded-full', ESTADO_DOT[c.estado])} />
-                    {ESTADO_LABEL[c.estado] ?? c.estado}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {!c.fecha_siembra && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-600 border border-amber-200">
+                        ⚠ Incompleto
+                      </span>
+                    )}
+                    <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold', ESTADO_BADGE[c.estado] ?? 'bg-zinc-100 text-zinc-500')}>
+                      <span className={cn('w-1.5 h-1.5 rounded-full', ESTADO_DOT[c.estado])} />
+                      {ESTADO_LABEL[c.estado] ?? c.estado}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Campo / Lote */}
