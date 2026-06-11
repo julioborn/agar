@@ -165,6 +165,7 @@ const UNIDADES_LABOR = [
 ];
 
 const num = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 let _lineCounter = 0;
 const nextId = () => `l-${++_lineCounter}`;
 const today = () => new Date().toISOString().split('T')[0];
@@ -894,7 +895,7 @@ export default function RiaForm({
                   <input
                     type="text"
                     value={nuevoCultivoDesc}
-                    onChange={(e) => setNuevoCultivoDesc(e.target.value)}
+                    onChange={(e) => setNuevoCultivoDesc(cap(e.target.value))}
                     placeholder="Nombre del nuevo cultivo (ej: Soja RR)"
                     className={inputCls(!nuevoCultivoDesc.trim())}
                   />
@@ -905,7 +906,7 @@ export default function RiaForm({
                 <input
                   type="text"
                   value={cultivoDesc}
-                  onChange={(e) => { setCultivoDesc(e.target.value); if (!e.target.value.trim()) setCrearCultivo(false); }}
+                  onChange={(e) => { const v = cap(e.target.value); setCultivoDesc(v); if (!v.trim()) setCrearCultivo(false); }}
                   disabled={esReadOnly}
                   placeholder={loteId ? 'Sin cultivos activos — escribí la actividad' : 'Seleccioná un lote primero'}
                   className={inputCls()}
@@ -1125,7 +1126,7 @@ export default function RiaForm({
                       <input
                         type="text"
                         value={lab.descripcion}
-                        onChange={(e) => updateLabor(lab._id, 'descripcion', e.target.value)}
+                        onChange={(e) => updateLabor(lab._id, 'descripcion', cap(e.target.value))}
                         disabled={esReadOnly}
                         placeholder="Ej: Pulverización herbicida pre-emergente…"
                         className={inputCls(!lab.descripcion && !esReadOnly)}

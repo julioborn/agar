@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import EmpresaSelector from './empresa-selector';
@@ -101,14 +102,16 @@ export default function AppShell({
               >
                 <Menu className="w-5 h-5" />
               </button>
-              <div className="lg:hidden pointer-events-none select-none">
+              <Link href="/app" className="lg:hidden">
                 <Image src="/agar-final.png" alt="AGAR" width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
-              </div>
+              </Link>
             </div>
 
             {/* Centro: logo — solo visible en desktop (lg+) */}
-            <div className="flex-1 hidden lg:flex justify-center pointer-events-none select-none">
-              <Image src="/agar-final.png" alt="AGAR" width={44} height={44} className="h-10 w-10 rounded-full object-cover" />
+            <div className="flex-1 hidden lg:flex justify-center">
+              <Link href="/app">
+                <Image src="/agar-final.png" alt="AGAR" width={44} height={44} className="h-10 w-10 rounded-full object-cover" />
+              </Link>
             </div>
             {/* Spacer mobile para que los controles queden a la derecha */}
             <div className="flex-1 lg:hidden" />
