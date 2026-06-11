@@ -4,6 +4,22 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 
+const TIPOS_ENTRADA = new Set([
+  'entrada_compra', 'entrada_devolucion', 'transferencia_entrada', 'ajuste', 'carga_stock',
+]);
+const TIPOS_SALIDA = new Set([
+  'salida_aplicacion', 'transferencia_salida', 'merma',
+]);
+
+function calcStock(movs: { tipo: string; cantidad: number | string }[]): number {
+  return movs.reduce((acc, m) => {
+    const qty = Number(m.cantidad ?? 0);
+    if (TIPOS_ENTRADA.has(String(m.tipo))) return acc + qty;
+    if (TIPOS_SALIDA.has(String(m.tipo))) return acc - qty;
+    return acc + qty;
+  }, 0);
+}
+
 export interface InsumoPayload {
   depositoId: string;
   productoId: string;
@@ -253,8 +269,7 @@ export async function eliminarRia(riaId: string): Promise<{ error?: string }> {
         .eq('producto_id', m.producto_id)
         .eq('deposito_id', m.deposito_id);
 
-      const nueva = (restantes ?? []).reduce((acc: number, r: any) =>
-        acc + (String(r.tipo).startsWith('entrada') ? Number(r.cantidad) : -Number(r.cantidad)), 0);
+      const nueva = calcStock(restantes ?? []);
 
       await supabase.from('stock')
         .update({ cantidad_actual: nueva })

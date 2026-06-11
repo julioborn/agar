@@ -192,6 +192,7 @@ export default function RiaForm({
   const [cultivoId, setCultivoIdState] = useState(riaExistente?.cultivo_id ?? '');
   const [cultivoDesc, setCultivoDesc] = useState(riaExistente?.cultivo_descripcion ?? '');
   const [crearCultivo, setCrearCultivo] = useState(false);
+  const [nuevoCultivoDesc, setNuevoCultivoDesc] = useState('');
   const [observaciones, setObservaciones] = useState(riaExistente?.observaciones ?? '');
 
   // Lines state
@@ -561,10 +562,12 @@ export default function RiaForm({
       fecha,
       loteId,
       campaniaId: campaniaId || undefined,
-      cultivoId: cultivoId || undefined,
+      cultivoId: (cultivoId && cultivoId !== '_nuevo_') ? cultivoId : undefined,
       superficieAfectada: sup > 0 ? sup : undefined,
-      cultivoDescripcion: cultivoDesc.trim() || undefined,
-      crearNuevoCultivo: crearCultivo && !cultivoId && !!cultivoDesc.trim(),
+      cultivoDescripcion: (cultivoId === '_nuevo_' ? nuevoCultivoDesc.trim() : cultivoDesc.trim()) || undefined,
+      crearNuevoCultivo:
+        (cultivoId === '_nuevo_' && !!nuevoCultivoDesc.trim()) ||
+        (crearCultivo && !cultivoId && !!cultivoDesc.trim()),
       observaciones: observaciones.trim() || undefined,
       insumos: insumos.map((i) => ({
         depositoId: i.depositoId,
@@ -836,21 +839,35 @@ export default function RiaForm({
           <div>
             <label className="block text-xs font-medium text-zinc-600 mb-1">Cultivo / Actividad</label>
             {cultivosDelLote.length > 0 ? (
-              <select
-                value={cultivoId}
-                onChange={(e) => {
-                  const sel = cultivosDelLote.find((c) => c.id === e.target.value);
-                  setCultivoIdState(e.target.value);
-                  setCultivoDesc(sel?.cultivo ?? '');
-                }}
-                disabled={esReadOnly}
-                className={inputCls()}
-              >
-                <option value="">Seleccioná un cultivo…</option>
-                {cultivosDelLote.map((c) => (
-                  <option key={c.id} value={c.id}>{c.cultivo}</option>
-                ))}
-              </select>
+              <>
+                <select
+                  value={cultivoId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const sel = cultivosDelLote.find((c) => c.id === val);
+                    setCultivoIdState(val);
+                    setCultivoDesc(sel?.cultivo ?? '');
+                    if (val !== '_nuevo_') setNuevoCultivoDesc('');
+                  }}
+                  disabled={esReadOnly}
+                  className={inputCls()}
+                >
+                  <option value="">Seleccioná un cultivo…</option>
+                  {cultivosDelLote.map((c) => (
+                    <option key={c.id} value={c.id}>{c.cultivo}</option>
+                  ))}
+                  {!esReadOnly && <option value="_nuevo_">+ Crear nuevo cultivo…</option>}
+                </select>
+                {cultivoId === '_nuevo_' && !esReadOnly && (
+                  <input
+                    type="text"
+                    value={nuevoCultivoDesc}
+                    onChange={(e) => setNuevoCultivoDesc(e.target.value)}
+                    placeholder="Nombre del nuevo cultivo (ej: Soja RR)"
+                    className={inputCls(!nuevoCultivoDesc.trim())}
+                  />
+                )}
+              </>
             ) : (
               <>
                 <input

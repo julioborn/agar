@@ -4,6 +4,22 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 
+const TIPOS_ENTRADA = new Set([
+  'entrada_compra', 'entrada_devolucion', 'transferencia_entrada', 'ajuste', 'carga_stock',
+]);
+const TIPOS_SALIDA = new Set([
+  'salida_aplicacion', 'transferencia_salida', 'merma',
+]);
+
+function calcStock(movs: { tipo: string; cantidad: number | string }[]): number {
+  return movs.reduce((acc, m) => {
+    const qty = Number(m.cantidad ?? 0);
+    if (TIPOS_ENTRADA.has(String(m.tipo))) return acc + qty;
+    if (TIPOS_SALIDA.has(String(m.tipo))) return acc - qty;
+    return acc + qty;
+  }, 0);
+}
+
 export interface ItemData {
   producto_id: string;
   presentacion_id: string | null;
@@ -162,7 +178,7 @@ export async function corregirItemsCompra(
 
     const nuevaCantidadStock = (movs ?? []).reduce((acc: number, m: any) => {
       const qty = Number(m.cantidad ?? 0);
-      return acc + (String(m.tipo).startsWith('entrada') ? qty : -qty);
+      return acc + (TIPOS_ENTRADA.has(String(m.tipo)) ? qty : TIPOS_SALIDA.has(String(m.tipo)) ? -qty : qty);
     }, 0);
 
     await supabase
@@ -298,7 +314,7 @@ export async function editarCompraCompleta(
 
     const nuevaCantidad = (movs ?? []).reduce((acc: number, m: any) => {
       const qty = Number(m.cantidad ?? 0);
-      return acc + (String(m.tipo).startsWith('entrada') ? qty : -qty);
+      return acc + (TIPOS_ENTRADA.has(String(m.tipo)) ? qty : TIPOS_SALIDA.has(String(m.tipo)) ? -qty : qty);
     }, 0);
 
     await supabase
@@ -359,8 +375,7 @@ export async function eliminarCompra(compraId: string): Promise<{ error?: string
       .eq('producto_id', productoId)
       .eq('deposito_id', depositoId);
 
-    const nueva = (restantes ?? []).reduce((acc: number, m: any) =>
-      acc + (String(m.tipo).startsWith('entrada') ? Number(m.cantidad) : -Number(m.cantidad)), 0);
+    const nueva = calcStock(restantes ?? []);
 
     await supabase.from('stock')
       .update({ cantidad_actual: nueva })
