@@ -287,26 +287,34 @@ export default function RiaForm({
   })();
 
   // ── Auto-save localStorage (solo modo nuevo, sin riaExistente) ───────────────
-  const LS_KEY = `ria_borrador_${empresaId}`;
+  const LS_KEY   = `ria_borrador_${empresaId}`;
+  const PREF_KEY = `ria_pref_${empresaId}`;
 
   // Restaurar borrador del localStorage al montar (solo modo nuevo)
   useEffect(() => {
     if (mode !== 'nuevo' || riaExistente) return;
     try {
       const saved = localStorage.getItem(LS_KEY);
-      if (!saved) return;
-      const d = JSON.parse(saved);
-      if (d.fecha)              setFecha(d.fecha);
-      if (d.loteId)             setLoteId(d.loteId);
-      if (d.campaniaId)         setCampaniaId(d.campaniaId);
+      if (saved) {
+        const d = JSON.parse(saved);
+        if (d.fecha)              setFecha(d.fecha);
+        if (d.loteId)             setLoteId(d.loteId);
+        if (d.campaniaId)         setCampaniaId(d.campaniaId);
       if (d.superficieAfectada) setSuperficieAfectada(d.superficieAfectada);
       if (d.cultivoId)          setCultivoIdState(d.cultivoId);
       if (d.cultivoDesc)        setCultivoDesc(d.cultivoDesc);
       if (d.observaciones)      setObservaciones(d.observaciones);
-      if (d.insumos?.length)    setInsumos(d.insumos.map((i: any) => ({ ...i, _id: nextId() })));
-      if (d.labores?.length)    setLabores(d.labores.map((l: any) => ({ ...l, _id: nextId() })));
-      if (d.produccion?.length) setProduccion(d.produccion.map((p: any) => ({ ...p, _id: nextId() })));
-      setDraftRecovered(true);
+        if (d.insumos?.length)    setInsumos(d.insumos.map((i: any) => ({ ...i, _id: nextId() })));
+        if (d.labores?.length)    setLabores(d.labores.map((l: any) => ({ ...l, _id: nextId() })));
+        if (d.produccion?.length) setProduccion(d.produccion.map((p: any) => ({ ...p, _id: nextId() })));
+        setDraftRecovered(true);
+      } else {
+        // Sin borrador — aplicar preferencias de última sesión
+        try {
+          const pref = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
+          if (pref.campaniaId) setCampaniaId(pref.campaniaId);
+        } catch {}
+      }
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -328,6 +336,19 @@ export default function RiaForm({
   function clearDraft() {
     try { localStorage.removeItem(LS_KEY); } catch {}
   }
+
+  function savePref(patch: Record<string, string>) {
+    try {
+      const prev = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
+      localStorage.setItem(PREF_KEY, JSON.stringify({ ...prev, ...patch }));
+    } catch {}
+  }
+
+  // Persistir campaña y depósito como preferencias
+  useEffect(() => {
+    if (campaniaId) savePref({ campaniaId });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaniaId]);
 
   // ── Auto-fill lote ────────────────────────────────────────────────────────────
   // Cultivos filtrados por lote seleccionado
@@ -387,8 +408,10 @@ export default function RiaForm({
 
   // ── Insumo handlers ───────────────────────────────────────────────────────────
   function addInsumo() {
+    let lastDeposito = '';
+    try { lastDeposito = JSON.parse(localStorage.getItem(PREF_KEY) || '{}').depositoId ?? ''; } catch {}
     setInsumos((p) => [...p, {
-      _id: nextId(), depositoId: '', productoId: '', cantidad: '',
+      _id: nextId(), depositoId: lastDeposito, productoId: '', cantidad: '',
       dosisPorHa: '', costoUnitario: '', subtotal: 0, obs: '',
       productoNombre: '', unidadBase: '', stockDisponible: null, sinPrecioCompra: false,
     }]);
@@ -449,6 +472,7 @@ export default function RiaForm({
 
   function handleInsumoDeposito(id: string, depositoId: string) {
     updateInsumo(id, 'depositoId', depositoId);
+    if (depositoId) savePref({ depositoId });
     const line = insumos.find((i) => i._id === id);
     if (line?.productoId && depositoId) fetchStock(depositoId, line.productoId, id);
   }
