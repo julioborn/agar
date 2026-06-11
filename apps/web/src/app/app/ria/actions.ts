@@ -236,7 +236,44 @@ export async function confirmarRia(riaId: string) {
   if (error) return { error: error.message };
   if (!data?.ok) return { error: data?.error ?? 'Error al confirmar.' };
 
+  // Guardar precios manuales de insumos sin compras previas en precios_reposicion
+  try {
+    const { data: ria } = await supabase
+      .from('remitos_internos')
+      .select('empresa_id, fecha')
+      .eq('id', riaId)
+      .single();
+
+    const { data: insumos } = await supabase
+      .from('remitos_insumos')
+      .select('producto_id, costo_unitario')
+      .eq('remito_id', riaId)
+      .gt('costo_unitario', 0);
+
+    if (ria && insumos?.length) {
+      for (const ins of insumos) {
+        // Solo guardar si el producto no tiene ninguna compra registrada
+        const { count } = await supabase
+          .from('compras_items')
+          .select('id', { count: 'exact', head: true })
+          .eq('producto_id', ins.producto_id);
+
+        if ((count ?? 0) === 0) {
+          await supabase.from('precios_reposicion').insert({
+            empresa_id:     ria.empresa_id,
+            producto_id:    ins.producto_id,
+            precio_ars:     ins.costo_unitario,
+            vigencia_desde: ria.fecha,
+            observaciones:  'Precio ingresado en RIA (sin factura de compra)',
+            usuario_id:     user.id,
+          });
+        }
+      }
+    }
+  } catch { /* no es crítico, no bloquea la confirmación */ }
+
   revalidatePath('/app/ria');
+  revalidatePath('/app/valuacion');
   return { ok: true };
 }
 
