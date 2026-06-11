@@ -702,7 +702,7 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
                             <div className="flex flex-wrap gap-4 text-xs border-t border-zinc-100 pt-3">
                               <span className="text-zinc-500">Insumos: <strong className="text-zinc-800">${num.format(ria.total_insumos)}</strong></span>
                               <span className="text-zinc-500">Labores: <strong className="text-zinc-800">${num.format(ria.total_labores)}</strong></span>
-                              <span className="text-zinc-600 font-medium">Costo total: <strong className="text-zinc-900 text-sm">${num.format(ria.total_ria)}</strong></span>
+                              <span className="text-zinc-600">Costo total: <strong className="text-green-700">${num.format(ria.total_ria)}</strong></span>
                               {ria.costo_por_ha != null && (
                                 <span className="text-zinc-500">Costo/ha: <strong className="text-zinc-800">${num.format(ria.costo_por_ha)}</strong></span>
                               )}
