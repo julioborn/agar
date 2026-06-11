@@ -252,11 +252,12 @@ export async function confirmarRia(riaId: string) {
 
     if (ria && insumos?.length) {
       for (const ins of insumos) {
-        // Solo guardar si el producto no tiene ninguna compra registrada
+        // Solo guardar si el producto no tiene compras con precio > 0
         const { count } = await supabase
           .from('compras_items')
           .select('id', { count: 'exact', head: true })
-          .eq('producto_id', ins.producto_id);
+          .eq('producto_id', ins.producto_id)
+          .gt('precio_unitario_ars', 0);
 
         if ((count ?? 0) === 0) {
           await supabase.from('precios_reposicion').insert({

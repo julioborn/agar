@@ -12,14 +12,15 @@ CREATE OR REPLACE FUNCTION fn_precio_ultima_compra(
 ) RETURNS NUMERIC
 LANGUAGE SQL STABLE SECURITY DEFINER AS $$
   SELECT COALESCE(
-    -- 1. Precio de la última compra confirmada (comportamiento original)
+    -- 1. Última compra confirmada con precio > 0 (compras con precio=0 no aplican)
     (
       SELECT ci.precio_unitario_ars
       FROM compras_items ci
       JOIN compras c ON c.id = ci.compra_id
-      WHERE ci.producto_id = p_producto_id
-        AND c.empresa_id   = p_empresa_id
-        AND c.estado       = 'confirmada'
+      WHERE ci.producto_id          = p_producto_id
+        AND c.empresa_id            = p_empresa_id
+        AND c.estado                = 'confirmada'
+        AND ci.precio_unitario_ars  > 0
       ORDER BY c.fecha DESC, c.created_at DESC
       LIMIT 1
     ),
