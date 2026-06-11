@@ -27,13 +27,20 @@ export default async function ConfiguracionPage() {
   const esAdmin = rol === 'admin_empresa' || esSuperAdmin;
   if (!esAdmin) redirect('/app');
 
-  const [configRes, cotizBNA] = await Promise.all([
+  const [configRes, cotizBNA, historialRes] = await Promise.all([
     supabase
       .from('configuracion_empresa')
       .select('precio_combustible, tipo_combustible, cotizacion_usd, cotizacion_usd_fecha, litros_por_uta')
       .eq('empresa_id', empresa.id)
       .maybeSingle(),
     fetchCotizBNA(),
+    supabase
+      .from('referencias_precio')
+      .select('id, valor, vigencia_desde, observaciones')
+      .eq('empresa_id', empresa.id)
+      .eq('tipo', 'gasoil')
+      .order('vigencia_desde', { ascending: false })
+      .limit(50),
   ]);
 
   const config = configRes.data;
@@ -67,6 +74,7 @@ export default async function ConfiguracionPage() {
             initialCotizUsd={config?.cotizacion_usd ?? null}
             cotizBNA={cotizBNA}
             initialLitrosPorUta={config?.litros_por_uta ?? 35}
+            historialGasoil={(historialRes.data ?? []) as any}
           />
         </div>
       </div>

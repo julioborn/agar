@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, RefreshCw, Fuel, CircleDollarSign, Tractor } from 'lucide-react';
+import { Check, RefreshCw, Fuel, CircleDollarSign, Tractor, Clock } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+
+interface HistorialItem { id: string; valor: number; vigencia_desde: string; observaciones: string | null; }
 
 interface Props {
   empresaId: string;
@@ -11,6 +13,7 @@ interface Props {
   initialCotizUsd: number | null;
   cotizBNA: number | null;
   initialLitrosPorUta: number;
+  historialGasoil: HistorialItem[];
 }
 
 const TIPOS_COMBUSTIBLE = [
@@ -21,10 +24,11 @@ const TIPOS_COMBUSTIBLE = [
 
 const field = 'w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#006836]/40 disabled:opacity-50';
 
-export default function ConfigForm({ empresaId, initialPrecio, initialTipo, initialCotizUsd, cotizBNA, initialLitrosPorUta }: Props) {
+export default function ConfigForm({ empresaId, initialPrecio, initialTipo, initialCotizUsd, cotizBNA, initialLitrosPorUta, historialGasoil }: Props) {
   // — Combustible —
   const [precio,       setPrecio]      = useState(initialPrecio > 0 ? String(initialPrecio) : '');
   const [tipo,         setTipo]        = useState(initialTipo);
+  const [historial,    setHistorial]   = useState<HistorialItem[]>(historialGasoil);
   const [savingComb,   setSavingComb]  = useState(false);
   const [savedComb,    setSavedComb]   = useState(false);
   const [errorComb,    setErrorComb]   = useState<string | null>(null);
@@ -48,9 +52,28 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
     if (!precio || Number(precio) <= 0) { setErrorComb('Ingresá un precio válido.'); return; }
     setSavingComb(true); setErrorComb(null);
 
-    const { error: err } = await createClient()
+    const sb = createClient();
+    const precioNum = Number(precio);
+    const hoy = new Date().toISOString().slice(0, 10);
+
+    const { error: err } = await sb
       .from('configuracion_empresa')
-      .upsert({ empresa_id: empresaId, precio_combustible: Number(precio), tipo_combustible: tipo }, { onConflict: 'empresa_id' });
+      .upsert({ empresa_id: empresaId, precio_combustible: precioNum, tipo_combustible: tipo }, { onConflict: 'empresa_id' });
+
+    if (!err) {
+      // Guardar en historial solo si cambió el precio
+      if (precioNum !== initialPrecio) {
+        const { data: nuevo } = await sb.from('referencias_precio').insert({
+          empresa_id:     empresaId,
+          tipo:           'gasoil',
+          nombre:         'Gasoil',
+          valor:          precioNum,
+          unidad:         'L',
+          vigencia_desde: hoy,
+        }).select('id, valor, vigencia_desde, observaciones').single();
+        if (nuevo) setHistorial((prev) => [nuevo as HistorialItem, ...prev]);
+      }
+    }
 
     setSavingComb(false);
     if (err) { setErrorComb(err.message); return; }
@@ -94,11 +117,15 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
     setTimeout(() => setSavedCotiz(false), 2500);
   }
 
+  const fmtFecha = (d: string) =>
+    new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
   return (
-    <div className="space-y-5 max-w-sm">
+    <div className="space-y-5">
+      <div className="flex flex-col lg:flex-row gap-5 items-start">
 
       {/* ── Combustible ─────────────────────────────────────────────── */}
-      <form onSubmit={handleSaveCombustible} className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden">
+      <form onSubmit={handleSaveCombustible} className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden w-full max-w-sm">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-100">
           <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
             <Fuel className="w-4 h-4 text-orange-500" />
@@ -149,6 +176,33 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
           </div>
         </div>
       </form>
+
+      {/* ── Historial gasoil ────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden flex-1 min-w-[220px]">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-100">
+          <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+            <Clock className="w-4 h-4 text-orange-500" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-zinc-800">Historial gasoil</p>
+            <p className="text-xs text-zinc-400">{historial.length} registro{historial.length !== 1 ? 's' : ''}</p>
+          </div>
+        </div>
+        <div className="divide-y divide-zinc-50 max-h-64 overflow-y-auto">
+          {historial.length === 0 ? (
+            <p className="text-xs text-zinc-400 text-center py-6">Sin historial todavía.</p>
+          ) : (
+            historial.map((h) => (
+              <div key={h.id} className="flex items-center justify-between px-5 py-3">
+                <span className="text-xs text-zinc-400">{fmtFecha(h.vigencia_desde)}</span>
+                <span className="text-sm font-semibold text-zinc-800">${num.format(Number(h.valor))}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      </div>{/* cierra flex row */}
 
       {/* ── Valor UTA ───────────────────────────────────────────────── */}
       <form onSubmit={handleSaveUta} className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden">
