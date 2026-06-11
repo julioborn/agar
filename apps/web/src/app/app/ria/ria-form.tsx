@@ -546,7 +546,6 @@ export default function RiaForm({
       if (!i.cantidad || parseFloat(i.cantidad) <= 0) return 'La cantidad de cada insumo debe ser mayor a cero.';
     }
     for (const l of labores) {
-      if (!l.descripcion.trim()) return 'Cada labor debe tener una descripción.';
       if (!l.unidadMedida) return 'Cada labor debe tener una unidad de medida.';
     }
     for (const p of produccion) {
@@ -1098,7 +1097,7 @@ export default function RiaForm({
                       </select>
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="block text-xs text-zinc-500 mb-1">Descripción *</label>
+                      <label className="block text-xs text-zinc-500 mb-1">Descripción</label>
                       <input
                         type="text"
                         value={lab.descripcion}
