@@ -24,12 +24,13 @@ interface Labor {
 interface Props {
   labores: Labor[];
   cultivoId: string;
+  hideEmptyMessage?: boolean;
 }
 
 const fmtFecha = (d: string) =>
   new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
 
-export default function LaborsList({ labores, cultivoId }: Props) {
+export default function LaborsList({ labores, cultivoId, hideEmptyMessage = false }: Props) {
   const { formatMoney } = useCurrency();
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
@@ -51,6 +52,7 @@ export default function LaborsList({ labores, cultivoId }: Props) {
   const total = labores.reduce((acc, l) => acc + Number(l.costo_total_calculado ?? 0), 0);
 
   if (labores.length === 0) {
+    if (hideEmptyMessage) return null;
     return (
       <div className="bg-white rounded-2xl border border-zinc-100 p-8 text-center">
         <Wrench className="w-8 h-8 text-zinc-200 mx-auto mb-2" />

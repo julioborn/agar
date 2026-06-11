@@ -127,10 +127,12 @@ export default async function CultivoDetallePage({ params }: Props) {
   const costoInsumosTotalDisplay = costoAplicacionesTotal + costoRiaTotal;
   const totalTrabajosServicios = costoLaboresTotal + costoCosechaTotal + costoRiaLaboresTotal;
 
-  const cantLabores     = (labores ?? []).length;
-  const cantCosechas    = (costosCosecha ?? []).length;
+  const cantLabores      = (labores ?? []).length;
+  const cantCosechas     = (costosCosecha ?? []).length;
   const cantAplicaciones = (aplicaciones ?? []).length;
-  const cantRias        = (riasConfirmados ?? []).length;
+  const cantRias         = (riasConfirmados ?? []).length;
+  const cantRiaLabores   = (riasConfirmados ?? []).reduce((acc, r: any) => acc + (r.remitos_labores?.length ?? 0), 0);
+  const cantRiaInsumos   = (riasConfirmados ?? []).reduce((acc, r: any) => acc + (r.remitos_insumos?.length ?? 0), 0);
 
   const activo   = cultivo.estado !== 'cancelada';
   const editable = cultivo.estado === 'en_curso' || cultivo.estado === 'planificada';
@@ -240,8 +242,9 @@ export default async function CultivoDetallePage({ params }: Props) {
             : undefined
         }
         stats={[
-          { label: 'Labores', value: cantLabores > 0 ? String(cantLabores) : 'Sin registros' },
+          { label: 'Labores', value: (cantLabores + cantRiaLabores) > 0 ? String(cantLabores + cantRiaLabores) : 'Sin registros' },
           { label: 'Cosecha/Trilla', value: cantCosechas > 0 ? String(cantCosechas) : 'Sin registros' },
+          ...(cantRiaLabores > 0 ? [{ label: 'Vía RIA', value: String(cantRiaLabores) }] : []),
         ]}
       >
         {/* Labores */}
@@ -256,7 +259,7 @@ export default async function CultivoDetallePage({ params }: Props) {
               <span className="text-base leading-none">+</span> Crear Remito Interno (RIA)
             </Link>
           )}
-          <LaborsList labores={(labores ?? []) as any} cultivoId={cultivoId} />
+          <LaborsList labores={(labores ?? []) as any} cultivoId={cultivoId} hideEmptyMessage={cantRiaLabores > 0} />
           <RiaLaboresList rias={(riasConfirmados ?? []) as any} />
         </div>
 
@@ -289,8 +292,8 @@ export default async function CultivoDetallePage({ params }: Props) {
             : undefined
         }
         stats={[
-          { label: 'Aplicaciones', value: cantAplicaciones > 0 ? String(cantAplicaciones) : 'Sin registros' },
-          ...(cantRias > 0 ? [{ label: 'Vía RIA', value: String(cantRias) }] : []),
+          { label: 'Aplicaciones', value: cantAplicaciones > 0 ? String(cantAplicaciones) : (cantRiaInsumos > 0 ? '—' : 'Sin registros') },
+          ...(cantRiaInsumos > 0 ? [{ label: 'Vía RIA', value: String(cantRiaInsumos) + ' prod.' }] : []),
         ]}
       >
         <div className="p-4 space-y-3">
