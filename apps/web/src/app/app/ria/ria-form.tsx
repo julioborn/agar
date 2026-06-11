@@ -249,6 +249,7 @@ export default function RiaForm({
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [cultivoCreadoMsg, setCultivoCreadoMsg] = useState('');
   const [secOpen, setSecOpen] = useState({ insumos: true, labores: true, produccion: true });
   const [draftRecovered, setDraftRecovered] = useState(false);
 
@@ -609,11 +610,15 @@ export default function RiaForm({
   async function handleSaveDraft() {
     const err = validate();
     if (err) { setErrorMsg(err); return; }
-    setErrorMsg('');
+    setErrorMsg(''); setCultivoCreadoMsg('');
     setSaving(true);
     const result = await saveRiaBorrador(buildPayload());
     setSaving(false);
     if (result.error) { setErrorMsg(result.error); return; }
+    if (result.cultivoCreado) {
+      const desc = buildPayload().cultivoDescripcion ?? 'el cultivo';
+      setCultivoCreadoMsg(`Cultivo "${desc}" creado y asociado al lote.`);
+    }
     if (result.riaId && !riaExistente) {
       clearDraft();
       router.push(`${basePath}/${result.riaId}`);
@@ -629,23 +634,27 @@ export default function RiaForm({
       setErrorMsg('El RIA no tiene contenido. Agregue al menos una línea.');
       return;
     }
-    setErrorMsg('');
+    setErrorMsg(''); setCultivoCreadoMsg('');
     setConfirming(true);
 
     let riaId = riaExistente?.id;
+    let cultivoDesc = '';
     if (!riaId) {
       const saveResult = await saveRiaBorrador(buildPayload());
       if (saveResult.error) { setErrorMsg(saveResult.error); setConfirming(false); return; }
       riaId = saveResult.riaId!;
+      if (saveResult.cultivoCreado) cultivoDesc = buildPayload().cultivoDescripcion ?? '';
     } else {
       const saveResult = await saveRiaBorrador(buildPayload());
       if (saveResult.error) { setErrorMsg(saveResult.error); setConfirming(false); return; }
+      if (saveResult.cultivoCreado) cultivoDesc = buildPayload().cultivoDescripcion ?? '';
     }
 
     const confirmResult = await confirmarRia(riaId!);
     setConfirming(false);
     if (confirmResult.error) { setErrorMsg(confirmResult.error); return; }
     clearDraft();
+    if (cultivoDesc) setCultivoCreadoMsg(`Cultivo "${cultivoDesc}" creado y asociado al lote.`);
     router.push(`${basePath}/${riaId}`);
     router.refresh();
   }
@@ -1416,6 +1425,12 @@ export default function RiaForm({
                   <span>{w}</span>
                 </div>
               ))}
+            </div>
+          )}
+          {cultivoCreadoMsg && (
+            <div className="flex items-start gap-2 text-sm text-[#006836] bg-[#006836]/5 rounded-xl px-4 py-3 mb-2 border border-[#006836]/20">
+              <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{cultivoCreadoMsg}</span>
             </div>
           )}
           {errorMsg && (

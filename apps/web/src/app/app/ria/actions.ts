@@ -84,8 +84,9 @@ export async function saveRiaBorrador(payload: SaveRiaPayload) {
 
   // Si se pidió crear un cultivo nuevo y no hay cultivoId, lo creamos primero
   let cultivoIdFinal = payload.cultivoId;
+  let cultivoCreado = false;
   if (payload.crearNuevoCultivo && payload.cultivoDescripcion && !payload.cultivoId) {
-    const { data: nuevoCultivo } = await supabase
+    const { data: nuevoCultivo, error: cultErr } = await supabase
       .from('cultivos')
       .insert({
         empresa_id: empresa.id,
@@ -97,7 +98,11 @@ export async function saveRiaBorrador(payload: SaveRiaPayload) {
       })
       .select('id')
       .single();
-    if (nuevoCultivo) cultivoIdFinal = nuevoCultivo.id;
+    if (cultErr) return { error: `Error al crear cultivo: ${cultErr.message}` };
+    if (nuevoCultivo) {
+      cultivoIdFinal = nuevoCultivo.id;
+      cultivoCreado = true;
+    }
   }
 
   const anio = new Date(payload.fecha).getFullYear();
@@ -215,7 +220,8 @@ export async function saveRiaBorrador(payload: SaveRiaPayload) {
   }
 
   revalidatePath('/app/ria');
-  return { riaId };
+  if (cultivoCreado) revalidatePath('/app/cultivos');
+  return { riaId, cultivoCreado };
 }
 
 export async function confirmarRia(riaId: string) {
