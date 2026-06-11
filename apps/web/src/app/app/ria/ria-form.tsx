@@ -410,11 +410,11 @@ export default function RiaForm({
   function addInsumo() {
     let lastDeposito = '';
     try { lastDeposito = JSON.parse(localStorage.getItem(PREF_KEY) || '{}').depositoId ?? ''; } catch {}
-    setInsumos((p) => [...p, {
+    setInsumos((p) => [{
       _id: nextId(), depositoId: lastDeposito, productoId: '', cantidad: '',
       dosisPorHa: '', costoUnitario: '', subtotal: 0, obs: '',
       productoNombre: '', unidadBase: '', stockDisponible: null, sinPrecioCompra: false,
-    }]);
+    }, ...p]);
   }
 
   function removeInsumo(id: string) {
@@ -481,11 +481,11 @@ export default function RiaForm({
   function addLabor() {
     const lote = lotes.find((l) => l.id === loteId);
     const ha = lote?.hectareas ?? 0;
-    setLabores((p) => [...p, {
+    setLabores((p) => [{
       _id: nextId(), tipoLaborId: '', tipoLaborNombre: '', descripcion: '',
       prestadorId: '', prestadorNombre: '', unidadMedida: 'has',
-      cantidad: ha > 0 ? String(ha) : '', tarifa: '', subtotal: 0, fechaEjecucion: '', obs: '',
-    }]);
+      cantidad: ha > 0 ? String(ha) : '', tarifa: '', subtotal: 0, fechaEjecucion: fecha, obs: '',
+    }, ...p]);
   }
 
   function removeLabor(id: string) {
