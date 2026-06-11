@@ -12,6 +12,7 @@ import LaborsList from './labores-list';
 import CosechaList from './cosecha-list';
 import CollapsibleCard from './collapsible-card';
 import RiaInsumosList from './ria-insumos-list';
+import RiaLaboresList from './ria-labores-list';
 
 const ESTADO_STYLE: Record<string, string> = {
   planificada: 'bg-blue-500/20 text-blue-100',
@@ -91,6 +92,10 @@ export default async function CultivoDetallePage({ params }: Props) {
           id, cantidad, dosis_por_ha, costo_unitario, subtotal,
           producto:productos(nombre, unidad_base),
           deposito:depositos(nombre)
+        ),
+        remitos_labores(
+          id, tipo_labor_nombre, descripcion, prestador_nombre,
+          unidad_medida, cantidad, tarifa, subtotal
         )
       `)
       .eq('cultivo_id', cultivoId)
@@ -117,8 +122,10 @@ export default async function CultivoDetallePage({ params }: Props) {
     acc + ((a.aplicaciones_items ?? []) as any[]).reduce((s: number, it: any) => s + Number(it.costo_imputado_ars ?? 0), 0), 0);
   const costoRiaTotal = (riasConfirmados ?? []).reduce((acc, r: any) =>
     acc + ((r.remitos_insumos ?? []) as any[]).reduce((s: number, i: any) => s + Number(i.subtotal ?? 0), 0), 0);
+  const costoRiaLaboresTotal = (riasConfirmados ?? []).reduce((acc, r: any) =>
+    acc + ((r.remitos_labores ?? []) as any[]).reduce((s: number, l: any) => s + Number(l.subtotal ?? 0), 0), 0);
   const costoInsumosTotalDisplay = costoAplicacionesTotal + costoRiaTotal;
-  const totalTrabajosServicios = costoLaboresTotal + costoCosechaTotal;
+  const totalTrabajosServicios = costoLaboresTotal + costoCosechaTotal + costoRiaLaboresTotal;
 
   const cantLabores     = (labores ?? []).length;
   const cantCosechas    = (costosCosecha ?? []).length;
@@ -250,6 +257,7 @@ export default async function CultivoDetallePage({ params }: Props) {
             </Link>
           )}
           <LaborsList labores={(labores ?? []) as any} cultivoId={cultivoId} />
+          <RiaLaboresList rias={(riasConfirmados ?? []) as any} />
         </div>
 
         {/* Cosecha / Trilla */}
