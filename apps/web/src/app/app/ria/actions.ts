@@ -89,12 +89,11 @@ export async function saveRiaBorrador(payload: SaveRiaPayload) {
     const { data: nuevoCultivo, error: cultErr } = await supabase
       .from('cultivos')
       .insert({
-        empresa_id: empresa.id,
         lote_id: payload.loteId,
         campania_id: payload.campaniaId ?? null,
         cultivo: payload.cultivoDescripcion.trim(),
         estado: 'en_curso',
-        fecha_siembra: null,
+        fecha_siembra: payload.fecha,
       })
       .select('id')
       .single();
@@ -379,12 +378,11 @@ export async function sincronizarRiasConCultivos(): Promise<{
       const { data: nuevoCultivo } = await supabase
         .from('cultivos')
         .insert({
-          empresa_id: empresa.id,
           lote_id: primer.lote_id,
           campania_id: primer.campania_id ?? null,
           cultivo: (primer.cultivo_descripcion ?? '').trim(),
           estado: 'en_curso',
-          fecha_siembra: primer.fecha ?? null,
+          fecha_siembra: primer.fecha,
         })
         .select('id')
         .single();
