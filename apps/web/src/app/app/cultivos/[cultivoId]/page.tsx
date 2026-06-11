@@ -292,8 +292,13 @@ export default async function CultivoDetallePage({ params }: Props) {
             : undefined
         }
         stats={[
-          { label: 'Aplicaciones', value: cantAplicaciones > 0 ? String(cantAplicaciones) : (cantRiaInsumos > 0 ? '—' : 'Sin registros') },
-          ...(cantRiaInsumos > 0 ? [{ label: 'Vía RIA', value: String(cantRiaInsumos) + ' prod.' }] : []),
+          {
+            label: 'Aplicaciones',
+            value: (cantAplicaciones + cantRiaInsumos) > 0
+              ? String(cantAplicaciones + cantRiaInsumos)
+              : 'Sin registros',
+          },
+          ...(cantRias > 0 ? [{ label: 'Vía RIA', value: String(cantRias) + ' rem.' }] : []),
         ]}
       >
         <div className="p-4 space-y-3">
