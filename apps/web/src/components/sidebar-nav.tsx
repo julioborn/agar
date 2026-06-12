@@ -45,7 +45,7 @@ const navSections: NavSection[] = [
       { href: '/app/productos',          label: 'Productos',          icon: Package },
       { href: '/app/compras',            label: 'Compras',            icon: ShoppingCart },
       { href: '/app/stock',              label: 'Stock',              icon: Warehouse },
-      { href: '/app/referencias-precio', label: 'Referencias Precio', icon: TrendingUp },
+      { href: '/app/referencias-precio', label: 'Referencias de Precio', icon: TrendingUp },
       { href: '/app/valuacion',          label: 'Valuación',          icon: Scale },
     ],
   },
@@ -79,7 +79,10 @@ const navSections: NavSection[] = [
     label: 'Reportes',
     requiereAdmin: true,
     items: [
-      { href: '/app/reportes/margenes', label: 'Reporte de Márgenes', icon: BarChart3 },
+      { href: '/app/reportes',               label: 'Vista General',    icon: BarChart3, exact: true },
+      { href: '/app/reportes/margenes',       label: 'Márgenes',         icon: TrendingUp },
+      { href: '/app/reportes/insumos-labores',label: 'Insumos y Labores',icon: Package },
+      { href: '/app/reportes/produccion',     label: 'Producción',       icon: Sprout },
     ],
   },
   {
