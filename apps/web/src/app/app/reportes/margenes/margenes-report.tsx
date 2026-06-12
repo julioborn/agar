@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 
 interface Cultivo {
   id: string;
+  cultivo: string | null;
   estado: string;
   producto_final: string | null;
   ingreso_bruto_ars: number | null;
@@ -13,6 +14,12 @@ interface Cultivo {
   margen_bruto_ars: number | null;
   campania_id: string | null;
   lote: { id: string; nombre: string; campo_id: string } | null;
+}
+interface RiaData {
+  cultivo_id: string;
+  total_insumos: number;
+  total_labores: number;
+  total_ria: number;
 }
 interface CostoIndCampo {
   id: string; campo_id: string; campania_id: string | null;
@@ -28,6 +35,7 @@ interface Props {
   empresaNombre: string;
   campos: { id: string; nombre: string; hectareas_totales?: number | null }[];
   cultivos: Cultivo[];
+  rias: RiaData[];
   costosIndCampo: CostoIndCampo[];
   costosIndEmpresa: CostoIndEmpresa[];
   campanias: { id: string; nombre: string }[];
@@ -42,7 +50,7 @@ const badge = (v: number) =>
     : 'text-red-600 bg-red-50';
 
 export default function MargenesReport({
-  empresaNombre, campos, cultivos, costosIndCampo, costosIndEmpresa, campanias,
+  empresaNombre, campos, cultivos, rias, costosIndCampo, costosIndEmpresa, campanias,
 }: Props) {
   const [campaniaFiltro, setCampaniaFiltro] = useState('');
   const [expandedCampos, setExpandedCampos] = useState<Set<string>>(new Set());
@@ -54,6 +62,19 @@ export default function MargenesReport({
       return next;
     });
   }
+
+  // Agrupar costos RIA por cultivo_id
+  const riasPorCultivo = useMemo(() => {
+    const map: Record<string, { insumos: number; labores: number; total: number }> = {};
+    for (const r of rias) {
+      if (!r.cultivo_id) continue;
+      if (!map[r.cultivo_id]) map[r.cultivo_id] = { insumos: 0, labores: 0, total: 0 };
+      map[r.cultivo_id].insumos += Number(r.total_insumos);
+      map[r.cultivo_id].labores += Number(r.total_labores);
+      map[r.cultivo_id].total += Number(r.total_ria);
+    }
+    return map;
+  }, [rias]);
 
   // Filtrado por campaña
   const cultivosFiltrados = useMemo(() =>
@@ -84,9 +105,14 @@ export default function MargenesReport({
 
     const cultivosDelCampo = cultivosFiltrados.filter((c) => c.lote?.campo_id === campo.id);
 
+    // Para cada cultivo, el costo directo incluye lo registrado en el cultivo + costos RIA
     const ingresoBruto = cultivosDelCampo.reduce((acc, c) => acc + Number(c.ingreso_bruto_ars ?? 0), 0);
-    const costoDirecto = cultivosDelCampo.reduce((acc, c) => acc + Number(c.costo_directo_ars ?? 0), 0);
-    const margenBrutoLotes = cultivosDelCampo.reduce((acc, c) => acc + Number(c.margen_bruto_ars ?? 0), 0);
+    const costoDirecto = cultivosDelCampo.reduce((acc, c) => {
+      const costoBase = Number(c.costo_directo_ars ?? 0);
+      const costoRia = riasPorCultivo[c.id]?.total ?? 0;
+      return acc + costoBase + costoRia;
+    }, 0);
+    const margenBrutoLotes = ingresoBruto - costoDirecto;
 
     const costosIndirectos = costosCampoFiltrados
       .filter((c) => c.campo_id === campo.id)
@@ -105,7 +131,7 @@ export default function MargenesReport({
       margenCampo,
       lotesCount: lotesDelCampo.size,
     };
-  }), [campos, cultivosFiltrados, costosCampoFiltrados]);
+  }), [campos, cultivosFiltrados, costosCampoFiltrados, riasPorCultivo]);
 
   // Totales empresa
   const totalIngresoBruto = datosCampo.reduce((acc, d) => acc + d.ingresoBruto, 0);
@@ -249,30 +275,47 @@ export default function MargenesReport({
               {cultivosDelCampo.length === 0 ? (
                 <div className="px-5 py-4 text-sm text-zinc-400 italic">Sin cultivos registrados para este campo</div>
               ) : (
-                cultivosDelCampo.map((cultivo) => (
-                  <div key={cultivo.id} className="px-5 py-3 flex items-center gap-3 hover:bg-zinc-50 transition-colors">
-                    <Sprout className="w-4 h-4 text-[#006836] shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-zinc-700 truncate">
-                        {cultivo.lote?.nombre ?? '—'}
-                        {cultivo.producto_final && (
-                          <span className="ml-2 text-xs text-zinc-400 font-normal">{cultivo.producto_final}</span>
-                        )}
-                      </p>
-                      <p className="text-xs text-zinc-400">
-                        Estado: {cultivo.estado}
-                        {cultivo.ingreso_bruto_ars ? ` · Ingreso: $ ${num(Number(cultivo.ingreso_bruto_ars))}` : ''}
-                        {cultivo.costo_directo_ars ? ` · Costo: $ ${num(Number(cultivo.costo_directo_ars))}` : ''}
-                      </p>
+                cultivosDelCampo.map((cultivo) => {
+                  const costoBase = Number(cultivo.costo_directo_ars ?? 0);
+                  const costoRia = riasPorCultivo[cultivo.id]?.total ?? 0;
+                  const costoDirectoTotal = costoBase + costoRia;
+                  const ingresoBruto = Number(cultivo.ingreso_bruto_ars ?? 0);
+                  const margenBruto = ingresoBruto - costoDirectoTotal;
+                  return (
+                    <div key={cultivo.id} className="px-5 py-3 hover:bg-zinc-50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <Sprout className="w-4 h-4 text-[#006836] shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-zinc-700 truncate">
+                            {cultivo.lote?.nombre ?? '—'}
+                            {cultivo.cultivo && (
+                              <span className="ml-2 text-xs text-zinc-400 font-normal capitalize">{cultivo.cultivo}</span>
+                            )}
+                            {cultivo.producto_final && (
+                              <span className="ml-1 text-xs text-zinc-400 font-normal">· {cultivo.producto_final}</span>
+                            )}
+                          </p>
+                          <p className="text-xs text-zinc-400">
+                            Estado: {cultivo.estado}
+                            {ingresoBruto > 0 ? ` · Ingreso: $ ${num(ingresoBruto)}` : ''}
+                            {costoDirectoTotal > 0 ? ` · Costo: $ ${num(costoDirectoTotal)}` : ''}
+                          </p>
+                          {costoRia > 0 && (
+                            <p className="text-xs text-zinc-400 mt-0.5">
+                              RIA — Insumos: ${num(riasPorCultivo[cultivo.id]!.insumos)} · Labores: ${num(riasPorCultivo[cultivo.id]!.labores)}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-xs text-zinc-400">Margen bruto</p>
+                          <p className={cn('text-sm font-bold', margenBruto >= 0 ? 'text-[#006836]' : 'text-red-600')}>
+                            $ {num(margenBruto)}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-xs text-zinc-400">Margen bruto</p>
-                      <p className={cn('text-sm font-bold', Number(cultivo.margen_bruto_ars ?? 0) >= 0 ? 'text-[#006836]' : 'text-red-600')}>
-                        $ {num(Number(cultivo.margen_bruto_ars ?? 0))}
-                      </p>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}

@@ -13,7 +13,7 @@ export default async function MargenesPage() {
   if (!empresaData) redirect('/login');
   const { empresa } = empresaData;
 
-  const [camposRes, cultivosRes, costosIndCampoRes, costosIndEmpresaRes, campaniaRes] = await Promise.all([
+  const [camposRes, cultivosRes, costosIndCampoRes, costosIndEmpresaRes, campaniaRes, riasRes] = await Promise.all([
     supabase
       .from('campos')
       .select('id, nombre, hectareas_totales')
@@ -23,7 +23,8 @@ export default async function MargenesPage() {
     supabase
       .from('cultivos')
       .select(`
-        id, estado, producto_final, ingreso_bruto_ars, costo_directo_ars, margen_bruto_ars,
+        id, cultivo, estado, producto_final,
+        ingreso_bruto_ars, costo_directo_ars, margen_bruto_ars,
         campania_id,
         lote:lotes!inner(id, nombre, campo_id)
       `)
@@ -44,6 +45,14 @@ export default async function MargenesPage() {
       .select('id, nombre')
       .eq('empresa_id', empresa.id)
       .order('nombre'),
+
+    // Costos de RIAs confirmados agrupados por cultivo
+    supabase
+      .from('remitos_internos')
+      .select('cultivo_id, total_insumos, total_labores, total_ria')
+      .eq('empresa_id', empresa.id)
+      .eq('estado', 'confirmado')
+      .not('cultivo_id', 'is', null),
   ]);
 
   return (
@@ -65,6 +74,7 @@ export default async function MargenesPage() {
         costosIndCampo={(costosIndCampoRes.data ?? []) as any}
         costosIndEmpresa={(costosIndEmpresaRes.data ?? []) as any}
         campanias={campaniaRes.data ?? []}
+        rias={(riasRes.data ?? []) as any}
       />
     </div>
   );

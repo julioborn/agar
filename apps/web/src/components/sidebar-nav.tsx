@@ -45,7 +45,7 @@ const navSections: NavSection[] = [
       { href: '/app/productos',          label: 'Productos',          icon: Package },
       { href: '/app/compras',            label: 'Compras',            icon: ShoppingCart },
       { href: '/app/stock',              label: 'Stock',              icon: Warehouse },
-      { href: '/app/referencias-precio', label: 'Referencias precio', icon: TrendingUp },
+      { href: '/app/referencias-precio', label: 'Referencias Precio', icon: TrendingUp },
       { href: '/app/valuacion',          label: 'Valuación',          icon: Scale },
     ],
   },
@@ -66,7 +66,7 @@ const navSections: NavSection[] = [
     label: 'Costos Indirectos',
     items: [
       { href: '/app/costos-campo',   label: 'Costos de Campo',   icon: Building },
-      { href: '/app/costos-empresa', label: 'Costos de empresa', icon: Landmark },
+      { href: '/app/costos-empresa', label: 'Costos de Empresa', icon: Landmark },
     ],
   },
   {
@@ -79,14 +79,14 @@ const navSections: NavSection[] = [
     label: 'Reportes',
     requiereAdmin: true,
     items: [
-      { href: '/app/reportes/margenes', label: 'Reporte de márgenes', icon: BarChart3 },
+      { href: '/app/reportes/margenes', label: 'Reporte de Márgenes', icon: BarChart3 },
     ],
   },
   {
     label: 'Configuración',
     items: [
       { href: '/app/unidades-negocio', label: 'Unidades de Negocios',     icon: Briefcase },
-      { href: '/app/configuracion',    label: 'Configuración de precios', icon: Settings },
+      { href: '/app/configuracion',    label: 'Configuración de Precios', icon: Settings },
     ],
   },
 ];
