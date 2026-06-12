@@ -16,7 +16,7 @@ interface Cultivo {
   lote: { id: string; nombre: string; campo_id: string } | null;
 }
 interface RiaData {
-  cultivo_id: string;
+  lote_id: string;
   total_insumos: number;
   total_labores: number;
   total_ria: number;
@@ -63,15 +63,15 @@ export default function MargenesReport({
     });
   }
 
-  // Agrupar costos RIA por cultivo_id
-  const riasPorCultivo = useMemo(() => {
+  // Agrupar costos RIA por lote_id (lote_id es NOT NULL en remitos_internos)
+  const riasPorLote = useMemo(() => {
     const map: Record<string, { insumos: number; labores: number; total: number }> = {};
     for (const r of rias) {
-      if (!r.cultivo_id) continue;
-      if (!map[r.cultivo_id]) map[r.cultivo_id] = { insumos: 0, labores: 0, total: 0 };
-      map[r.cultivo_id].insumos += Number(r.total_insumos);
-      map[r.cultivo_id].labores += Number(r.total_labores);
-      map[r.cultivo_id].total += Number(r.total_ria);
+      if (!r.lote_id) continue;
+      if (!map[r.lote_id]) map[r.lote_id] = { insumos: 0, labores: 0, total: 0 };
+      map[r.lote_id].insumos += Number(r.total_insumos);
+      map[r.lote_id].labores += Number(r.total_labores);
+      map[r.lote_id].total += Number(r.total_ria);
     }
     return map;
   }, [rias]);
@@ -109,7 +109,7 @@ export default function MargenesReport({
     const ingresoBruto = cultivosDelCampo.reduce((acc, c) => acc + Number(c.ingreso_bruto_ars ?? 0), 0);
     const costoDirecto = cultivosDelCampo.reduce((acc, c) => {
       const costoBase = Number(c.costo_directo_ars ?? 0);
-      const costoRia = riasPorCultivo[c.id]?.total ?? 0;
+      const costoRia = riasPorLote[c.lote?.id ?? '']?.total ?? 0;
       return acc + costoBase + costoRia;
     }, 0);
     const margenBrutoLotes = ingresoBruto - costoDirecto;
@@ -131,7 +131,7 @@ export default function MargenesReport({
       margenCampo,
       lotesCount: lotesDelCampo.size,
     };
-  }), [campos, cultivosFiltrados, costosCampoFiltrados, riasPorCultivo]);
+  }), [campos, cultivosFiltrados, costosCampoFiltrados, riasPorLote]);
 
   // Totales empresa
   const totalIngresoBruto = datosCampo.reduce((acc, d) => acc + d.ingresoBruto, 0);
@@ -276,8 +276,10 @@ export default function MargenesReport({
                 <div className="px-5 py-4 text-sm text-zinc-400 italic">Sin cultivos registrados para este campo</div>
               ) : (
                 cultivosDelCampo.map((cultivo) => {
+                  const loteId = cultivo.lote?.id ?? '';
                   const costoBase = Number(cultivo.costo_directo_ars ?? 0);
-                  const costoRia = riasPorCultivo[cultivo.id]?.total ?? 0;
+                  const riaData = riasPorLote[loteId];
+                  const costoRia = riaData?.total ?? 0;
                   const costoDirectoTotal = costoBase + costoRia;
                   const ingresoBruto = Number(cultivo.ingreso_bruto_ars ?? 0);
                   const margenBruto = ingresoBruto - costoDirectoTotal;
@@ -300,9 +302,9 @@ export default function MargenesReport({
                             {ingresoBruto > 0 ? ` · Ingreso: $ ${num(ingresoBruto)}` : ''}
                             {costoDirectoTotal > 0 ? ` · Costo: $ ${num(costoDirectoTotal)}` : ''}
                           </p>
-                          {costoRia > 0 && (
+                          {costoRia > 0 && riaData && (
                             <p className="text-xs text-zinc-400 mt-0.5">
-                              RIA — Insumos: ${num(riasPorCultivo[cultivo.id]!.insumos)} · Labores: ${num(riasPorCultivo[cultivo.id]!.labores)}
+                              RIA — Insumos: ${num(riaData.insumos)} · Labores: ${num(riaData.labores)}
                             </p>
                           )}
                         </div>
