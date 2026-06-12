@@ -27,8 +27,7 @@ export default async function MargenesPage() {
         ingreso_bruto_ars, costo_directo_ars, margen_bruto_ars,
         campania_id,
         lote:lotes!inner(id, nombre, campo_id)
-      `)
-      .eq('empresa_id', empresa.id),
+      `),
 
     supabase
       .from('costos_indirectos_campo')
