@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { Package, Wrench, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/lib/currency-context';
 
 interface RiaInfo {
   id: string;
@@ -39,7 +40,6 @@ interface Props {
   campanias: { id: string; nombre: string }[];
 }
 
-const ars = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 });
 const qty = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
 
 function fmtAxis(v: number) {
@@ -48,22 +48,23 @@ function fmtAxis(v: number) {
   return `$${v}`;
 }
 
-function ChartTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-white border border-zinc-200 rounded-xl px-3 py-2 shadow-lg text-xs space-y-1">
-      <p className="font-semibold text-zinc-700 truncate max-w-[180px]">{label}</p>
-      {payload.map((p: any) => (
-        <p key={p.name} style={{ color: p.fill }}>
-          {p.name}: <strong>${ars.format(p.value)}</strong>
-        </p>
-      ))}
-    </div>
-  );
-}
-
 export default function InsumosLaboresReport({ rias, insumos, labores, campanias }: Props) {
+  const { formatMoney } = useCurrency();
   const [tab, setTab] = useState<'insumos' | 'labores'>('insumos');
+
+  function ChartTooltip({ active, payload, label }: any) {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="bg-white border border-zinc-200 rounded-xl px-3 py-2 shadow-lg text-xs space-y-1">
+        <p className="font-semibold text-zinc-700 truncate max-w-[180px]">{label}</p>
+        {payload.map((p: any) => (
+          <p key={p.name} style={{ color: p.fill }}>
+            {p.name}: <strong>{formatMoney(p.value)}</strong>
+          </p>
+        ))}
+      </div>
+    );
+  }
   const [campaniaFiltro, setCampaniaFiltro] = useState('');
 
   // IDs de RIAs filtrados por campaña
@@ -171,13 +172,13 @@ export default function InsumosLaboresReport({ rias, insumos, labores, campanias
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {tab === 'insumos' ? (
           <>
-            <KpiCard label="Costo total insumos" value={`$${ars.format(totalInsumos)}`} color="bg-amber-400" />
+            <KpiCard label="Costo total insumos" value={formatMoney(totalInsumos)} color="bg-amber-400" />
             <KpiCard label="Productos distintos" value={insumosPorProducto.length.toString()} color="bg-[#006836]" />
             <KpiCard label="Usos registrados" value={insumos.filter((i) => riaIdsFiltrados.has(i.remito_id)).length.toString()} color="bg-blue-400" />
           </>
         ) : (
           <>
-            <KpiCard label="Costo total labores" value={`$${ars.format(totalLabores)}`} color="bg-orange-400" />
+            <KpiCard label="Costo total labores" value={formatMoney(totalLabores)} color="bg-orange-400" />
             <KpiCard label="Tipos de labor" value={laboresPorTipo.length.toString()} color="bg-[#006836]" />
             <KpiCard label="Usos registrados" value={labores.filter((l) => riaIdsFiltrados.has(l.remito_id)).length.toString()} color="bg-blue-400" />
           </>
@@ -254,7 +255,7 @@ export default function InsumosLaboresReport({ rias, insumos, labores, campanias
                           <td className="px-4 py-3 font-medium text-zinc-800">{i.nombre}</td>
                           <td className="px-4 py-3 text-zinc-500 text-xs capitalize">{i.categoria || '—'}</td>
                           <td className="px-4 py-3 text-right text-zinc-700">{qty.format(i.cantidadTotal)} {i.unidad}</td>
-                          <td className="px-4 py-3 text-right font-semibold text-zinc-900">${ars.format(i.costoTotal)}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-zinc-900">{formatMoney(i.costoTotal)}</td>
                           <td className="px-4 py-3 text-right text-zinc-400">{i.usos}</td>
                         </tr>
                       ))
@@ -262,7 +263,7 @@ export default function InsumosLaboresReport({ rias, insumos, labores, campanias
                         <tr key={idx} className="hover:bg-zinc-50">
                           <td className="px-4 py-3 font-medium text-zinc-800">{l.nombre}</td>
                           <td className="px-4 py-3 text-right text-zinc-700">{qty.format(l.cantidadTotal)}</td>
-                          <td className="px-4 py-3 text-right font-semibold text-zinc-900">${ars.format(l.costoTotal)}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-zinc-900">{formatMoney(l.costoTotal)}</td>
                           <td className="px-4 py-3 text-right text-zinc-400">{l.usos}</td>
                         </tr>
                       ))}
@@ -272,13 +273,13 @@ export default function InsumosLaboresReport({ rias, insumos, labores, campanias
                     {tab === 'insumos' ? (
                       <>
                         <td className="px-4 py-3 text-xs font-semibold text-zinc-600" colSpan={3}>Total</td>
-                        <td className="px-4 py-3 text-right font-bold text-zinc-900">${ars.format(totalInsumos)}</td>
+                        <td className="px-4 py-3 text-right font-bold text-zinc-900">{formatMoney(totalInsumos)}</td>
                         <td />
                       </>
                     ) : (
                       <>
                         <td className="px-4 py-3 text-xs font-semibold text-zinc-600" colSpan={2}>Total</td>
-                        <td className="px-4 py-3 text-right font-bold text-zinc-900">${ars.format(totalLabores)}</td>
+                        <td className="px-4 py-3 text-right font-bold text-zinc-900">{formatMoney(totalLabores)}</td>
                         <td />
                       </>
                     )}

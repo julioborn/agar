@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { Sprout, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/lib/currency-context';
 
 interface RiaInfo {
   id: string;
@@ -30,7 +31,6 @@ interface Props {
 }
 
 const qty = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
-const ars = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 });
 
 function fmtAxis(v: number) {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
@@ -53,6 +53,7 @@ function ChartTooltip({ active, payload, label }: any) {
 }
 
 export default function ProduccionReport({ rias, produccion, campanias }: Props) {
+  const { formatMoney } = useCurrency();
   const [tab, setTab] = useState<'cultivo' | 'lote'>('cultivo');
   const [campaniaFiltro, setCampaniaFiltro] = useState('');
 
@@ -177,7 +178,7 @@ export default function ProduccionReport({ rias, produccion, campanias }: Props)
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <KpiCard label="Producción total" value={`${qty.format(totalProduccion)} u`} color="bg-blue-400" />
             <KpiCard label={tab === 'cultivo' ? 'Cultivos distintos' : 'Lotes con producción'} value={(tab === 'cultivo' ? produccionPorCultivo.length : produccionPorLote.length).toString()} color="bg-[#006836]" />
-            {totalValor > 0 && <KpiCard label="Valor estimado" value={`$${ars.format(totalValor)}`} color="bg-amber-400" />}
+            {totalValor > 0 && <KpiCard label="Valor estimado" value={formatMoney(totalValor)} color="bg-amber-400" />}
           </div>
 
           {/* Gráfico */}
@@ -241,7 +242,7 @@ export default function ProduccionReport({ rias, produccion, campanias }: Props)
                         <td className="px-4 py-3 font-medium text-zinc-800 capitalize">{g.cultivo}</td>
                         <td className="px-4 py-3 text-right font-semibold text-zinc-900">{qty.format(g.cantidad)}</td>
                         <td className="px-4 py-3 text-right text-zinc-400">{g.loteCount}</td>
-                        {totalValor > 0 && <td className="px-4 py-3 text-right text-zinc-700">{g.valorTotal > 0 ? `$${ars.format(g.valorTotal)}` : '—'}</td>}
+                        {totalValor > 0 && <td className="px-4 py-3 text-right text-zinc-700">{g.valorTotal > 0 ? formatMoney(g.valorTotal) : '—'}</td>}
                       </tr>
                     ))}
                   </tbody>
@@ -250,7 +251,7 @@ export default function ProduccionReport({ rias, produccion, campanias }: Props)
                       <td className="px-4 py-3 text-xs font-semibold text-zinc-600">Total</td>
                       <td className="px-4 py-3 text-right font-bold text-zinc-900">{qty.format(totalProduccion)}</td>
                       <td />
-                      {totalValor > 0 && <td className="px-4 py-3 text-right font-bold text-zinc-900">${ars.format(totalValor)}</td>}
+                      {totalValor > 0 && <td className="px-4 py-3 text-right font-bold text-zinc-900">{formatMoney(totalValor)}</td>}
                     </tr>
                   </tfoot>
                 </table>

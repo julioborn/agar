@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { ChevronDown, ChevronRight, MapPin, Sprout, BarChart3, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/lib/currency-context';
 
 interface Cultivo {
   id: string;
@@ -44,33 +45,35 @@ interface Props {
   campanias: { id: string; nombre: string }[];
 }
 
-const num = (v: number) => new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(v);
-
-function fmtAxis(v: number) {
-  const abs = Math.abs(v);
-  if (abs >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
-  return `$${v}`;
-}
-
-function ChartTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-white border border-zinc-200 rounded-xl px-3 py-2 shadow-lg text-xs space-y-1 min-w-[160px]">
-      <p className="font-semibold text-zinc-700 mb-1 truncate max-w-[200px]">{label}</p>
-      {payload.map((p: any) => (
-        <p key={p.name} style={{ color: p.fill }}>
-          {p.name}: <strong>${num(p.value)}</strong>
-        </p>
-      ))}
-    </div>
-  );
-}
 
 export default function MargenesReport({
   empresaNombre, campos, cultivos, rias, costosIndCampo, costosIndEmpresa, campanias,
 }: Props) {
+  const { formatMoney, currency, usdRate } = useCurrency();
   const [vista, setVista] = useState<'jerarquia' | 'cultivo'>('jerarquia');
+
+  function fmtAxis(v: number) {
+    const converted = currency === 'USD' && usdRate ? v / usdRate : v;
+    const abs = Math.abs(converted);
+    const prefix = currency === 'USD' ? 'U$S ' : '$ ';
+    if (abs >= 1_000_000) return `${prefix}${(converted / 1_000_000).toFixed(1)}M`;
+    if (abs >= 1_000) return `${prefix}${(converted / 1_000).toFixed(0)}K`;
+    return `${prefix}${converted.toFixed(0)}`;
+  }
+
+  function ChartTooltip({ active, payload, label }: any) {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="bg-white border border-zinc-200 rounded-xl px-3 py-2 shadow-lg text-xs space-y-1 min-w-[160px]">
+        <p className="font-semibold text-zinc-700 mb-1 truncate max-w-[200px]">{label}</p>
+        {payload.map((p: any) => (
+          <p key={p.name} style={{ color: p.fill }}>
+            {p.name}: <strong>{formatMoney(p.value)}</strong>
+          </p>
+        ))}
+      </div>
+    );
+  }
   const [campaniaFiltro, setCampaniaFiltro] = useState('');
   const [expandedCampos, setExpandedCampos] = useState<Set<string>>(new Set());
 
@@ -272,7 +275,7 @@ export default function MargenesReport({
               <div className="bg-white/10 rounded-xl p-3">
                 <p className="text-xs text-zinc-400 mb-1">Margen líquido empresa</p>
                 <p className={cn('text-xl font-bold', margenLiquidoEmpresa >= 0 ? 'text-green-400' : 'text-red-400')}>
-                  $ {num(margenLiquidoEmpresa)}
+                  {formatMoney(margenLiquidoEmpresa)}
                 </p>
               </div>
             </div>
@@ -286,7 +289,7 @@ export default function MargenesReport({
                     <div key={c.id} className="flex items-center gap-2 text-xs text-zinc-400 py-1 border-t border-white/5">
                       <span className="font-mono text-zinc-600">{c.comprobante?.numero ?? '—'}</span>
                       <span className="flex-1 truncate">{c.descripcion}</span>
-                      <span className="text-red-400 font-medium">− $ {num(Number(c.monto_ars))}</span>
+                      <span className="text-red-400 font-medium">− {formatMoney(Number(c.monto_ars))}</span>
                     </div>
                   ))}
                 </div>
@@ -312,19 +315,19 @@ export default function MargenesReport({
                   <div className="text-right hidden md:block">
                     <p className="text-xs text-zinc-400">Margen bruto lotes</p>
                     <p className={cn('font-semibold', margenBrutoLotes >= 0 ? 'text-[#006836]' : 'text-red-600')}>
-                      $ {num(margenBrutoLotes)}
+                      {formatMoney(margenBrutoLotes)}
                     </p>
                   </div>
                   {cic.length > 0 && (
                     <div className="text-right hidden md:block">
                       <p className="text-xs text-zinc-400">Costos indirectos</p>
-                      <p className="font-semibold text-amber-600">− $ {num(costosIndirectos)}</p>
+                      <p className="font-semibold text-amber-600">− {formatMoney(costosIndirectos)}</p>
                     </div>
                   )}
                   <div className="text-right">
                     <p className="text-xs text-zinc-400">Margen campo</p>
                     <p className={cn('font-bold', margenCampo >= 0 ? 'text-[#006836]' : 'text-red-600')}>
-                      $ {num(margenCampo)}
+                      {formatMoney(margenCampo)}
                     </p>
                   </div>
                   {expandedCampos.has(campo.id)
@@ -349,7 +352,7 @@ export default function MargenesReport({
                           <div key={c.id} className="flex items-center gap-2 text-xs text-zinc-500">
                             <span className="font-mono text-zinc-400">{c.comprobante?.numero ?? '—'}</span>
                             <span className="flex-1 truncate">{c.descripcion}</span>
-                            <span className="text-amber-700 font-medium">− $ {num(Number(c.monto_ars))}</span>
+                            <span className="text-amber-700 font-medium">− {formatMoney(Number(c.monto_ars))}</span>
                           </div>
                         ))}
                       </div>
@@ -382,19 +385,19 @@ export default function MargenesReport({
                               </p>
                               <p className="text-xs text-zinc-400">
                                 Estado: {cultivo.estado}
-                                {ingresoBrutoC > 0 ? ` · Ingreso: $ ${num(ingresoBrutoC)}` : ''}
-                                {costoDirectoTotal > 0 ? ` · Costo: $ ${num(costoDirectoTotal)}` : ''}
+                                {ingresoBrutoC > 0 ? ` · Ingreso: ${formatMoney(ingresoBrutoC)}` : ''}
+                                {costoDirectoTotal > 0 ? ` · Costo: ${formatMoney(costoDirectoTotal)}` : ''}
                               </p>
                               {costoRia > 0 && riaData && (
                                 <p className="text-xs text-zinc-400 mt-0.5">
-                                  RIA — Insumos: ${num(riaData.insumos)} · Labores: ${num(riaData.labores)}
+                                  RIA — Insumos: ${formatMoney(riaData.insumos)} · Labores: ${formatMoney(riaData.labores)}
                                 </p>
                               )}
                             </div>
                             <div className="text-right shrink-0">
                               <p className="text-xs text-zinc-400">Margen bruto</p>
                               <p className={cn('text-sm font-bold', margenBruto >= 0 ? 'text-[#006836]' : 'text-red-600')}>
-                                $ {num(margenBruto)}
+                                {formatMoney(margenBruto)}
                               </p>
                             </div>
                           </div>
@@ -469,11 +472,11 @@ export default function MargenesReport({
                         <tr key={i} className="hover:bg-zinc-50">
                           <td className="px-4 py-3 font-medium text-zinc-800">{d.label}</td>
                           <td className="px-4 py-3 text-right text-zinc-400">{d.lotes}</td>
-                          <td className="px-4 py-3 text-right text-blue-600 font-medium">{d.ingreso > 0 ? `$ ${num(d.ingreso)}` : '—'}</td>
-                          <td className="px-4 py-3 text-right text-amber-600 font-medium">{d.costo > 0 ? `$ ${num(d.costo)}` : '—'}</td>
+                          <td className="px-4 py-3 text-right text-blue-600 font-medium">{d.ingreso > 0 ? formatMoney(d.ingreso) : '—'}</td>
+                          <td className="px-4 py-3 text-right text-amber-600 font-medium">{d.costo > 0 ? formatMoney(d.costo) : '—'}</td>
                           <td className="px-4 py-3 text-right">
                             <span className={cn('font-bold text-sm', d.margen >= 0 ? 'text-[#006836]' : 'text-red-600')}>
-                              $ {num(d.margen)}
+                              {formatMoney(d.margen)}
                             </span>
                           </td>
                         </tr>
@@ -483,10 +486,10 @@ export default function MargenesReport({
                       <tr>
                         <td className="px-4 py-3 text-xs font-semibold text-zinc-600">Total empresa</td>
                         <td className="px-4 py-3 text-right text-zinc-400">{datosPorCultivo.reduce((a, d) => a + d.lotes, 0)}</td>
-                        <td className="px-4 py-3 text-right font-bold text-zinc-900">$ {num(totalIngresoBruto)}</td>
-                        <td className="px-4 py-3 text-right font-bold text-zinc-900">$ {num(totalCostoDirecto)}</td>
+                        <td className="px-4 py-3 text-right font-bold text-zinc-900">{formatMoney(totalIngresoBruto)}</td>
+                        <td className="px-4 py-3 text-right font-bold text-zinc-900">{formatMoney(totalCostoDirecto)}</td>
                         <td className={cn('px-4 py-3 text-right font-bold', totalMargenLotes >= 0 ? 'text-[#006836]' : 'text-red-600')}>
-                          $ {num(totalMargenLotes)}
+                          {formatMoney(totalMargenLotes)}
                         </td>
                       </tr>
                     </tfoot>
@@ -502,17 +505,19 @@ export default function MargenesReport({
 }
 
 function Kpi({ label, value, highlight, color }: { label: string; value: number; highlight?: boolean; color?: string }) {
+  const { formatMoney } = useCurrency();
   return (
     <div className={cn('rounded-xl p-3', highlight ? 'bg-white/10' : 'bg-white/5')}>
       <p className="text-xs text-zinc-400 mb-1">{label}</p>
       <p className={cn('text-lg font-bold', color ? `text-${color}` : value >= 0 ? 'text-zinc-100' : 'text-red-400')}>
-        $ {new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(value)}
+        {formatMoney(value)}
       </p>
     </div>
   );
 }
 
 function FinRow({ label, value, bold, amber }: { label: string; value: number; bold?: boolean; amber?: boolean }) {
+  const { formatMoney } = useCurrency();
   return (
     <div>
       <p className="text-xs text-zinc-400">{label}</p>
@@ -521,7 +526,7 @@ function FinRow({ label, value, bold, amber }: { label: string; value: number; b
         bold && 'font-bold',
         amber ? 'text-amber-600' : value >= 0 ? 'text-[#006836]' : 'text-red-600',
       )}>
-        $ {new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(value)}
+        {formatMoney(value)}
       </p>
     </div>
   );

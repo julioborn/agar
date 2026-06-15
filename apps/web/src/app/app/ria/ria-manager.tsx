@@ -12,6 +12,7 @@ import {
 import { anularRia, eliminarRia } from './actions';
 import { generateRiaPdf } from './ria-pdf-button';
 import { useRouter } from 'next/navigation';
+import { useCurrency } from '@/lib/currency-context';
 
 const ESTADO_STYLE: Record<string, string> = {
   borrador:   'bg-amber-100 text-amber-700',
@@ -87,6 +88,7 @@ interface Props {
 
 export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Props) {
   const router = useRouter();
+  const { formatMoney } = useCurrency();
   const [estado, setEstado] = useState('');
   const [campaniaId, setCampaniaId] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -254,8 +256,8 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
         {[
           { label: 'Remitos', val: filtradas.length.toString(), color: 'bg-[#006836]' },
           { label: 'Confirmados', val: filtradas.filter((r) => r.estado === 'confirmado').length.toString(), color: 'bg-blue-400' },
-          { label: 'Total insumos', val: `$${num.format(totales.ins)}`, color: 'bg-amber-400' },
-          { label: 'Total labores', val: `$${num.format(totales.lab)}`, color: 'bg-violet-400' },
+          { label: 'Total insumos', val: formatMoney(totales.ins), color: 'bg-amber-400' },
+          { label: 'Total labores', val: formatMoney(totales.lab), color: 'bg-violet-400' },
         ].map(({ label, val, color }) => (
           <div key={label} className="bg-white rounded-2xl border border-zinc-100 px-4 py-3 flex items-center gap-3 shadow-sm">
             <span className={cn('w-2.5 h-2.5 rounded-full shrink-0', color)} />
@@ -461,9 +463,9 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
 
                         {/* Total */}
                         <div className="w-28 shrink-0 text-right">
-                          <p className="text-sm font-bold text-zinc-900">${num.format(ria.total_ria)}</p>
+                          <p className="text-sm font-bold text-zinc-900">{formatMoney(ria.total_ria)}</p>
                           {ria.costo_por_ha != null && (
-                            <p className="text-xs text-zinc-400">${num.format(ria.costo_por_ha)}/ha</p>
+                            <p className="text-xs text-zinc-400">{formatMoney(ria.costo_por_ha)}/ha</p>
                           )}
                         </div>
 
@@ -614,8 +616,8 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
                                             <td className="px-3 py-2 text-zinc-500">{i.deposito?.nombre ?? '—'}</td>
                                             <td className="px-3 py-2 text-right text-zinc-700">{num.format(i.cantidad)} {i.producto?.unidad_base}</td>
                                             <td className="px-3 py-2 text-right text-zinc-500">{i.dosis_por_ha != null ? num.format(i.dosis_por_ha) : '—'}</td>
-                                            <td className="px-3 py-2 text-right text-zinc-600">${num.format(i.costo_unitario)}</td>
-                                            <td className="px-3 py-2 text-right font-semibold text-zinc-900">${num.format(i.subtotal)}</td>
+                                            <td className="px-3 py-2 text-right text-zinc-600">{formatMoney(i.costo_unitario)}</td>
+                                            <td className="px-3 py-2 text-right font-semibold text-zinc-900">{formatMoney(i.subtotal)}</td>
                                           </tr>
                                         ))}
                                       </tbody>
@@ -652,8 +654,8 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
                                             </td>
                                             <td className="px-3 py-2 text-zinc-500">{l.prestador_nombre ?? 'Campo propio'}</td>
                                             <td className="px-3 py-2 text-right text-zinc-700">{num.format(l.cantidad)} {l.unidad_medida}</td>
-                                            <td className="px-3 py-2 text-right text-zinc-600">${num.format(l.tarifa)}</td>
-                                            <td className="px-3 py-2 text-right font-semibold text-zinc-900">${num.format(l.subtotal)}</td>
+                                            <td className="px-3 py-2 text-right text-zinc-600">{formatMoney(l.tarifa)}</td>
+                                            <td className="px-3 py-2 text-right font-semibold text-zinc-900">{formatMoney(l.subtotal)}</td>
                                           </tr>
                                         ))}
                                       </tbody>
@@ -688,7 +690,7 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
                                             <td className="px-3 py-2 text-zinc-500">{p.deposito_ingreso?.nombre ?? '—'}</td>
                                             <td className="px-3 py-2 text-right text-zinc-700">{num.format(p.cantidad)} {p.producto?.unidad_base}</td>
                                             <td className="px-3 py-2 text-right text-zinc-500">{p.humedad_porcentaje != null ? `${p.humedad_porcentaje}%` : '—'}</td>
-                                            <td className="px-3 py-2 text-right text-zinc-600">{p.precio_referencia != null ? `$${num.format(p.precio_referencia)}` : '—'}</td>
+                                            <td className="px-3 py-2 text-right text-zinc-600">{p.precio_referencia != null ? formatMoney(p.precio_referencia) : '—'}</td>
                                           </tr>
                                         ))}
                                       </tbody>
@@ -700,11 +702,11 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
 
                             {/* Totales */}
                             <div className="flex flex-wrap gap-4 text-xs border-t border-zinc-100 pt-3">
-                              <span className="text-zinc-500">Insumos: <strong className="text-zinc-800">${num.format(ria.total_insumos)}</strong></span>
-                              <span className="text-zinc-500">Labores: <strong className="text-zinc-800">${num.format(ria.total_labores)}</strong></span>
-                              <span className="text-zinc-600">Costo total: <strong className="text-green-700">${num.format(ria.total_ria)}</strong></span>
+                              <span className="text-zinc-500">Insumos: <strong className="text-zinc-800">{formatMoney(ria.total_insumos)}</strong></span>
+                              <span className="text-zinc-500">Labores: <strong className="text-zinc-800">{formatMoney(ria.total_labores)}</strong></span>
+                              <span className="text-zinc-600">Costo total: <strong className="text-green-700">{formatMoney(ria.total_ria)}</strong></span>
                               {ria.costo_por_ha != null && (
-                                <span className="text-zinc-500">Costo/ha: <strong className="text-zinc-800">${num.format(ria.costo_por_ha)}</strong></span>
+                                <span className="text-zinc-500">Costo/ha: <strong className="text-zinc-800">{formatMoney(ria.costo_por_ha)}</strong></span>
                               )}
                             </div>
                           </>

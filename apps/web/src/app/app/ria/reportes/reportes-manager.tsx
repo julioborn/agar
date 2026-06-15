@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ExportButtons from '@/components/export-buttons';
+import { useCurrency } from '@/lib/currency-context';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -73,8 +74,6 @@ const fmt = (d: string) =>
   new Date(d + 'T00:00:00').toLocaleDateString('es-AR', {
     day: '2-digit', month: '2-digit', year: 'numeric',
   });
-const $ = (v: number | null | undefined) =>
-  v != null ? `$${num.format(v)}` : '—';
 
 const ESTADO_STYLE: Record<string, string> = {
   borrador:   'bg-amber-100 text-amber-700',
@@ -97,6 +96,8 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 export default function ReportesManager({
   rias, insumos, labores, produccion, campanias, empresaNombre,
 }: Props) {
+  const { formatMoney, currency } = useCurrency();
+  const $ = (v: number | null | undefined) => v != null ? formatMoney(v) : '—';
   const [tab, setTab] = useState<Tab>('costos');
   const [campaniaFilter, setCampaniaFilter] = useState('');
   const [estadoFilter, setEstadoFilter] = useState('');
@@ -396,12 +397,12 @@ export default function ReportesManager({
                 { header: 'Campaña',       key: 'campania',    width: 22 },
                 { header: 'Cultivo',       key: 'cultivo',     width: 20 },
                 { header: 'Superficie',    key: 'superficie',  width: 16 },
-                { header: 'Insumos $',     key: 'ins',         width: 18, align: 'right', format: (v: any) => $(v), total: true },
-                { header: 'Labores $',     key: 'lab',         width: 18, align: 'right', format: (v: any) => $(v), total: true },
-                { header: 'Total $',       key: 'total',       width: 18, align: 'right', format: (v: any) => $(v), total: true },
-                { header: 'Costo/ha $',    key: 'costo_ha',    width: 18, align: 'right', format: (v: any) => $(v) },
+                { header: `Insumos (${currency})`,     key: 'ins',         width: 18, align: 'right', format: (v: any) => $(v), total: true },
+                { header: `Labores (${currency})`,     key: 'lab',         width: 18, align: 'right', format: (v: any) => $(v), total: true },
+                { header: `Total (${currency})`,       key: 'total',       width: 18, align: 'right', format: (v: any) => $(v), total: true },
+                { header: `Costo/ha (${currency})`,    key: 'costo_ha',    width: 18, align: 'right', format: (v: any) => $(v) },
                 { header: 'Producción',    key: 'produccion',  width: 18 },
-                { header: 'Costo/unidad $',key: 'costo_unidad',width: 18, align: 'right', format: (v: any) => $(v) },
+                { header: `Costo/unidad (${currency})`,key: 'costo_unidad',width: 18, align: 'right', format: (v: any) => $(v) },
               ]}
               filename={`costos-por-lote-${empresaNombre}`}
               docTitle={`Costos por lote — ${empresaNombre}`}
@@ -490,9 +491,9 @@ export default function ReportesManager({
                 { header: 'Rend./ha',       key: 'rendimiento', width: 14 },
                 { header: 'Humedad',        key: 'humedad',     width: 12 },
                 { header: 'Precio ref.',    key: 'precio_ref',  width: 16, align: 'right', format: (v: any) => $(v) },
-                { header: 'Valor bruto $',  key: 'valor_bruto', width: 18, align: 'right', format: (v: any) => $(v), total: true },
-                { header: 'Costo total $',  key: 'costo_total', width: 18, align: 'right', format: (v: any) => $(v), total: true },
-                { header: 'Margen bruto $', key: 'margen',      width: 18, align: 'right', format: (v: any) => $(v), total: true },
+                { header: `Valor bruto (${currency})`,  key: 'valor_bruto', width: 18, align: 'right', format: (v: any) => $(v), total: true },
+                { header: `Costo total (${currency})`,  key: 'costo_total', width: 18, align: 'right', format: (v: any) => $(v), total: true },
+                { header: `Margen bruto (${currency})`, key: 'margen',      width: 18, align: 'right', format: (v: any) => $(v), total: true },
               ]}
               filename={`produccion-${empresaNombre}`}
               docTitle={`Producción — ${empresaNombre}`}
@@ -558,8 +559,8 @@ export default function ReportesManager({
                 { header: 'Categoría',      key: 'categoria',  width: 20 },
                 { header: 'Cantidad total', key: 'cantidad',   width: 18, align: 'right', format: (v: any) => num.format(v), total: true },
                 { header: 'Unidad',         key: 'unidad',     width: 12 },
-                { header: 'Costo prom. $',  key: 'costo_prom', width: 18, align: 'right', format: (v: any) => $(v) },
-                { header: 'Costo total $',  key: 'total',      width: 18, align: 'right', format: (v: any) => $(v), total: true },
+                { header: `Costo prom. (${currency})`,  key: 'costo_prom', width: 18, align: 'right', format: (v: any) => $(v) },
+                { header: `Costo total (${currency})`,  key: 'total',      width: 18, align: 'right', format: (v: any) => $(v), total: true },
                 { header: '% del total',    key: 'porcentaje', width: 14, align: 'right' },
               ]}
               filename={`consumo-insumos-${empresaNombre}`}
@@ -642,8 +643,8 @@ export default function ReportesManager({
                 { header: 'Prestador',     key: 'prestador',   width: 22 },
                 { header: 'Cantidad',      key: 'cantidad',    width: 14, align: 'right', format: (v: any) => num.format(v), total: true },
                 { header: 'Unidad',        key: 'unidad',      width: 12 },
-                { header: 'Tarifa $',      key: 'tarifa',      width: 16, align: 'right', format: (v: any) => $(v) },
-                { header: 'Subtotal $',    key: 'subtotal',    width: 18, align: 'right', format: (v: any) => $(v), total: true },
+                { header: `Tarifa (${currency})`,      key: 'tarifa',      width: 16, align: 'right', format: (v: any) => $(v) },
+                { header: `Subtotal (${currency})`,    key: 'subtotal',    width: 18, align: 'right', format: (v: any) => $(v), total: true },
                 { header: 'Fecha ejec.',   key: 'fecha',       width: 16 },
               ]}
               filename={`labores-${empresaNombre}`}
@@ -716,9 +717,9 @@ export default function ReportesManager({
                 { header: 'Lote',           key: 'lote',        width: 22 },
                 { header: 'Campo',          key: 'campo',       width: 22 },
                 { header: 'Campaña',        key: 'campania',    width: 22 },
-                { header: 'Insumos $',      key: 'insumos',     width: 18, align: 'right', format: (v: any) => $(v), total: true },
-                { header: 'Labores $',      key: 'labores',     width: 18, align: 'right', format: (v: any) => $(v), total: true },
-                { header: 'Total $',        key: 'total',       width: 18, align: 'right', format: (v: any) => $(v), total: true },
+                { header: `Insumos (${currency})`,      key: 'insumos',     width: 18, align: 'right', format: (v: any) => $(v), total: true },
+                { header: `Labores (${currency})`,      key: 'labores',     width: 18, align: 'right', format: (v: any) => $(v), total: true },
+                { header: `Total (${currency})`,        key: 'total',       width: 18, align: 'right', format: (v: any) => $(v), total: true },
                 { header: 'Producción',     key: 'produccion',  width: 14 },
                 { header: 'Motivo anul.',   key: 'motivo',      width: 30 },
               ]}

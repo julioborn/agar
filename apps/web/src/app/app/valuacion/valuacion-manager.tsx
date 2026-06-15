@@ -7,6 +7,7 @@ import { guardarPrecioYActualizarRias } from './actions';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import ExportButtons from '@/components/export-buttons';
+import { useCurrency } from '@/lib/currency-context';
 
 const CRITERIOS = [
   { value: 'ultima_compra', label: 'Última compra',         desc: 'Precio de la compra más reciente' },
@@ -21,7 +22,6 @@ const CATEGORIAS = [
 const num = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
 const fmtDate = (d: string) =>
   new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-const $ = (v: number | null | undefined) => v != null ? `$${num.format(v)}` : '—';
 const today = () => new Date().toISOString().split('T')[0];
 
 const inp = 'w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#006836]/40';
@@ -43,6 +43,8 @@ export default function ValuacionManager({
   productos, stockValuacion, empresaId, productosSinPrecio,
 }: Props) {
   const router = useRouter();
+  const { formatMoney, currency } = useCurrency();
+  const $ = (v: number | null | undefined) => v != null ? formatMoney(v) : '—';
   const [tab, setTab] = useState<Tab>('criterios');
   const [configs, setConfigs] = useState(initConfig);
   const [precios, setPrecios] = useState(initPrecios);
