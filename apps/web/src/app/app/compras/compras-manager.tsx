@@ -125,9 +125,9 @@ export default function ComprasManager({ compras, proveedores, empresaNombre, es
     { header: 'N° Factura',     key: 'numero_factura',         width: 18, format: (v: any) => v ?? '' },
     { header: 'Proveedor',      key: 'proveedor_nombre',       width: 30 },
     { header: 'Moneda original',key: 'moneda',                 width: 14 },
-    { header: 'Total original', key: 'total_moneda_original',  width: 16, format: (v: any) => v != null ? num.format(v) : '' },
+    { header: 'Total original', key: 'total_moneda_original',  width: 16, format: (v: any) => v != null ? num.format(v) : '', total: true },
     { header: 'Cotiz. USD',     key: 'cotizacion_usd',         width: 12, format: (v: any) => v != null ? num.format(v) : '' },
-    { header: `Total (${currency})`, key: 'total_en_ars',      width: 20, format: (v: any) => v != null ? formatMoney(v) : '' },
+    { header: `Total (${currency})`, key: 'total_en_ars',      width: 20, format: (v: any) => v != null ? formatMoney(v) : '', total: true },
     { header: 'Estado',         key: 'estado',                 width: 14, format: (v: string) => ESTADO_LABEL[v] ?? v },
   ];
 

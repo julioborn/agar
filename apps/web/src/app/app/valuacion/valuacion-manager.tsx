@@ -566,13 +566,13 @@ export default function ValuacionManager({
                       { header: 'Producto',           key: 'producto',      width: 28 },
                       { header: 'Categoría',          key: 'categoria',     width: 18 },
                       { header: 'Unidad',             key: 'unidad',        width: 10 },
-                      { header: 'Cantidad',           key: 'cantidad',      width: 14, align: 'right', format: (v: any) => num.format(v) },
+                      { header: 'Cantidad',           key: 'cantidad',      width: 14, align: 'right', format: (v: any) => num.format(v), total: true },
                       { header: 'P. Última compra',  key: 'p_ult_compra',  width: 18, align: 'right', format: (v: any) => $(v) },
                       { header: 'P. PPP',             key: 'p_ppp',         width: 18, align: 'right', format: (v: any) => $(v) },
                       { header: 'P. Reposición',     key: 'p_reposicion',  width: 18, align: 'right', format: (v: any) => $(v) },
-                      { header: 'V. Última compra',  key: 'v_ult_compra',  width: 20, align: 'right', format: (v: any) => $(v) },
-                      { header: 'V. PPP',             key: 'v_ppp',         width: 20, align: 'right', format: (v: any) => $(v) },
-                      { header: 'V. Reposición',     key: 'v_reposicion',  width: 20, align: 'right', format: (v: any) => $(v) },
+                      { header: 'V. Última compra',  key: 'v_ult_compra',  width: 20, align: 'right', format: (v: any) => $(v), total: true },
+                      { header: 'V. PPP',             key: 'v_ppp',         width: 20, align: 'right', format: (v: any) => $(v), total: true },
+                      { header: 'V. Reposición',     key: 'v_reposicion',  width: 20, align: 'right', format: (v: any) => $(v), total: true },
                       { header: 'Criterio config.',  key: 'criterio_conf', width: 18 },
                     ]}
                     filename="valuacion-stock"

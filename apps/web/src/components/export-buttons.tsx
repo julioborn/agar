@@ -11,6 +11,7 @@ export interface ExportColumn {
   width?: number;
   format?: (val: any) => string;
   align?: 'left' | 'center' | 'right';
+  total?: boolean; // si true, se suma en la fila de totales
 }
 
 interface Props {
@@ -67,6 +68,19 @@ export default function ExportButtons({ data, columns, filename, title, classNam
   const timeStr  = TIME_FMT(now);
   const metaLine = `Moneda: ${currency}   ·   ${data.length} registros   ·   Generado: ${dateStr} ${timeStr}`;
   const docTitle = title ?? filename;
+
+  // Calcular totales de columnas marcadas con total: true
+  const totalCols = columns.filter((c) => c.total);
+  const totalsMap = Object.fromEntries(
+    totalCols.map((col) => [
+      col.key,
+      data.reduce((acc, row) => {
+        const v = row[col.key];
+        return acc + (typeof v === 'number' && !isNaN(v) ? v : 0);
+      }, 0),
+    ]),
+  );
+  const hasTotals = totalCols.length > 0;
 
   /* ── EXCEL ─────────────────────────────────────────────────────────────── */
   async function exportExcel() {
@@ -153,6 +167,29 @@ export default function ExportButtons({ data, columns, filename, title, classNam
         });
       });
 
+      /* Fila de totales */
+      if (hasTotals) {
+        const sepTotalRow = ws.addRow([]);
+        sepTotalRow.height = 4;
+
+        const totalValues = columns.map((col, i) => {
+          if (i === 0) return 'TOTAL';
+          if (col.total) {
+            const v = totalsMap[col.key];
+            return col.format ? col.format(v) : v;
+          }
+          return '';
+        });
+        const totalRow = ws.addRow(totalValues);
+        totalRow.height = 18;
+        totalRow.eachCell((cell, colNum) => {
+          cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + GREEN_HEX } };
+          cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 9.5 };
+          cell.alignment = { vertical: 'middle', horizontal: columns[colNum - 1]?.align ?? 'left' };
+          cell.border    = { top: { style: 'medium', color: { argb: 'FF004d24' } } };
+        });
+      }
+
       /* Fila de pie */
       ws.addRow([]);
       const footRow = ws.addRow([`AgroSistema  ·  ${docTitle}  ·  ${dateStr}`]);
@@ -208,6 +245,18 @@ export default function ExportButtons({ data, columns, filename, title, classNam
       doc.setTextColor(190, 235, 210);
       doc.text(metaLine, textX, 21);
 
+      /* Fila de totales para PDF */
+      const pdfFoot = hasTotals
+        ? [columns.map((col, i) => {
+            if (i === 0) return 'TOTAL';
+            if (col.total) {
+              const v = totalsMap[col.key];
+              return col.format ? col.format(v) : String(v ?? '');
+            }
+            return '';
+          })]
+        : undefined;
+
       /* Tabla */
       autoTable(doc, {
         startY: 35,
@@ -217,6 +266,8 @@ export default function ExportButtons({ data, columns, filename, title, classNam
             col.format ? col.format(row[col.key]) : (row[col.key] ?? '')
           )
         ),
+        foot:   pdfFoot,
+        showFoot: 'lastPage',
         styles: {
           fontSize:    8,
           cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
@@ -228,6 +279,12 @@ export default function ExportButtons({ data, columns, filename, title, classNam
           fontStyle:  'bold',
           fontSize:   8.5,
           minCellHeight: 9,
+        },
+        footStyles: {
+          fillColor:  [...GREEN_RGB],
+          textColor:  [255, 255, 255],
+          fontStyle:  'bold',
+          fontSize:   8.5,
         },
         alternateRowStyles: { fillColor: [240, 247, 243] },
         margin:             { left: 10, right: 10, bottom: 14 },

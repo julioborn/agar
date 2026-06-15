@@ -71,7 +71,7 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
     { header: 'Depósito', key: 'deposito_nombre', width: 20 },
     { header: 'Producto', key: 'producto_nombre', width: 28 },
     { header: 'Categoría', key: 'producto_categoria', width: 18, format: (v: string) => CATEGORIA_LABEL[v] ?? v },
-    { header: 'Stock actual', key: 'cantidad_actual', width: 14, format: (v: number) => numFmt.format(v) },
+    { header: 'Stock actual', key: 'cantidad_actual', width: 14, format: (v: number) => numFmt.format(v), total: true },
     { header: 'Unidad', key: 'producto_unidad_base', width: 10 },
     { header: 'Precio unit. (última compra)', key: 'precio_ultimo', width: 22, format: (v: number | null) => v != null ? ars.format(v) : '' },
     { header: 'Stock mínimo', key: 'producto_stock_minimo', width: 14, format: (v: number) => v > 0 ? numFmt.format(v) : '' },

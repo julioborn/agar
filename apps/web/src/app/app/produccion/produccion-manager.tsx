@@ -90,13 +90,13 @@ export default function ProduccionManager({ cultivos, campanias, campos, empresa
     { header: 'Estado',                      key: 'estado',             width: 14, format: (v: string) => ESTADO_LABEL[v] ?? v },
     { header: 'F. Siembra',                  key: 'fecha_siembra',      width: 14, format: (v: any) => fmt(v) },
     { header: 'F. Cosecha',                  key: 'fecha_cosecha_real', width: 14, format: (v: any) => fmt(v) },
-    { header: 'Producción',                  key: 'produccion_total',   width: 16, format: (v: any) => v != null ? num(v, 2) : '' },
+    { header: 'Producción',                  key: 'produccion_total',   width: 16, format: (v: any) => v != null ? num(v, 2) : '', total: true },
     { header: 'Unidad',                      key: 'unidad_produccion',  width: 10 },
     { header: 'Rendimiento / ha',            key: 'rendimiento_por_ha', width: 16, format: (v: any) => v != null ? num(v, 2) : '' },
     { header: `Precio venta (${currency})`,  key: 'precio_venta_ars',   width: 20, format: (v: any) => v != null ? formatMoney(v) : '' },
-    { header: `Ingreso bruto (${currency})`, key: 'ingreso_bruto_ars',  width: 20, format: (v: any) => v != null ? formatMoney(v) : '' },
-    { header: `Costo directo (${currency})`, key: 'costo_directo_ars',  width: 20, format: (v: any) => v != null ? formatMoney(v) : '' },
-    { header: `Margen bruto (${currency})`,  key: 'margen_bruto_ars',   width: 20, format: (v: any) => v != null ? formatMoney(v) : '' },
+    { header: `Ingreso bruto (${currency})`, key: 'ingreso_bruto_ars',  width: 20, format: (v: any) => v != null ? formatMoney(v) : '', total: true },
+    { header: `Costo directo (${currency})`, key: 'costo_directo_ars',  width: 20, format: (v: any) => v != null ? formatMoney(v) : '', total: true },
+    { header: `Margen bruto (${currency})`,  key: 'margen_bruto_ars',   width: 20, format: (v: any) => v != null ? formatMoney(v) : '', total: true },
   ];
 
   return (
