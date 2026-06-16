@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* En iOS PWA con black-translucent + viewport-fit=cover, el área del safe-area
+   (Dynamic Island / notch) es transparente y muestra el fondo del html.
+   Forzar negro aquí garantiza que esa zona nunca sea blanca. */
+html {
+  background-color: #09090b;
+}
+
 /* ── Leaflet: etiquetas de lotes sobre el mapa ──────────────────────────────── */
 .lote-map-label {
   background: rgba(255, 255, 255, 0.85) !important;

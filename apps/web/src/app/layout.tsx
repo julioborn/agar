@@ -24,6 +24,11 @@ export const viewport: Viewport = {
   themeColor: '#09090b',
   width: 'device-width',
   initialScale: 1,
+  // viewport-fit=cover es la clave: extiende el viewport detrás de la
+  // Dynamic Island/notch en iOS para que el header negro cubra esa área.
+  // Sin esto, env(safe-area-inset-top) siempre devuelve 0 y el black-translucent
+  // no tiene efecto sobre el fondo del safe area.
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
