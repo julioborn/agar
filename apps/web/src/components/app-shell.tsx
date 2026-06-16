@@ -119,36 +119,44 @@ export default function AppShell({
         {/* Main column */}
         <div className="flex flex-col flex-1 min-w-0">
 
-          {/* Header — layout 3 columnas para que el logo siempre quede centrado sin solapar */}
-          <header className="h-16 shrink-0 bg-zinc-950 flex items-center px-3 gap-2">
+          {/* Header — bg-zinc-950 se extiende hasta el safe area (Dynamic Island en iOS).
+               Con black-translucent el status bar es transparente y se ve el negro del header.
+               El padding-top empuja el contenido debajo de la isla. */}
+          <header
+            className="shrink-0 bg-zinc-950"
+            style={{ paddingTop: 'env(safe-area-inset-top)' }}
+          >
+            {/* Layout 3 columnas para que el logo siempre quede centrado */}
+            <div className="h-16 flex items-center px-3 gap-2">
 
-            {/* Izquierda: hamburger + logo circular (mobile) */}
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-                aria-label="Abrir menú"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-              <Link href="/app" className="lg:hidden">
-                <Image src="/agar-final.png" alt="AGAR" width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
-              </Link>
-            </div>
+              {/* Izquierda: hamburger + logo circular (mobile) */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="lg:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+                  aria-label="Abrir menú"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
+                <Link href="/app" className="lg:hidden">
+                  <Image src="/agar-final.png" alt="AGAR" width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
+                </Link>
+              </div>
 
-            {/* Centro: logo — solo visible en desktop (lg+) */}
-            <div className="flex-1 hidden lg:flex justify-center">
-              <Link href="/app">
-                <Image src="/agar-final.png" alt="AGAR" width={44} height={44} className="h-10 w-10 rounded-full object-cover" />
-              </Link>
-            </div>
-            {/* Spacer mobile para que los controles queden a la derecha */}
-            <div className="flex-1 lg:hidden" />
+              {/* Centro: logo — solo visible en desktop (lg+) */}
+              <div className="flex-1 hidden lg:flex justify-center">
+                <Link href="/app">
+                  <Image src="/agar-final.png" alt="AGAR" width={44} height={44} className="h-10 w-10 rounded-full object-cover" />
+                </Link>
+              </div>
+              {/* Spacer mobile para que los controles queden a la derecha */}
+              <div className="flex-1 lg:hidden" />
 
-            {/* Derecha: toggle moneda + logout */}
-            <div className="flex items-center gap-2 shrink-0">
-              <CurrencyToggle />
-              <LogoutButton />
+              {/* Derecha: toggle moneda + logout */}
+              <div className="flex items-center gap-2 shrink-0">
+                <CurrencyToggle />
+                <LogoutButton />
+              </div>
             </div>
           </header>
 

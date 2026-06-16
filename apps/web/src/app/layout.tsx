@@ -10,6 +10,14 @@ export const metadata: Metadata = {
     shortcut: '/favicon.svg',
     apple: '/agar-final.png',
   },
+  appleWebApp: {
+    capable: true,
+    title: 'AGAR',
+    // black-translucent: el contenido se extiende bajo el status bar (Dynamic Island).
+    // El header negro se ve a través del área transparente → looks seamless en iOS.
+    // Sin esto el área sobre la isla queda blanca.
+    statusBarStyle: 'black-translucent',
+  },
 };
 
 export const viewport: Viewport = {

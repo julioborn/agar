@@ -145,7 +145,10 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6 py-12">
+    <main
+      className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6 py-12"
+      style={{ paddingTop: 'max(3rem, calc(env(safe-area-inset-top) + 1rem))' }}
+    >
       <Suspense fallback={
         <div className="w-full max-w-sm space-y-4">
           <div className="h-14 bg-white/5 rounded-xl animate-pulse mx-auto w-36" />
