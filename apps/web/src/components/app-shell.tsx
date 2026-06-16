@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Menu } from 'lucide-react';
@@ -10,6 +10,7 @@ import EmpresaSelector from './empresa-selector';
 import LogoutButton from './logout-button';
 import SidebarNav from './sidebar-nav';
 import { CurrencyProvider, useCurrency } from '@/lib/currency-context';
+import { createClient } from '@/lib/supabase/client';
 import type { EmpresaConRol } from '@/lib/empresa-actual';
 
 interface Props {
@@ -52,10 +53,38 @@ export default function AppShell({
   children, userEmail, empresaActiva, todasLasEmpresas, esSuperAdmin, esAdmin, usdRate,
 }: Props) {
   const pathname = usePathname();
+  const router   = useRouter();
   const [sidebarOpen, setSidebarOpen]           = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
+
+  // Cuando la PWA vuelve al primer plano (visibilitychange visible),
+  // verificamos que la sesión siga activa y la renovamos si es necesario.
+  // Cubre el caso de app suspendida por mucho tiempo sin ser matada.
+  useEffect(() => {
+    const supabase = createClient();
+
+    async function checkSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        // Intentamos renovar antes de forzar login
+        const { data } = await supabase.auth.refreshSession();
+        if (!data.session) {
+          router.push('/login');
+        } else {
+          router.refresh(); // sincronizar estado del servidor con nuevas cookies
+        }
+      }
+    }
+
+    function onVisibility() {
+      if (document.visibilityState === 'visible') checkSession();
+    }
+
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [router]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {

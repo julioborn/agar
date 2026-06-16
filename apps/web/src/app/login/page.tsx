@@ -8,10 +8,38 @@ import { Loader2 } from 'lucide-react';
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError]       = useState<string | null>(null);
-  const [loading, setLoading]   = useState(false);
+  const [email, setEmail]         = useState('');
+  const [password, setPassword]   = useState('');
+  const [error, setError]         = useState<string | null>(null);
+  const [loading, setLoading]     = useState(false);
+  // Mientras intentamos recuperar la sesión desde localStorage mostramos spinner
+  const [recovering, setRecovering] = useState(true);
+
+  // Recuperación silenciosa de sesión para PWA en iOS/Android.
+  // Cuando iOS mata el proceso de la PWA borra las cookies aunque tengan
+  // Max-Age, pero el localStorage sobrevive. El cliente de Supabase lee
+  // primero la cookie y cae en el fallback de localStorage, por lo que
+  // refreshSession() puede renovar el token sin pedirle al usuario que
+  // vuelva a loguearse.
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        router.replace('/');
+        return;
+      }
+      // No hay sesión en memoria/cookies. Intentamos renovar usando el
+      // refresh token que puede estar en localStorage (backup de la PWA).
+      supabase.auth.refreshSession().then(({ data }) => {
+        if (data.session) {
+          // ¡Sesión recuperada! Las cookies ya fueron escritas por el cliente.
+          router.replace('/');
+        } else {
+          setRecovering(false); // sin sesión recuperable → mostrar form
+        }
+      }).catch(() => setRecovering(false));
+    }).catch(() => setRecovering(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (searchParams.get('error') === 'link_invalido') {
@@ -41,6 +69,15 @@ function LoginForm() {
     }
     router.push('/');
     router.refresh();
+  }
+
+  if (recovering) {
+    return (
+      <div className="w-full max-w-sm mx-auto flex flex-col items-center gap-4">
+        <Image src="/agar-final.png" alt="AGAR" width={140} height={56} className="h-14 w-auto" priority />
+        <Loader2 className="w-6 h-6 text-white/40 animate-spin mt-4" />
+      </div>
+    );
   }
 
   return (
