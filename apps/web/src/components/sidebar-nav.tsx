@@ -152,7 +152,7 @@ export default function SidebarNav({
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-2 px-2 overflow-y-auto overflow-x-hidden">
+      <nav className="flex-1 py-2 px-2 overflow-y-auto overflow-x-hidden scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
 
         {/* Inicio — sin grupo */}
         <Link
