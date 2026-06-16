@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 import AppShell from '@/components/app-shell';
 import type { TickerData } from '@/components/price-ticker';
+import { fetchPreciosPizarra } from '@/lib/precios-pizarra';
 
 async function fetchUsdRate(empresaId: string): Promise<number | null> {
   const supabase = await createClient();
@@ -27,18 +28,19 @@ async function fetchUsdRate(empresaId: string): Promise<number | null> {
 
 async function fetchTickerExtras(empresaId: string): Promise<Omit<TickerData, 'dolar'>> {
   const supabase = await createClient();
-  const [maizR, sorgoR, sojaR, configR] = await Promise.all([
+  const [maizR, sorgoR, sojaR, configR, bcr] = await Promise.all([
     supabase.from('referencias_precio').select('valor').eq('empresa_id', empresaId).eq('tipo', 'maiz').order('vigencia_desde', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('referencias_precio').select('valor').eq('empresa_id', empresaId).eq('tipo', 'sorgo').order('vigencia_desde', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('referencias_precio').select('valor').eq('empresa_id', empresaId).eq('tipo', 'soja').order('vigencia_desde', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('configuracion_empresa').select('precio_combustible, litros_por_uta').eq('empresa_id', empresaId).maybeSingle(),
+    fetchPreciosPizarra(),
   ]);
   const gasoil = configR.data?.precio_combustible ?? null;
   const litros = configR.data?.litros_por_uta ?? null;
   return {
-    maiz:   maizR.data?.valor  ?? null,
-    sorgo:  sorgoR.data?.valor ?? null,
-    soja:   sojaR.data?.valor  ?? null,
+    maiz:   maizR.data?.valor  ?? bcr?.maiz  ?? null,
+    sorgo:  sorgoR.data?.valor ?? bcr?.sorgo ?? null,
+    soja:   sojaR.data?.valor  ?? bcr?.soja  ?? null,
     gasoil,
     uta: gasoil && litros ? gasoil * litros : null,
   };
