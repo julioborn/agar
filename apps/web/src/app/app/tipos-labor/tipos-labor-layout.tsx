@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { Plus, ChevronDown, ChevronUp, Wrench, Trash2, Check, X, Search, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { useCurrency } from '@/lib/currency-context';
 import { createClient } from '@/lib/supabase/client';
 
 interface TipoLabor { id: string; nombre: string; descripcion: string | null; uta_equivalencia: number | null; }
@@ -46,8 +47,7 @@ const field = 'w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:
 export default function TiposLaborLayout({ tiposLabor, empresaId, precioGasoil = 0, litrosPorUta = 35 }: Props) {
   const router = useRouter();
   const supabase = createClient();
-
-  const numFmt = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
+  const { formatMoney } = useCurrency();
 
   // New form
   const [formOpen, setFormOpen] = useState(false);
@@ -235,7 +235,7 @@ export default function TiposLaborLayout({ tiposLabor, empresaId, precioGasoil =
                   <span className="text-sm text-zinc-500">UTA / ha</span>
                   {parseFloat(newUta || '0') > 0 && precioGasoil > 0 && (
                     <span className="text-xs text-[#006836] font-medium">
-                      = ${numFmt.format(parseFloat(newUta) * litrosPorUta * precioGasoil)}/ha
+                      = {formatMoney(parseFloat(newUta) * litrosPorUta * precioGasoil)}/ha
                     </span>
                   )}
                 </div>
@@ -350,7 +350,7 @@ export default function TiposLaborLayout({ tiposLabor, empresaId, precioGasoil =
                               <span className="text-xs text-zinc-500">UTA</span>
                               {parseFloat(editUta || '0') > 0 && precioGasoil > 0 && (
                                 <span className="text-xs text-[#006836] font-medium">
-                                  = ${numFmt.format(parseFloat(editUta) * litrosPorUta * precioGasoil)}/ha
+                                  = {formatMoney(parseFloat(editUta) * litrosPorUta * precioGasoil)}/ha
                                 </span>
                               )}
                             </div>
@@ -397,7 +397,7 @@ export default function TiposLaborLayout({ tiposLabor, empresaId, precioGasoil =
                                 </span>
                                 {precioGasoil > 0 && (
                                   <p className="text-xs text-zinc-400 mt-0.5">
-                                    ${numFmt.format(t.uta_equivalencia * litrosPorUta * precioGasoil)}/ha
+                                    {formatMoney(t.uta_equivalencia * litrosPorUta * precioGasoil)}/ha
                                   </p>
                                 )}
                               </div>

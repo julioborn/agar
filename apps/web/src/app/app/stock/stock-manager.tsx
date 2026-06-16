@@ -6,6 +6,7 @@ import { Filter, X, BarChart2, Upload, ChevronRight, Search } from 'lucide-react
 import { cn } from '@/lib/utils';
 import ExportButtons from '@/components/export-buttons';
 import { CATEGORIAS } from '../productos/constants';
+import { useCurrency } from '@/lib/currency-context';
 
 const CATEGORIA_LABEL = Object.fromEntries(CATEGORIAS.map((c) => [c.value, c.label]));
 const CATEGORIA_BADGE: Record<string, string> = {
@@ -31,9 +32,9 @@ interface Props { stockRows: StockRow[]; empresaNombre: string }
 
 const numFmt = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 });
 const num = (n: number, unit: string) => `${numFmt.format(n)} ${unit}`;
-const ars = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 });
 
 export default function StockManager({ stockRows, empresaNombre }: Props) {
+  const { formatMoney } = useCurrency();
   const [searchText, setSearchText]     = useState('');
   const [depositoId, setDepositoId]     = useState('');
   const [categoria, setCategoria]       = useState('');
@@ -73,7 +74,7 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
     { header: 'Categoría', key: 'producto_categoria', width: 18, format: (v: string) => CATEGORIA_LABEL[v] ?? v },
     { header: 'Stock actual', key: 'cantidad_actual', width: 14, format: (v: number) => numFmt.format(v), total: true },
     { header: 'Unidad', key: 'producto_unidad_base', width: 10 },
-    { header: 'Precio unit. (última compra)', key: 'precio_ultimo', width: 22, format: (v: number | null) => v != null ? ars.format(v) : '' },
+    { header: 'Precio unit. (última compra)', key: 'precio_ultimo', width: 22, format: (v: number | null) => v != null ? formatMoney(v) : '' },
     { header: 'Stock mínimo', key: 'producto_stock_minimo', width: 14, format: (v: number) => v > 0 ? numFmt.format(v) : '' },
     { header: 'Estado', key: '_estado', width: 14 },
   ];
@@ -240,7 +241,7 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
                           <td className="px-4 py-3 text-right text-sm">
                             {row.precio_ultimo != null ? (
                               <span className={row.precio_fuente === 'ria' ? 'text-indigo-600' : 'text-zinc-500'}>
-                                {ars.format(row.precio_ultimo)}
+                                {formatMoney(row.precio_ultimo)}
                                 {row.precio_fuente === 'ria' && (
                                   <span className="ml-1 text-xs text-indigo-400">RIA</span>
                                 )}

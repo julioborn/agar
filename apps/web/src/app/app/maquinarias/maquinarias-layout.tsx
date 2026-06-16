@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { useCurrency } from '@/lib/currency-context';
 import { createClient } from '@/lib/supabase/client';
 import MaquinariaForm, { type MaquinariaInitialData } from './maquinaria-form';
 
@@ -30,10 +31,9 @@ function costoHora(m: Maquinaria, precioCombustible: number) {
   return { combustible, mantenimiento, amortizacion, total: combustible + mantenimiento + amortizacion };
 }
 
-const fmt = (n: number) => n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
 export default function MaquinariasLayout({ maquinarias: initial, empresaId, precioCombustible, tipoCombustible }: Props) {
   const router = useRouter();
+  const { formatMoney } = useCurrency();
   const [maquinarias, setMaquinarias] = useState(initial);
   const [formOpen,    setFormOpen]    = useState(false);
   const [expandida,   setExpandida]   = useState<string | null>(null);
@@ -73,7 +73,7 @@ export default function MaquinariasLayout({ maquinarias: initial, empresaId, pre
           <Zap className="w-5 h-5 text-amber-500 shrink-0" />
           <div>
             <p className="text-sm font-bold text-zinc-900 leading-none">
-              ${fmt(precioCombustible)}<span className="text-xs font-normal text-zinc-400">/L</span>
+              {formatMoney(precioCombustible)}<span className="text-xs font-normal text-zinc-400">/L</span>
             </p>
             <p className="text-xs text-zinc-400 mt-0.5 capitalize">{tipoCombustible}</p>
           </div>
@@ -150,7 +150,7 @@ export default function MaquinariasLayout({ maquinarias: initial, empresaId, pre
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-bold text-zinc-900">${fmt(costo.total)}<span className="text-xs font-normal text-zinc-400">/h</span></p>
+                    <p className="text-sm font-bold text-zinc-900">{formatMoney(costo.total)}<span className="text-xs font-normal text-zinc-400">/h</span></p>
                     <p className="text-xs text-zinc-400">costo/hora</p>
                   </div>
                   {abierta && !editing
@@ -168,7 +168,7 @@ export default function MaquinariasLayout({ maquinarias: initial, empresaId, pre
                       <div className="grid grid-cols-3 gap-3">
                         <div className="bg-amber-50 rounded-xl p-3 text-center">
                           <Zap className="w-4 h-4 text-amber-500 mx-auto mb-1" />
-                          <p className="text-sm font-bold text-zinc-900">${fmt(costo.combustible)}</p>
+                          <p className="text-sm font-bold text-zinc-900">{formatMoney(costo.combustible)}</p>
                           <p className="text-xs text-zinc-500 mt-0.5">
                             Combustible<br/>
                             <span className="text-zinc-400">{m.consumo_combustible_hora} L/h</span>
@@ -176,12 +176,12 @@ export default function MaquinariasLayout({ maquinarias: initial, empresaId, pre
                         </div>
                         <div className="bg-blue-50 rounded-xl p-3 text-center">
                           <Wrench className="w-4 h-4 text-blue-500 mx-auto mb-1" />
-                          <p className="text-sm font-bold text-zinc-900">${fmt(costo.mantenimiento)}</p>
+                          <p className="text-sm font-bold text-zinc-900">{formatMoney(costo.mantenimiento)}</p>
                           <p className="text-xs text-zinc-500 mt-0.5">Mantenimiento</p>
                         </div>
                         <div className="bg-zinc-50 rounded-xl p-3 text-center">
                           <TrendingDown className="w-4 h-4 text-zinc-400 mx-auto mb-1" />
-                          <p className="text-sm font-bold text-zinc-900">${fmt(costo.amortizacion)}</p>
+                          <p className="text-sm font-bold text-zinc-900">{formatMoney(costo.amortizacion)}</p>
                           <p className="text-xs text-zinc-500 mt-0.5">
                             Amortización
                             {(!m.valor_adquisicion || !m.vida_util_horas) && (
@@ -212,7 +212,7 @@ export default function MaquinariasLayout({ maquinarias: initial, empresaId, pre
                     {/* Total */}
                     <div className="flex items-center justify-between bg-[#006836]/5 rounded-xl px-4 py-3">
                       <span className="text-sm font-semibold text-zinc-700">Costo total por hora</span>
-                      <span className="text-lg font-bold text-[#006836]">${fmt(costo.total)}</span>
+                      <span className="text-lg font-bold text-[#006836]">{formatMoney(costo.total)}</span>
                     </div>
 
                     {/* Acciones */}
