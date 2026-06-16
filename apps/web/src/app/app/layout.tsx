@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 import AppShell from '@/components/app-shell';
+import type { TickerData } from '@/components/price-ticker';
 
 async function fetchUsdRate(empresaId: string): Promise<number | null> {
   const supabase = await createClient();
@@ -24,6 +25,25 @@ async function fetchUsdRate(empresaId: string): Promise<number | null> {
   return null;
 }
 
+async function fetchTickerExtras(empresaId: string): Promise<Omit<TickerData, 'dolar'>> {
+  const supabase = await createClient();
+  const [maizR, sorgoR, sojaR, configR] = await Promise.all([
+    supabase.from('referencias_precio').select('valor').eq('empresa_id', empresaId).eq('tipo', 'maiz').order('vigencia_desde', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('referencias_precio').select('valor').eq('empresa_id', empresaId).eq('tipo', 'sorgo').order('vigencia_desde', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('referencias_precio').select('valor').eq('empresa_id', empresaId).eq('tipo', 'soja').order('vigencia_desde', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('configuracion_empresa').select('precio_combustible, litros_por_uta').eq('empresa_id', empresaId).maybeSingle(),
+  ]);
+  const gasoil = configR.data?.precio_combustible ?? null;
+  const litros = configR.data?.litros_por_uta ?? null;
+  return {
+    maiz:   maizR.data?.valor  ?? null,
+    sorgo:  sorgoR.data?.valor ?? null,
+    soja:   sojaR.data?.valor  ?? null,
+    gasoil,
+    uta: gasoil && litros ? gasoil * litros : null,
+  };
+}
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -40,7 +60,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   );
   if (rol === 'encargado_campo' && !tieneRolAdmin) redirect('/campo');
 
-  const usdRate = await fetchUsdRate(empresa.id);
+  const [usdRate, tickerExtras] = await Promise.all([
+    fetchUsdRate(empresa.id),
+    fetchTickerExtras(empresa.id),
+  ]);
+
+  const tickerData: TickerData = { dolar: usdRate, ...tickerExtras };
 
   return (
     <AppShell
@@ -50,6 +75,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       esSuperAdmin={esSuperAdmin}
       esAdmin={rol === 'admin_empresa'}
       usdRate={usdRate}
+      tickerData={tickerData}
     >
       {children}
     </AppShell>

@@ -9,6 +9,12 @@ html {
   background-color: #09090b;
 }
 
+/* Ticker de precios en header */
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
 /* Logo palpitando: escala suave + opacidad, efecto corazón */
 @keyframes logo-pulse {
   0%, 100% { transform: scale(1);    opacity: 1;    }

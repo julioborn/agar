@@ -12,6 +12,7 @@ import SidebarNav from './sidebar-nav';
 import { CurrencyProvider, useCurrency } from '@/lib/currency-context';
 import { createClient } from '@/lib/supabase/client';
 import type { EmpresaConRol } from '@/lib/empresa-actual';
+import PriceTicker, { type TickerData } from './price-ticker';
 
 interface Props {
   children: React.ReactNode;
@@ -21,6 +22,7 @@ interface Props {
   esSuperAdmin: boolean;
   esAdmin: boolean;
   usdRate: number | null;
+  tickerData: TickerData;
 }
 
 function CurrencyToggle() {
@@ -50,7 +52,7 @@ function CurrencyToggle() {
 }
 
 export default function AppShell({
-  children, userEmail, empresaActiva, todasLasEmpresas, esSuperAdmin, esAdmin, usdRate,
+  children, userEmail, empresaActiva, todasLasEmpresas, esSuperAdmin, esAdmin, usdRate, tickerData,
 }: Props) {
   const pathname = usePathname();
   const router   = useRouter();
@@ -119,17 +121,15 @@ export default function AppShell({
         {/* Main column */}
         <div className="flex flex-col flex-1 min-w-0">
 
-          {/* Header — bg-zinc-950 se extiende hasta el safe area (Dynamic Island en iOS).
-               Con black-translucent el status bar es transparente y se ve el negro del header.
-               El padding-top empuja el contenido debajo de la isla. */}
+          {/* Header */}
           <header
             className="shrink-0 bg-zinc-950"
             style={{ paddingTop: 'env(safe-area-inset-top)' }}
           >
-            {/* Layout 3 columnas para que el logo siempre quede centrado */}
-            <div className="h-16 flex items-center px-3 gap-2">
+            {/* Barra principal */}
+            <div className="h-14 flex items-center px-3 gap-2">
 
-              {/* Izquierda: hamburger + logo circular (mobile) */}
+              {/* Izquierda: hamburger (mobile) + logo siempre visible */}
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => setSidebarOpen(true)}
@@ -138,19 +138,13 @@ export default function AppShell({
                 >
                   <Menu className="w-5 h-5" />
                 </button>
-                <Link href="/app" className="lg:hidden">
+                <Link href="/app">
                   <Image src="/agar-final.png" alt="AGAR" width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
                 </Link>
               </div>
 
-              {/* Centro: logo — solo visible en desktop (lg+) */}
-              <div className="flex-1 hidden lg:flex justify-center">
-                <Link href="/app">
-                  <Image src="/agar-final.png" alt="AGAR" width={44} height={44} className="h-10 w-10 rounded-full object-cover" />
-                </Link>
-              </div>
-              {/* Spacer mobile para que los controles queden a la derecha */}
-              <div className="flex-1 lg:hidden" />
+              {/* Spacer */}
+              <div className="flex-1" />
 
               {/* Derecha: toggle moneda + logout */}
               <div className="flex items-center gap-2 shrink-0">
@@ -158,6 +152,9 @@ export default function AppShell({
                 <LogoutButton />
               </div>
             </div>
+
+            {/* Ticker de precios */}
+            <PriceTicker data={tickerData} />
           </header>
 
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-zinc-50">
