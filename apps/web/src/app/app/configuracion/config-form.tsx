@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Check, RefreshCw, Fuel, CircleDollarSign, Tractor, Clock, Wheat, ExternalLink } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import type { PreciosPizarra } from '@/lib/precios-pizarra';
 
 interface HistorialItem { id: string; valor: number; vigencia_desde: string; observaciones: string | null; }
 
@@ -17,6 +19,7 @@ interface Props {
   initialLitrosPorUta: number;
   historialGasoil: HistorialItem[];
   preciosGranos: { maiz: PrecioGrano; sorgo: PrecioGrano; soja: PrecioGrano };
+  bcrPrecios: PreciosPizarra | null;
 }
 
 const TIPOS_COMBUSTIBLE = [
@@ -27,7 +30,8 @@ const TIPOS_COMBUSTIBLE = [
 
 const field = 'w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#006836]/40 disabled:opacity-50';
 
-export default function ConfigForm({ empresaId, initialPrecio, initialTipo, initialCotizUsd, cotizBNA, initialLitrosPorUta, historialGasoil, preciosGranos }: Props) {
+export default function ConfigForm({ empresaId, initialPrecio, initialTipo, initialCotizUsd, cotizBNA, initialLitrosPorUta, historialGasoil, preciosGranos, bcrPrecios }: Props) {
+  const router = useRouter();
   // — Combustible —
   const [precio,       setPrecio]      = useState(initialPrecio > 0 ? String(initialPrecio) : '');
   const [tipo,         setTipo]        = useState(initialTipo);
@@ -49,10 +53,14 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
   const [errorCotiz,   setErrorCotiz]  = useState<string | null>(null);
 
   // — Precios Granos Pizarra Rosario —
+  // Usa valores de DB si existen; si no, usa live de BCR como sugerencia
   const [granos, setGranos] = useState({
-    maiz:  preciosGranos.maiz.valor  != null ? String(preciosGranos.maiz.valor)  : '',
-    sorgo: preciosGranos.sorgo.valor != null ? String(preciosGranos.sorgo.valor) : '',
-    soja:  preciosGranos.soja.valor  != null ? String(preciosGranos.soja.valor)  : '',
+    maiz:  preciosGranos.maiz.valor  != null ? String(preciosGranos.maiz.valor)
+           : bcrPrecios?.maiz  != null ? String(bcrPrecios.maiz)  : '',
+    sorgo: preciosGranos.sorgo.valor != null ? String(preciosGranos.sorgo.valor)
+           : bcrPrecios?.sorgo != null ? String(bcrPrecios.sorgo) : '',
+    soja:  preciosGranos.soja.valor  != null ? String(preciosGranos.soja.valor)
+           : bcrPrecios?.soja  != null ? String(bcrPrecios.soja)  : '',
   });
   const [savingGranos,  setSavingGranos]  = useState(false);
   const [savedGranos,   setSavedGranos]   = useState(false);
@@ -63,6 +71,17 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
   const num = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 });
 
   async function handleFetchBCR() {
+    if (bcrPrecios) {
+      // Ya tenemos datos server-side, usarlos directamente
+      setGranos({
+        maiz:  bcrPrecios.maiz  != null ? String(bcrPrecios.maiz)  : '',
+        sorgo: bcrPrecios.sorgo != null ? String(bcrPrecios.sorgo) : '',
+        soja:  bcrPrecios.soja  != null ? String(bcrPrecios.soja)  : '',
+      });
+      setBcrFecha(bcrPrecios.fecha ?? null);
+      return;
+    }
+    // Fallback: re-fetch desde el cliente
     setFetchingBCR(true); setErrorGranos(null);
     try {
       const res = await fetch('/api/precios-pizarra');
@@ -113,6 +132,7 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
     if (error) { setErrorGranos(error.message); return; }
     setSavedGranos(true);
     setTimeout(() => setSavedGranos(false), 2500);
+    router.refresh();
   }
 
   async function handleSaveCombustible(e: React.FormEvent) {
@@ -422,6 +442,19 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
         </div>
 
         <div className="p-5 space-y-4">
+          {/* Banner BCR live */}
+          {bcrPrecios && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-[#006836]/5 border border-[#006836]/15 rounded-lg text-xs text-[#006836]">
+              <RefreshCw className="w-3 h-3 shrink-0" />
+              <span>
+                Pizarra BCR{bcrPrecios.fecha ? ` del ${bcrPrecios.fecha}` : ''}:{' '}
+                {bcrPrecios.maiz  != null && <><strong>Maíz ${num.format(bcrPrecios.maiz)}</strong> · </>}
+                {bcrPrecios.sorgo != null && <><strong>Sorgo ${num.format(bcrPrecios.sorgo)}</strong> · </>}
+                {bcrPrecios.soja  != null && <><strong>Soja ${num.format(bcrPrecios.soja)}</strong></>}
+              </span>
+            </div>
+          )}
+
           {/* Precios actuales guardados */}
           {(preciosGranos.maiz.valor || preciosGranos.sorgo.valor || preciosGranos.soja.valor) && (
             <div className="grid grid-cols-3 gap-3">
