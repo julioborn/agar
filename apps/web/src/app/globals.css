@@ -9,6 +9,15 @@ html {
   background-color: #09090b;
 }
 
+/* Logo palpitando: escala suave + opacidad, efecto corazón */
+@keyframes logo-pulse {
+  0%, 100% { transform: scale(1);    opacity: 1;    }
+  50%       { transform: scale(0.88); opacity: 0.55; }
+}
+.animate-logo-pulse {
+  animation: logo-pulse 1.6s ease-in-out infinite;
+}
+
 /* ── Leaflet: etiquetas de lotes sobre el mapa ──────────────────────────────── */
 .lote-map-label {
   background: rgba(255, 255, 255, 0.85) !important;

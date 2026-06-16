@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
+import AppLoader from '@/components/app-loader';
 
 function LoginForm() {
   const router = useRouter();
@@ -149,14 +150,7 @@ export default function LoginPage() {
       className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6 py-12"
       style={{ paddingTop: 'max(3rem, calc(env(safe-area-inset-top) + 1rem))' }}
     >
-      <Suspense fallback={
-        <div className="w-full max-w-sm space-y-4">
-          <div className="h-14 bg-white/5 rounded-xl animate-pulse mx-auto w-36" />
-          <div className="h-12 bg-white/5 rounded-xl animate-pulse" />
-          <div className="h-12 bg-white/5 rounded-xl animate-pulse" />
-          <div className="h-12 bg-white/5 rounded-xl animate-pulse" />
-        </div>
-      }>
+      <Suspense fallback={<AppLoader size="lg" className="py-0" />}>
         <LoginForm />
       </Suspense>
     </main>
