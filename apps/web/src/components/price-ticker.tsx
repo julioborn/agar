@@ -29,24 +29,36 @@ export default function PriceTicker({ data }: { data: TickerData }) {
 
   const doubled = [...formatted, ...formatted];
 
+  const renderItem = (it: typeof formatted[number], i: number, showDot = true) => (
+    <span key={i} className="inline-flex items-center gap-1.5 px-4">
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+        {it.label}
+      </span>
+      <span className={`text-[11px] font-bold ${it.color}`}>
+        {it.value}
+      </span>
+      {showDot && <span className="text-zinc-700 ml-1 text-xs">·</span>}
+    </span>
+  );
+
   return (
-    <div className="h-7 bg-zinc-900 border-t border-white/[0.06] overflow-hidden flex items-center">
-      <div
-        className="flex items-center whitespace-nowrap will-change-transform"
-        style={{ animation: `ticker-scroll ${items.length * 5}s linear infinite` }}
-      >
-        {doubled.map((item, i) => (
-          <span key={i} className="inline-flex items-center gap-1.5 px-4">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-              {item.label}
-            </span>
-            <span className={`text-[11px] font-bold ${item.color}`}>
-              {item.value}
-            </span>
-            <span className="text-zinc-700 ml-1 text-xs">·</span>
-          </span>
-        ))}
+    <div className="h-7 bg-zinc-900 border-t border-white/[0.06] overflow-hidden">
+
+      {/* Mobile: scroll animado */}
+      <div className="flex items-center h-full lg:hidden">
+        <div
+          className="flex items-center whitespace-nowrap will-change-transform"
+          style={{ animation: `ticker-scroll ${items.length * 5}s linear infinite` }}
+        >
+          {doubled.map((it, i) => renderItem(it, i))}
+        </div>
       </div>
+
+      {/* Desktop: fijos y centrados, sin animación */}
+      <div className="hidden lg:flex items-center justify-center h-full">
+        {formatted.map((it, i) => renderItem(it, i, i < formatted.length - 1))}
+      </div>
+
     </div>
   );
 }
