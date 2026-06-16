@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, RefreshCw, Fuel, CircleDollarSign, Tractor, Clock, Wheat, ExternalLink, RotateCw } from 'lucide-react';
+import { Check, RefreshCw, Fuel, CircleDollarSign, Tractor, Clock, Wheat, ExternalLink } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import type { PreciosPizarra } from '@/lib/precios-pizarra';
 
 interface HistorialItem { id: string; valor: number; vigencia_desde: string; observaciones: string | null; }
+
+interface PrecioGrano { valor: number | null; fecha: string | null; }
 
 interface Props {
   empresaId: string;
@@ -15,7 +16,7 @@ interface Props {
   cotizBNA: number | null;
   initialLitrosPorUta: number;
   historialGasoil: HistorialItem[];
-  initialPreciosPizarra: PreciosPizarra | null;
+  preciosGranos: { maiz: PrecioGrano; sorgo: PrecioGrano; soja: PrecioGrano };
 }
 
 const TIPOS_COMBUSTIBLE = [
@@ -26,7 +27,7 @@ const TIPOS_COMBUSTIBLE = [
 
 const field = 'w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#006836]/40 disabled:opacity-50';
 
-export default function ConfigForm({ empresaId, initialPrecio, initialTipo, initialCotizUsd, cotizBNA, initialLitrosPorUta, historialGasoil, initialPreciosPizarra }: Props) {
+export default function ConfigForm({ empresaId, initialPrecio, initialTipo, initialCotizUsd, cotizBNA, initialLitrosPorUta, historialGasoil, preciosGranos }: Props) {
   // — Combustible —
   const [precio,       setPrecio]      = useState(initialPrecio > 0 ? String(initialPrecio) : '');
   const [tipo,         setTipo]        = useState(initialTipo);
@@ -47,27 +48,50 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
   const [savedCotiz,   setSavedCotiz]  = useState(false);
   const [errorCotiz,   setErrorCotiz]  = useState<string | null>(null);
 
-  // — Precios Pizarra Rosario —
-  const [pizarra,      setPizarra]     = useState<PreciosPizarra | null>(initialPreciosPizarra);
-  const [loadingPiz,   setLoadingPiz]  = useState(false);
-  const [errorPiz,     setErrorPiz]    = useState<string | null>(null);
+  // — Precios Granos Pizarra Rosario —
+  const [granos, setGranos] = useState({
+    maiz:  preciosGranos.maiz.valor  != null ? String(preciosGranos.maiz.valor)  : '',
+    sorgo: preciosGranos.sorgo.valor != null ? String(preciosGranos.sorgo.valor) : '',
+    soja:  preciosGranos.soja.valor  != null ? String(preciosGranos.soja.valor)  : '',
+  });
+  const [savingGranos,  setSavingGranos]  = useState(false);
+  const [savedGranos,   setSavedGranos]   = useState(false);
+  const [errorGranos,   setErrorGranos]   = useState<string | null>(null);
 
   const num = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 });
 
-  async function handleRefreshPizarra() {
-    setLoadingPiz(true);
-    setErrorPiz(null);
-    try {
-      const res = await fetch('/api/precios-pizarra', { cache: 'no-store' });
-      if (!res.ok) throw new Error(`Error ${res.status}`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setPizarra(data);
-    } catch (e: any) {
-      setErrorPiz(e.message ?? 'No se pudo actualizar');
-    } finally {
-      setLoadingPiz(false);
+  async function handleSaveGranos(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingGranos(true); setErrorGranos(null);
+    const sb = createClient();
+    const hoy = new Date().toISOString().slice(0, 10);
+    const items = [
+      { tipo: 'maiz',  nombre: 'Maíz',  valor: granos.maiz  },
+      { tipo: 'sorgo', nombre: 'Sorgo', valor: granos.sorgo },
+      { tipo: 'soja',  nombre: 'Soja',  valor: granos.soja  },
+    ].filter(i => i.valor && Number(i.valor) > 0);
+
+    if (items.length === 0) {
+      setErrorGranos('Ingresá al menos un precio.');
+      setSavingGranos(false);
+      return;
     }
+
+    const { error } = await sb.from('referencias_precio').insert(
+      items.map(i => ({
+        empresa_id:     empresaId,
+        tipo:           i.tipo,
+        nombre:         i.nombre,
+        valor:          Number(i.valor),
+        unidad:         'tn',
+        vigencia_desde: hoy,
+      })),
+    );
+
+    setSavingGranos(false);
+    if (error) { setErrorGranos(error.message); return; }
+    setSavedGranos(true);
+    setTimeout(() => setSavedGranos(false), 2500);
   }
 
   async function handleSaveCombustible(e: React.FormEvent) {
@@ -354,106 +378,105 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
         </div>
       </form>
 
-      {/* ── Precios Pizarra Rosario (Consiagro) ─────────────────────── */}
-      <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#006836]/10 flex items-center justify-center">
-              <Wheat className="w-4 h-4 text-[#006836]" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-zinc-800">Pizarra Rosario</p>
-              <p className="text-xs text-zinc-400">Últimos precios · Fuente: Consiagro</p>
-            </div>
+      {/* ── Precios Pizarra Rosario ──────────────────────────────────── */}
+      <form onSubmit={handleSaveGranos} className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-100">
+          <div className="w-8 h-8 rounded-lg bg-[#006836]/10 flex items-center justify-center">
+            <Wheat className="w-4 h-4 text-[#006836]" />
           </div>
-          <div className="flex items-center gap-2">
-            {pizarra?.fecha && (
-              <span className="text-xs text-zinc-400">{pizarra.fecha}</span>
-            )}
-            <button
-              type="button"
-              onClick={handleRefreshPizarra}
-              disabled={loadingPiz}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-zinc-200 rounded-xl hover:bg-zinc-50 disabled:opacity-50 transition-colors"
-            >
-              <RotateCw className={`w-3.5 h-3.5 ${loadingPiz ? 'animate-spin' : ''}`} />
-              {loadingPiz ? 'Actualizando…' : 'Actualizar'}
-            </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-zinc-800">Pizarra Rosario</p>
+            <p className="text-xs text-zinc-400">
+              Precios de referencia $/tn ·{' '}
+              <a
+                href="https://consiagro.com.ar/mercados/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-0.5 hover:text-[#006836] transition-colors"
+              >
+                Consiagro <ExternalLink className="w-3 h-3" />
+              </a>
+            </p>
           </div>
         </div>
 
-        <div className="p-5">
-          {pizarra ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="p-5 space-y-4">
+          {/* Precios actuales guardados */}
+          {(preciosGranos.maiz.valor || preciosGranos.sorgo.valor || preciosGranos.soja.valor) && (
+            <div className="grid grid-cols-3 gap-3">
               {[
-                { label: 'Maíz',   val: pizarra.maiz,    color: 'text-amber-600' },
-                { label: 'Sorgo',  val: pizarra.sorgo,   color: 'text-orange-600' },
-                { label: 'Soja',   val: pizarra.soja,    color: 'text-[#006836]' },
-              ].map(({ label, val, color }) => (
-                <div key={label} className="rounded-xl bg-zinc-50 border border-zinc-100 px-4 py-3">
-                  <p className="text-xs text-zinc-400 mb-1">{label}</p>
-                  <p className={`text-lg font-bold ${color}`}>
-                    {val != null ? `$${num.format(val)}` : '—'}
+                { label: 'Maíz',  d: preciosGranos.maiz,  color: 'text-amber-600' },
+                { label: 'Sorgo', d: preciosGranos.sorgo, color: 'text-orange-600' },
+                { label: 'Soja',  d: preciosGranos.soja,  color: 'text-[#006836]' },
+              ].map(({ label, d, color }) => (
+                <div key={label} className="rounded-xl bg-zinc-50 border border-zinc-100 px-3 py-2.5">
+                  <p className="text-xs text-zinc-400">{label}</p>
+                  <p className={`text-base font-bold ${color} leading-tight`}>
+                    {d.valor != null ? `$${num.format(d.valor)}` : '—'}
                   </p>
-                  <p className="text-xs text-zinc-400 mt-0.5">$/tn · Rosario</p>
+                  {d.fecha && (
+                    <p className="text-xs text-zinc-300 mt-0.5">
+                      {new Date(d.fecha + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
-          ) : (
-            /* Carga fallida: el sitio bloquea requests de servidor. Entrada manual. */
-            <div className="space-y-3">
-              <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                No se pudo cargar automáticamente. Ingresá los precios manualmente consultando{' '}
-                <a href="https://consiagro.com.ar/mercados/" target="_blank" rel="noopener noreferrer" className="underline">
-                  Consiagro
-                </a>.
-              </p>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { key: 'maiz',  label: 'Maíz $/tn'  },
-                  { key: 'sorgo', label: 'Sorgo $/tn' },
-                  { key: 'soja',  label: 'Soja $/tn'  },
-                ].map(({ key, label }) => (
-                  <div key={key}>
-                    <label className="block text-xs font-medium text-zinc-500 mb-1">{label}</label>
+          )}
+
+          {/* Inputs para actualizar */}
+          <div>
+            <p className="text-xs font-medium text-zinc-500 mb-2">
+              {preciosGranos.maiz.valor || preciosGranos.sorgo.valor || preciosGranos.soja.valor
+                ? 'Actualizar precios (consultá Consiagro):'
+                : 'Ingresá los precios desde Consiagro:'}
+            </p>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { key: 'maiz' as const,  label: 'Maíz $/tn'  },
+                { key: 'sorgo' as const, label: 'Sorgo $/tn' },
+                { key: 'soja' as const,  label: 'Soja $/tn'  },
+              ].map(({ key, label }) => (
+                <div key={key}>
+                  <label className="block text-xs text-zinc-400 mb-1">{label}</label>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">$</span>
                     <input
                       type="number"
                       inputMode="decimal"
                       min="0"
-                      placeholder="0"
-                      onChange={(e) => {
-                        const v = e.target.value ? Number(e.target.value) : null;
-                        setPizarra(prev => ({ fecha: null, maiz: null, sorgo: null, soja: null, trigo: null, girasol: null, fuente: 'mensual', ...prev, [key]: v }));
-                      }}
-                      className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+                      step="1"
+                      value={granos[key]}
+                      onChange={(e) => setGranos(prev => ({ ...prev, [key]: e.target.value }))}
+                      placeholder={preciosGranos[key].valor ? num.format(preciosGranos[key].valor!) : '0'}
+                      disabled={savingGranos}
+                      className={`${field} pl-7`}
                     />
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
 
-          {errorPiz && <p className="text-xs text-red-500 mt-2">{errorPiz}</p>}
+          {errorGranos && <p className="text-xs text-red-500">{errorGranos}</p>}
 
-          <div className="flex items-center justify-between mt-3">
-            {pizarra && (
-              <span className="text-xs text-zinc-400">
-                {pizarra.fuente === 'datatable' || pizarra.fuente === 'diario'
-                  ? 'Precios del día'
-                  : 'Promedio mensual'} · Bolsa de Rosario
+          <div className="flex items-center gap-3">
+            <button
+              type="submit"
+              disabled={savingGranos || (!granos.maiz && !granos.sorgo && !granos.soja)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#006836] text-white text-sm font-semibold rounded-xl hover:bg-[#005228] disabled:opacity-50 transition-colors"
+            >
+              <Check className="w-4 h-4" />
+              {savingGranos ? 'Guardando...' : 'Guardar'}
+            </button>
+            {savedGranos && (
+              <span className="text-xs text-[#006836] flex items-center gap-1">
+                <Check className="w-3.5 h-3.5" /> Guardado
               </span>
             )}
-            <a
-              href="https://consiagro.com.ar/mercados/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-[#006836] transition-colors ml-auto"
-            >
-              Ver en Consiagro <ExternalLink className="w-3 h-3" />
-            </a>
           </div>
         </div>
-      </div>
+      </form>
 
     </div>
   );
