@@ -57,8 +57,29 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
   const [savingGranos,  setSavingGranos]  = useState(false);
   const [savedGranos,   setSavedGranos]   = useState(false);
   const [errorGranos,   setErrorGranos]   = useState<string | null>(null);
+  const [fetchingBCR,   setFetchingBCR]   = useState(false);
+  const [bcrFecha,      setBcrFecha]      = useState<string | null>(null);
 
   const num = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 });
+
+  async function handleFetchBCR() {
+    setFetchingBCR(true); setErrorGranos(null);
+    try {
+      const res = await fetch('/api/precios-pizarra');
+      if (!res.ok) throw new Error('Sin respuesta de BCR');
+      const data = await res.json();
+      setGranos({
+        maiz:  data.maiz  != null ? String(data.maiz)  : '',
+        sorgo: data.sorgo != null ? String(data.sorgo) : '',
+        soja:  data.soja  != null ? String(data.soja)  : '',
+      });
+      setBcrFecha(data.fecha ?? null);
+    } catch {
+      setErrorGranos('No se pudo obtener la pizarra de BCR. Ingresá los precios manualmente.');
+    } finally {
+      setFetchingBCR(false);
+    }
+  }
 
   async function handleSaveGranos(e: React.FormEvent) {
     e.preventDefault();
@@ -389,12 +410,12 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
             <p className="text-xs text-zinc-400">
               Precios de referencia $/tn ·{' '}
               <a
-                href="https://consiagro.com.ar/mercados/"
+                href="https://www.bcr.com.ar/es/mercados/mercado-de-granos/cotizaciones/cotizaciones-locales-0"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-0.5 hover:text-[#006836] transition-colors"
               >
-                Consiagro <ExternalLink className="w-3 h-3" />
+                BCR <ExternalLink className="w-3 h-3" />
               </a>
             </p>
           </div>
@@ -424,12 +445,28 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
             </div>
           )}
 
+          {/* Botón fetch BCR + fecha */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleFetchBCR}
+              disabled={fetchingBCR}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-semibold rounded-lg disabled:opacity-50 transition-colors"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${fetchingBCR ? 'animate-spin' : ''}`} />
+              {fetchingBCR ? 'Consultando BCR...' : 'Traer de BCR'}
+            </button>
+            {bcrFecha && (
+              <span className="text-xs text-zinc-400">Pizarra del {bcrFecha}</span>
+            )}
+          </div>
+
           {/* Inputs para actualizar */}
           <div>
             <p className="text-xs font-medium text-zinc-500 mb-2">
               {preciosGranos.maiz.valor || preciosGranos.sorgo.valor || preciosGranos.soja.valor
-                ? 'Actualizar precios (consultá Consiagro):'
-                : 'Ingresá los precios desde Consiagro:'}
+                ? 'Actualizar precios:'
+                : 'Ingresá los precios:'}
             </p>
             <div className="grid grid-cols-3 gap-3">
               {[
