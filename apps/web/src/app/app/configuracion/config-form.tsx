@@ -383,9 +383,7 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
         </div>
 
         <div className="p-5">
-          {errorPiz ? (
-            <p className="text-xs text-red-500">{errorPiz}</p>
-          ) : pizarra ? (
+          {pizarra ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
                 { label: 'Maíz',   val: pizarra.maiz,    color: 'text-amber-600' },
@@ -402,18 +400,47 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
               ))}
             </div>
           ) : (
-            <p className="text-xs text-zinc-400 text-center py-4">
-              No se pudo cargar la pizarra. Verificá la conexión o{' '}
-              <button type="button" onClick={handleRefreshPizarra} className="underline hover:text-zinc-700">
-                intentá de nuevo
-              </button>.
-            </p>
+            /* Carga fallida: el sitio bloquea requests de servidor. Entrada manual. */
+            <div className="space-y-3">
+              <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                No se pudo cargar automáticamente. Ingresá los precios manualmente consultando{' '}
+                <a href="https://consiagro.com.ar/mercados/" target="_blank" rel="noopener noreferrer" className="underline">
+                  Consiagro
+                </a>.
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { key: 'maiz',  label: 'Maíz $/tn'  },
+                  { key: 'sorgo', label: 'Sorgo $/tn' },
+                  { key: 'soja',  label: 'Soja $/tn'  },
+                ].map(({ key, label }) => (
+                  <div key={key}>
+                    <label className="block text-xs font-medium text-zinc-500 mb-1">{label}</label>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      placeholder="0"
+                      onChange={(e) => {
+                        const v = e.target.value ? Number(e.target.value) : null;
+                        setPizarra(prev => ({ fecha: null, maiz: null, sorgo: null, soja: null, trigo: null, girasol: null, fuente: 'mensual', ...prev, [key]: v }));
+                      }}
+                      className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
+
+          {errorPiz && <p className="text-xs text-red-500 mt-2">{errorPiz}</p>}
 
           <div className="flex items-center justify-between mt-3">
             {pizarra && (
               <span className="text-xs text-zinc-400">
-                {pizarra.fuente === 'diario' ? 'Precios del día' : 'Promedio mensual'} · Bolsa de Rosario
+                {pizarra.fuente === 'datatable' || pizarra.fuente === 'diario'
+                  ? 'Precios del día'
+                  : 'Promedio mensual'} · Bolsa de Rosario
               </span>
             )}
             <a
