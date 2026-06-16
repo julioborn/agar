@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 import { Settings, Fuel, DollarSign } from 'lucide-react';
 import ConfigForm from './config-form';
+import { fetchPreciosPizarra } from '@/lib/precios-pizarra';
 
 async function fetchCotizBNA(): Promise<number | null> {
   try {
@@ -27,7 +28,7 @@ export default async function ConfiguracionPage() {
   const esAdmin = rol === 'admin_empresa' || esSuperAdmin;
   if (!esAdmin) redirect('/app');
 
-  const [configRes, cotizBNA, historialRes] = await Promise.all([
+  const [configRes, cotizBNA, historialRes, preciosPizarra] = await Promise.all([
     supabase
       .from('configuracion_empresa')
       .select('precio_combustible, tipo_combustible, cotizacion_usd, cotizacion_usd_fecha, litros_por_uta')
@@ -41,6 +42,7 @@ export default async function ConfiguracionPage() {
       .eq('tipo', 'gasoil')
       .order('vigencia_desde', { ascending: false })
       .limit(50),
+    fetchPreciosPizarra(),
   ]);
 
   const config = configRes.data;
@@ -75,6 +77,7 @@ export default async function ConfiguracionPage() {
             cotizBNA={cotizBNA}
             initialLitrosPorUta={config?.litros_por_uta ?? 35}
             historialGasoil={(historialRes.data ?? []) as any}
+            initialPreciosPizarra={preciosPizarra}
           />
         </div>
       </div>

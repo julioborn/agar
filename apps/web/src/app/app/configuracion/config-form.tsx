@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, RefreshCw, Fuel, CircleDollarSign, Tractor, Clock } from 'lucide-react';
+import { Check, RefreshCw, Fuel, CircleDollarSign, Tractor, Clock, Wheat, ExternalLink, RotateCw } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import type { PreciosPizarra } from '@/lib/precios-pizarra';
 
 interface HistorialItem { id: string; valor: number; vigencia_desde: string; observaciones: string | null; }
 
@@ -14,6 +15,7 @@ interface Props {
   cotizBNA: number | null;
   initialLitrosPorUta: number;
   historialGasoil: HistorialItem[];
+  initialPreciosPizarra: PreciosPizarra | null;
 }
 
 const TIPOS_COMBUSTIBLE = [
@@ -24,7 +26,7 @@ const TIPOS_COMBUSTIBLE = [
 
 const field = 'w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#006836]/40 disabled:opacity-50';
 
-export default function ConfigForm({ empresaId, initialPrecio, initialTipo, initialCotizUsd, cotizBNA, initialLitrosPorUta, historialGasoil }: Props) {
+export default function ConfigForm({ empresaId, initialPrecio, initialTipo, initialCotizUsd, cotizBNA, initialLitrosPorUta, historialGasoil, initialPreciosPizarra }: Props) {
   // — Combustible —
   const [precio,       setPrecio]      = useState(initialPrecio > 0 ? String(initialPrecio) : '');
   const [tipo,         setTipo]        = useState(initialTipo);
@@ -45,7 +47,28 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
   const [savedCotiz,   setSavedCotiz]  = useState(false);
   const [errorCotiz,   setErrorCotiz]  = useState<string | null>(null);
 
-  const num = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
+  // — Precios Pizarra Rosario —
+  const [pizarra,      setPizarra]     = useState<PreciosPizarra | null>(initialPreciosPizarra);
+  const [loadingPiz,   setLoadingPiz]  = useState(false);
+  const [errorPiz,     setErrorPiz]    = useState<string | null>(null);
+
+  const num = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 });
+
+  async function handleRefreshPizarra() {
+    setLoadingPiz(true);
+    setErrorPiz(null);
+    try {
+      const res = await fetch('/api/precios-pizarra', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setPizarra(data);
+    } catch (e: any) {
+      setErrorPiz(e.message ?? 'No se pudo actualizar');
+    } finally {
+      setLoadingPiz(false);
+    }
+  }
 
   async function handleSaveCombustible(e: React.FormEvent) {
     e.preventDefault();
@@ -330,6 +353,75 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
           </div>
         </div>
       </form>
+
+      {/* ── Precios Pizarra Rosario (Consiagro) ─────────────────────── */}
+      <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[#006836]/10 flex items-center justify-center">
+              <Wheat className="w-4 h-4 text-[#006836]" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-zinc-800">Pizarra Rosario</p>
+              <p className="text-xs text-zinc-400">Últimos precios · Fuente: Consiagro</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {pizarra?.fecha && (
+              <span className="text-xs text-zinc-400">{pizarra.fecha}</span>
+            )}
+            <button
+              type="button"
+              onClick={handleRefreshPizarra}
+              disabled={loadingPiz}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-zinc-200 rounded-xl hover:bg-zinc-50 disabled:opacity-50 transition-colors"
+            >
+              <RotateCw className={`w-3.5 h-3.5 ${loadingPiz ? 'animate-spin' : ''}`} />
+              {loadingPiz ? 'Actualizando…' : 'Actualizar'}
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5">
+          {errorPiz ? (
+            <p className="text-xs text-red-500">{errorPiz}</p>
+          ) : pizarra ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[
+                { label: 'Maíz',   val: pizarra.maiz,    color: 'text-amber-600' },
+                { label: 'Sorgo',  val: pizarra.sorgo,   color: 'text-orange-600' },
+                { label: 'Soja',   val: pizarra.soja,    color: 'text-[#006836]' },
+              ].map(({ label, val, color }) => (
+                <div key={label} className="rounded-xl bg-zinc-50 border border-zinc-100 px-4 py-3">
+                  <p className="text-xs text-zinc-400 mb-1">{label}</p>
+                  <p className={`text-lg font-bold ${color}`}>
+                    {val != null ? `$${num.format(val)}` : '—'}
+                  </p>
+                  <p className="text-xs text-zinc-400 mt-0.5">$/tn · Rosario</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-400 text-center py-4">
+              No se pudo cargar la pizarra. Verificá la conexión o{' '}
+              <button type="button" onClick={handleRefreshPizarra} className="underline hover:text-zinc-700">
+                intentá de nuevo
+              </button>.
+            </p>
+          )}
+
+          <div className="flex justify-end mt-3">
+            <a
+              href="https://consiagro.com.ar/mercados/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-[#006836] transition-colors"
+            >
+              Ver en Consiagro <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        </div>
+      </div>
 
     </div>
   );
