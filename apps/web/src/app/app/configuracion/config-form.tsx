@@ -410,12 +410,17 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
             </p>
           )}
 
-          <div className="flex justify-end mt-3">
+          <div className="flex items-center justify-between mt-3">
+            {pizarra && (
+              <span className="text-xs text-zinc-400">
+                {pizarra.fuente === 'diario' ? 'Precios del día' : 'Promedio mensual'} · Bolsa de Rosario
+              </span>
+            )}
             <a
               href="https://consiagro.com.ar/mercados/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-[#006836] transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-[#006836] transition-colors ml-auto"
             >
               Ver en Consiagro <ExternalLink className="w-3 h-3" />
             </a>
