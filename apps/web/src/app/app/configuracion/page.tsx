@@ -55,12 +55,41 @@ export default async function ConfiguracionPage() {
   ]);
 
   const config = configRes.data;
+  const hoy = new Date().toISOString().slice(0, 10);
 
-  const preciosGranos = {
+  let preciosGranos = {
     maiz:  { valor: maizRes.data?.valor  ?? null, fecha: maizRes.data?.vigencia_desde  ?? null },
     sorgo: { valor: sorgoRes.data?.valor ?? null, fecha: sorgoRes.data?.vigencia_desde ?? null },
     soja:  { valor: sojaRes.data?.valor  ?? null, fecha: sojaRes.data?.vigencia_desde  ?? null },
   };
+
+  // Auto-guardado: si BCR trajo precios y no hay registro de hoy, insertar en DB
+  if (bcrPrecios) {
+    const toInsert = [
+      { tipo: 'maiz',  nombre: 'Maíz',  valor: bcrPrecios.maiz,  dbFecha: maizRes.data?.vigencia_desde  },
+      { tipo: 'sorgo', nombre: 'Sorgo', valor: bcrPrecios.sorgo, dbFecha: sorgoRes.data?.vigencia_desde },
+      { tipo: 'soja',  nombre: 'Soja',  valor: bcrPrecios.soja,  dbFecha: sojaRes.data?.vigencia_desde  },
+    ].filter(i => i.valor != null && i.dbFecha !== hoy);
+
+    if (toInsert.length > 0) {
+      await supabase.from('referencias_precio').insert(
+        toInsert.map(i => ({
+          empresa_id:     empresa.id,
+          tipo:           i.tipo,
+          nombre:         i.nombre,
+          valor:          i.valor!,
+          unidad:         'tn',
+          vigencia_desde: hoy,
+        }))
+      );
+      const inserted = new Set(toInsert.map(i => i.tipo));
+      preciosGranos = {
+        maiz:  inserted.has('maiz')  ? { valor: bcrPrecios.maiz!,  fecha: hoy } : preciosGranos.maiz,
+        sorgo: inserted.has('sorgo') ? { valor: bcrPrecios.sorgo!, fecha: hoy } : preciosGranos.sorgo,
+        soja:  inserted.has('soja')  ? { valor: bcrPrecios.soja!,  fecha: hoy } : preciosGranos.soja,
+      };
+    }
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">

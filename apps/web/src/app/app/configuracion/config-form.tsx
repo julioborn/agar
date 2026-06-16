@@ -447,10 +447,8 @@ export default function ConfigForm({ empresaId, initialPrecio, initialTipo, init
             <div className="flex items-center gap-2 px-3 py-2 bg-[#006836]/5 border border-[#006836]/15 rounded-lg text-xs text-[#006836]">
               <RefreshCw className="w-3 h-3 shrink-0" />
               <span>
-                Pizarra BCR{bcrPrecios.fecha ? ` del ${bcrPrecios.fecha}` : ''}:{' '}
-                {bcrPrecios.maiz  != null && <><strong>Maíz ${num.format(bcrPrecios.maiz)}</strong> · </>}
-                {bcrPrecios.sorgo != null && <><strong>Sorgo ${num.format(bcrPrecios.sorgo)}</strong> · </>}
-                {bcrPrecios.soja  != null && <><strong>Soja ${num.format(bcrPrecios.soja)}</strong></>}
+                Actualizado automáticamente desde BCR{bcrPrecios.fecha ? ` (${bcrPrecios.fecha})` : ''}.{' '}
+                Podés modificar manualmente y guardar.
               </span>
             </div>
           )}
