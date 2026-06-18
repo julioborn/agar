@@ -57,13 +57,7 @@ export default async function ConfiguracionPage() {
   const config = configRes.data;
   const hoy = new Date().toISOString().slice(0, 10);
 
-  let preciosGranos = {
-    maiz:  { valor: maizRes.data?.valor  ?? null, fecha: maizRes.data?.vigencia_desde  ?? null },
-    sorgo: { valor: sorgoRes.data?.valor ?? null, fecha: sorgoRes.data?.vigencia_desde ?? null },
-    soja:  { valor: sojaRes.data?.valor  ?? null, fecha: sojaRes.data?.vigencia_desde  ?? null },
-  };
-
-  // Auto-guardado: si BCR trajo precios y no hay registro de hoy, insertar en DB
+  // Auto-guardado: si BCR trajo precios y no hay registro de hoy, insertar en DB (historial)
   if (bcrPrecios) {
     const toInsert = [
       { tipo: 'maiz',  nombre: 'Maíz',  valor: bcrPrecios.maiz,  dbFecha: maizRes.data?.vigencia_desde  },
@@ -72,7 +66,7 @@ export default async function ConfiguracionPage() {
     ].filter(i => i.valor != null && i.dbFecha !== hoy);
 
     if (toInsert.length > 0) {
-      await supabase.from('referencias_precio').insert(
+      const { error: insertError } = await supabase.from('referencias_precio').insert(
         toInsert.map(i => ({
           empresa_id:     empresa.id,
           tipo:           i.tipo,
@@ -82,14 +76,17 @@ export default async function ConfiguracionPage() {
           vigencia_desde: hoy,
         }))
       );
-      const inserted = new Set(toInsert.map(i => i.tipo));
-      preciosGranos = {
-        maiz:  inserted.has('maiz')  ? { valor: bcrPrecios.maiz!,  fecha: hoy } : preciosGranos.maiz,
-        sorgo: inserted.has('sorgo') ? { valor: bcrPrecios.sorgo!, fecha: hoy } : preciosGranos.sorgo,
-        soja:  inserted.has('soja')  ? { valor: bcrPrecios.soja!,  fecha: hoy } : preciosGranos.soja,
-      };
+      if (insertError) console.error('[BCR] Error guardando precios en DB:', insertError.message);
     }
   }
+
+  // Para mostrar: BCR en vivo tiene prioridad (la DB puede tener un registro viejo);
+  // si BCR no responde, se usa el último valor guardado.
+  const preciosGranos = {
+    maiz:  { valor: bcrPrecios?.maiz  ?? maizRes.data?.valor  ?? null, fecha: bcrPrecios?.maiz  != null ? hoy : maizRes.data?.vigencia_desde  ?? null },
+    sorgo: { valor: bcrPrecios?.sorgo ?? sorgoRes.data?.valor ?? null, fecha: bcrPrecios?.sorgo != null ? hoy : sorgoRes.data?.vigencia_desde ?? null },
+    soja:  { valor: bcrPrecios?.soja  ?? sojaRes.data?.valor  ?? null, fecha: bcrPrecios?.soja  != null ? hoy : sojaRes.data?.vigencia_desde  ?? null },
+  };
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">

@@ -37,10 +37,11 @@ async function fetchTickerExtras(empresaId: string): Promise<Omit<TickerData, 'd
   ]);
   const gasoil = configR.data?.precio_combustible ?? null;
   const litros = configR.data?.litros_por_uta ?? null;
+  // BCR en vivo tiene prioridad: la DB puede tener un registro viejo (no necesariamente de hoy).
   return {
-    maiz:   maizR.data?.valor  ?? bcr?.maiz  ?? null,
-    sorgo:  sorgoR.data?.valor ?? bcr?.sorgo ?? null,
-    soja:   sojaR.data?.valor  ?? bcr?.soja  ?? null,
+    maiz:   bcr?.maiz  ?? maizR.data?.valor  ?? null,
+    sorgo:  bcr?.sorgo ?? sorgoR.data?.valor ?? null,
+    soja:   bcr?.soja  ?? sojaR.data?.valor  ?? null,
     gasoil,
     uta: gasoil && litros ? gasoil * litros : null,
   };
