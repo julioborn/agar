@@ -12,3 +12,7 @@ coverage
 .idea
 supabase/.branches
 supabase/.temp
+
+# Apps nativas (Capacitor) — se trabajan localmente, no se suben al repo
+apps/web/android
+apps/web/ios
