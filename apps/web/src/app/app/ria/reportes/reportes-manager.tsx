@@ -361,9 +361,11 @@ export default function ReportesManager({
 
   // ── Listado RIA ────────────────────────────────────────────────────────────
   const listadoRias = useMemo(() => {
+    // Los borradores no son operaciones confirmadas todavía: no se listan en el reporte/auditoría.
+    const sinBorradores = riasEmpresa.filter((r) => r.estado !== 'borrador');
     const filtered = estadoFilter
-      ? riasEmpresa.filter((r) => r.estado === estadoFilter)
-      : riasEmpresa;
+      ? sinBorradores.filter((r) => r.estado === estadoFilter)
+      : sinBorradores;
     return filtered.filter(passesFilters).map((r) => ({
       ...r,
       tieneProduccion: produccion.some((p) => p.remito_id === r.id) ? 'Sí' : 'No',
@@ -460,7 +462,6 @@ export default function ReportesManager({
                   className="w-full text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
                 >
                   <option value="">Todos</option>
-                  <option value="borrador">Borrador</option>
                   <option value="confirmado">Confirmado</option>
                   <option value="anulado">Anulado</option>
                 </select>
