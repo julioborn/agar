@@ -83,6 +83,7 @@ const navSections: NavSection[] = [
       { href: '/app/reportes/margenes',       label: 'Márgenes',         icon: TrendingUp },
       { href: '/app/reportes/insumos-labores',label: 'Insumos y Labores',icon: Package },
       { href: '/app/reportes/produccion',     label: 'Producción',       icon: Sprout },
+      { href: '/app/ria/reportes',            label: 'Reportes RIA',     icon: FileText },
     ],
   },
   {

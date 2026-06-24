@@ -23,8 +23,11 @@ interface RiaRow {
   total_ria: number;
   costo_por_ha: number | null;
   motivo_anulacion: string | null;
-  lote: { id: string; nombre: string; campo: { nombre: string } | null } | null;
+  operador_id: string | null;
+  operador_email: string | null;
+  lote: { id: string; nombre: string; campo: { id: string; nombre: string } | null } | null;
   campania: { id: string; nombre: string } | null;
+  empresa: { id: string; nombre: string } | null;
 }
 
 interface InsumoRow {
@@ -63,8 +66,9 @@ interface Props {
   insumos: InsumoRow[];
   labores: LaborRow[];
   produccion: ProduccionRow[];
-  campanias: { id: string; nombre: string }[];
-  empresaNombre: string;
+  campanias: { id: string; nombre: string; empresa_id: string }[];
+  empresas: { id: string; nombre: string }[];
+  empresaActivaId: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -94,25 +98,123 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function ReportesManager({
-  rias, insumos, labores, produccion, campanias, empresaNombre,
+  rias, insumos, labores, produccion, campanias, empresas, empresaActivaId,
 }: Props) {
   const { formatMoney, currency } = useCurrency();
   const $ = (v: number | null | undefined) => v != null ? formatMoney(v) : '—';
   const [tab, setTab] = useState<Tab>('costos');
+  const [empresaFilter, setEmpresaFilter] = useState(empresaActivaId);
   const [campaniaFilter, setCampaniaFilter] = useState('');
   const [estadoFilter, setEstadoFilter] = useState('');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
+  const [campoFilter, setCampoFilter] = useState('');
+  const [loteFilter, setLoteFilter] = useState('');
+  const [cultivoFilter, setCultivoFilter] = useState('');
+  const [usuarioFilter, setUsuarioFilter] = useState('');
+
+  // RIAs de la empresa seleccionada (el resto de los filtros se aplican sobre este universo)
+  const riasEmpresa = useMemo(
+    () => rias.filter((r) => r.empresa?.id === empresaFilter),
+    [rias, empresaFilter],
+  );
+
+  const campaniasEmpresa = useMemo(
+    () => campanias.filter((c) => c.empresa_id === empresaFilter),
+    [campanias, empresaFilter],
+  );
+
+  // ── Opciones de filtro derivadas de los datos ya cargados ───────────────────
+  const camposOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of riasEmpresa) {
+      if (r.lote?.campo) map.set(r.lote.campo.id, r.lote.campo.nombre);
+    }
+    return Array.from(map, ([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [riasEmpresa]);
+
+  const lotesOptions = useMemo(() => {
+    const map = new Map<string, { nombre: string; campoId: string | null }>();
+    for (const r of riasEmpresa) {
+      if (!r.lote) continue;
+      if (campoFilter && r.lote.campo?.id !== campoFilter) continue;
+      map.set(r.lote.id, { nombre: r.lote.nombre, campoId: r.lote.campo?.id ?? null });
+    }
+    return Array.from(map, ([id, v]) => ({ id, nombre: v.nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [riasEmpresa, campoFilter]);
+
+  const cultivosOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of riasEmpresa) {
+      if (r.cultivo_descripcion) set.add(r.cultivo_descripcion);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [riasEmpresa]);
+
+  const usuariosOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of riasEmpresa) {
+      if (r.operador_id) map.set(r.operador_id, r.operador_email ?? r.operador_id);
+    }
+    return Array.from(map, ([id, email]) => ({ id, email })).sort((a, b) => a.email.localeCompare(b.email));
+  }, [riasEmpresa]);
+
+  function limpiarFiltros() {
+    setCampaniaFilter('');
+    setEstadoFilter('');
+    setFechaDesde('');
+    setFechaHasta('');
+    setCampoFilter('');
+    setLoteFilter('');
+    setCultivoFilter('');
+    setUsuarioFilter('');
+  }
+
+  const hayFiltrosActivos = !!(
+    campaniaFilter || estadoFilter || fechaDesde || fechaHasta ||
+    campoFilter || loteFilter || cultivoFilter || usuarioFilter
+  );
+
+  // Predicado común: campaña, fecha, campo, lote, cultivo y usuario (estado se maneja aparte)
+  function passesFilters(r: RiaRow): boolean {
+    if (campaniaFilter && r.campania?.id !== campaniaFilter) return false;
+    if (fechaDesde && r.fecha < fechaDesde) return false;
+    if (fechaHasta && r.fecha > fechaHasta) return false;
+    if (campoFilter && r.lote?.campo?.id !== campoFilter) return false;
+    if (loteFilter && r.lote?.id !== loteFilter) return false;
+    if (cultivoFilter && r.cultivo_descripcion !== cultivoFilter) return false;
+    if (usuarioFilter && r.operador_id !== usuarioFilter) return false;
+    return true;
+  }
 
   const confirmedRias = useMemo(
-    () => rias.filter((r) => r.estado === 'confirmado'),
-    [rias],
+    () => riasEmpresa.filter((r) => r.estado === 'confirmado'),
+    [riasEmpresa],
   );
 
   const filteredConfirmed = useMemo(
-    () => campaniaFilter
-      ? confirmedRias.filter((r) => r.campania?.id === campaniaFilter)
-      : confirmedRias,
-    [confirmedRias, campaniaFilter],
+    () => confirmedRias.filter(passesFilters),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [confirmedRias, campaniaFilter, fechaDesde, fechaHasta, campoFilter, loteFilter, cultivoFilter, usuarioFilter],
   );
+
+  const empresaSeleccionadaNombre = empresas.find((e) => e.id === empresaFilter)?.nombre ?? '';
+
+  const filtrosResumen = useMemo(() => {
+    const partes: string[] = [];
+    if (campaniaFilter) partes.push(`Campaña: ${campaniasEmpresa.find((c) => c.id === campaniaFilter)?.nombre ?? ''}`);
+    if (estadoFilter) partes.push(`Estado: ${estadoFilter}`);
+    if (fechaDesde) partes.push(`Desde: ${fmt(fechaDesde)}`);
+    if (fechaHasta) partes.push(`Hasta: ${fmt(fechaHasta)}`);
+    if (campoFilter) partes.push(`Campo: ${camposOptions.find((c) => c.id === campoFilter)?.nombre ?? ''}`);
+    if (loteFilter) partes.push(`Lote: ${lotesOptions.find((l) => l.id === loteFilter)?.nombre ?? ''}`);
+    if (cultivoFilter) partes.push(`Cultivo: ${cultivoFilter}`);
+    if (usuarioFilter) partes.push(`Usuario: ${usuariosOptions.find((u) => u.id === usuarioFilter)?.email ?? ''}`);
+    return partes.join(' · ');
+  }, [campaniaFilter, estadoFilter, fechaDesde, fechaHasta, campoFilter, loteFilter, cultivoFilter, usuarioFilter, campaniasEmpresa, camposOptions, lotesOptions, usuariosOptions]);
+
+  const tituloSufijo = [empresaSeleccionadaNombre, filtrosResumen].filter(Boolean).join(' · ');
+  const nombreArchivo = (empresaSeleccionadaNombre || 'reporte').toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
   // ── Costos por lote ────────────────────────────────────────────────────────
   const costosPorLote = useMemo(() => {
@@ -258,16 +360,14 @@ export default function ReportesManager({
   // ── Listado RIA ────────────────────────────────────────────────────────────
   const listadoRias = useMemo(() => {
     const filtered = estadoFilter
-      ? rias.filter((r) => r.estado === estadoFilter)
-      : rias;
-    const withCampania = campaniaFilter
-      ? filtered.filter((r) => r.campania?.id === campaniaFilter)
-      : filtered;
-    return withCampania.map((r) => ({
+      ? riasEmpresa.filter((r) => r.estado === estadoFilter)
+      : riasEmpresa;
+    return filtered.filter(passesFilters).map((r) => ({
       ...r,
       tieneProduccion: produccion.some((p) => p.remito_id === r.id) ? 'Sí' : 'No',
     }));
-  }, [rias, produccion, campaniaFilter, estadoFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [riasEmpresa, produccion, estadoFilter, campaniaFilter, fechaDesde, fechaHasta, campoFilter, loteFilter, cultivoFilter, usuarioFilter]);
 
   // ── Sub-totales ────────────────────────────────────────────────────────────
   const kpis = useMemo(() => {
@@ -279,16 +379,37 @@ export default function ReportesManager({
     const lotesConProd = new Set(
       filteredConfirmed.filter((r) => withProd.has(r.id)).map((r) => r.lote?.id),
     ).size;
-    const borradores = rias.filter((r) => r.estado === 'borrador').length;
+    const borradores = riasEmpresa.filter(passesFilters).filter((r) => r.estado === 'borrador').length;
 
     return { totalCosto, costoPerHa, lotesActivos, lotesConProd, borradores };
-  }, [filteredConfirmed, produccion, rias]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredConfirmed, produccion, riasEmpresa, campaniaFilter, fechaDesde, fechaHasta, campoFilter, loteFilter, cultivoFilter, usuarioFilter]);
 
   return (
     <div className="space-y-5">
 
+      {empresas.length > 1 && (
+        <p className="text-sm text-zinc-500">
+          Mostrando: <span className="font-semibold text-zinc-800">{empresaSeleccionadaNombre}</span>
+        </p>
+      )}
+
       {/* Filtros globales */}
       <div className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm flex flex-wrap gap-3 items-end">
+        {empresas.length > 1 && (
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1.5">Empresa</label>
+            <select
+              value={empresaFilter}
+              onChange={(e) => { setEmpresaFilter(e.target.value); setCampoFilter(''); setLoteFilter(''); }}
+              className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+            >
+              {empresas.map((e) => (
+                <option key={e.id} value={e.id}>{e.nombre}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div>
           <label className="block text-xs text-zinc-400 mb-1.5">Campaña</label>
           <select
@@ -297,7 +418,7 @@ export default function ReportesManager({
             className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
           >
             <option value="">Todas las campañas</option>
-            {campanias.map((c) => (
+            {campaniasEmpresa.map((c) => (
               <option key={c.id} value={c.id}>{c.nombre}</option>
             ))}
           </select>
@@ -317,12 +438,90 @@ export default function ReportesManager({
             </select>
           </div>
         )}
-        {(campaniaFilter || estadoFilter) && (
+        <div>
+          <label className="block text-xs text-zinc-400 mb-1.5">Fecha desde</label>
+          <input
+            type="date"
+            value={fechaDesde}
+            onChange={(e) => setFechaDesde(e.target.value)}
+            className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-zinc-400 mb-1.5">Fecha hasta</label>
+          <input
+            type="date"
+            value={fechaHasta}
+            onChange={(e) => setFechaHasta(e.target.value)}
+            className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+          />
+        </div>
+        {camposOptions.length > 0 && (
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1.5">Campo</label>
+            <select
+              value={campoFilter}
+              onChange={(e) => { setCampoFilter(e.target.value); setLoteFilter(''); }}
+              className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+            >
+              <option value="">Todos los campos</option>
+              {camposOptions.map((c) => (
+                <option key={c.id} value={c.id}>{c.nombre}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        {lotesOptions.length > 0 && (
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1.5">Lote</label>
+            <select
+              value={loteFilter}
+              onChange={(e) => setLoteFilter(e.target.value)}
+              className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+            >
+              <option value="">Todos los lotes</option>
+              {lotesOptions.map((l) => (
+                <option key={l.id} value={l.id}>{l.nombre}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        {cultivosOptions.length > 0 && (
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1.5">Cultivo</label>
+            <select
+              value={cultivoFilter}
+              onChange={(e) => setCultivoFilter(e.target.value)}
+              className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+            >
+              <option value="">Todos los cultivos</option>
+              {cultivosOptions.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        {usuariosOptions.length > 0 && (
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1.5">Usuario</label>
+            <select
+              value={usuarioFilter}
+              onChange={(e) => setUsuarioFilter(e.target.value)}
+              className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+            >
+              <option value="">Todos los usuarios</option>
+              {usuariosOptions.map((u) => (
+                <option key={u.id} value={u.id}>{u.email}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        {hayFiltrosActivos && (
           <button
-            onClick={() => { setCampaniaFilter(''); setEstadoFilter(''); }}
+            onClick={limpiarFiltros}
             className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-red-500 pb-1.5"
           >
-            <X className="w-3.5 h-3.5" /> Limpiar
+            <X className="w-3.5 h-3.5" /> Limpiar filtros
           </button>
         )}
       </div>
@@ -404,8 +603,8 @@ export default function ReportesManager({
                 { header: 'Producción',    key: 'produccion',  width: 18 },
                 { header: `Costo/unidad (${currency})`,key: 'costo_unidad',width: 18, align: 'right', format: (v: any) => $(v) },
               ]}
-              filename={`costos-por-lote-${empresaNombre}`}
-              docTitle={`Costos por lote — ${empresaNombre}`}
+              filename={`costos-por-lote-${nombreArchivo}`}
+              docTitle={`Costos por lote — ${tituloSufijo}`}
             >
               {costosPorLote.length === 0 ? (
                 <EmptyState text="Sin datos confirmados para los filtros seleccionados." />
@@ -495,8 +694,8 @@ export default function ReportesManager({
                 { header: `Costo total (${currency})`,  key: 'costo_total', width: 18, align: 'right', format: (v: any) => $(v), total: true },
                 { header: `Margen bruto (${currency})`, key: 'margen',      width: 18, align: 'right', format: (v: any) => $(v), total: true },
               ]}
-              filename={`produccion-${empresaNombre}`}
-              docTitle={`Producción — ${empresaNombre}`}
+              filename={`produccion-${nombreArchivo}`}
+              docTitle={`Producción — ${tituloSufijo}`}
             >
               {produccionRows.length === 0 ? (
                 <EmptyState text="Sin registros de producción para los filtros seleccionados." />
@@ -563,8 +762,8 @@ export default function ReportesManager({
                 { header: `Costo total (${currency})`,  key: 'total',      width: 18, align: 'right', format: (v: any) => $(v), total: true },
                 { header: '% del total',    key: 'porcentaje', width: 14, align: 'right' },
               ]}
-              filename={`consumo-insumos-${empresaNombre}`}
-              docTitle={`Consumo de insumos — ${empresaNombre}`}
+              filename={`consumo-insumos-${nombreArchivo}`}
+              docTitle={`Consumo de insumos — ${tituloSufijo}`}
             >
               {consumoInsumos.length === 0 ? (
                 <EmptyState text="Sin insumos registrados para los filtros seleccionados." />
@@ -647,8 +846,8 @@ export default function ReportesManager({
                 { header: `Subtotal (${currency})`,    key: 'subtotal',    width: 18, align: 'right', format: (v: any) => $(v), total: true },
                 { header: 'Fecha ejec.',   key: 'fecha',       width: 16 },
               ]}
-              filename={`labores-${empresaNombre}`}
-              docTitle={`Labores y servicios — ${empresaNombre}`}
+              filename={`labores-${nombreArchivo}`}
+              docTitle={`Labores y servicios — ${tituloSufijo}`}
             >
               {laboresRows.length === 0 ? (
                 <EmptyState text="Sin labores registradas para los filtros seleccionados." />
@@ -704,6 +903,7 @@ export default function ReportesManager({
                 lote:       r.lote?.nombre ?? '—',
                 campo:      r.lote?.campo?.nombre ?? '—',
                 campania:   r.campania?.nombre ?? '—',
+                usuario:    r.operador_email ?? '—',
                 insumos:    r.total_insumos,
                 labores:    r.total_labores,
                 total:      r.total_ria,
@@ -717,14 +917,15 @@ export default function ReportesManager({
                 { header: 'Lote',           key: 'lote',        width: 22 },
                 { header: 'Campo',          key: 'campo',       width: 22 },
                 { header: 'Campaña',        key: 'campania',    width: 22 },
+                { header: 'Usuario',        key: 'usuario',     width: 24 },
                 { header: `Insumos (${currency})`,      key: 'insumos',     width: 18, align: 'right', format: (v: any) => $(v), total: true },
                 { header: `Labores (${currency})`,      key: 'labores',     width: 18, align: 'right', format: (v: any) => $(v), total: true },
                 { header: `Total (${currency})`,        key: 'total',       width: 18, align: 'right', format: (v: any) => $(v), total: true },
                 { header: 'Producción',     key: 'produccion',  width: 14 },
                 { header: 'Motivo anul.',   key: 'motivo',      width: 30 },
               ]}
-              filename={`listado-ria-${empresaNombre}`}
-              docTitle={`Listado de RIA — ${empresaNombre}`}
+              filename={`listado-ria-${nombreArchivo}`}
+              docTitle={`Listado de RIA — ${tituloSufijo}`}
             >
               {listadoRias.length === 0 ? (
                 <EmptyState text="Sin RIA para los filtros seleccionados." />
@@ -733,7 +934,7 @@ export default function ReportesManager({
                   <table className="w-full text-xs min-w-[800px]">
                     <thead className="bg-zinc-50 border-b border-zinc-100">
                       <tr>
-                        {['Nº RIA','Fecha','Estado','Campo › Lote','Campaña','Total insumos','Total labores','Costo total','Producción'].map((h) => (
+                        {['Nº RIA','Fecha','Estado','Campo › Lote','Campaña','Usuario','Total insumos','Total labores','Costo total','Producción'].map((h) => (
                           <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-zinc-500">{h}</th>
                         ))}
                       </tr>
@@ -769,6 +970,7 @@ export default function ReportesManager({
                             <span className="font-medium text-zinc-800">{r.lote?.nombre ?? '—'}</span>
                           </td>
                           <td className="px-3 py-2 text-zinc-600">{r.campania?.nombre ?? '—'}</td>
+                          <td className="px-3 py-2 text-zinc-500">{r.operador_email ?? '—'}</td>
                           <td className="px-3 py-2 text-right text-zinc-700">{$(r.total_insumos)}</td>
                           <td className="px-3 py-2 text-right text-zinc-700">{$(r.total_labores)}</td>
                           <td className="px-3 py-2 text-right font-semibold text-zinc-900">{$(r.total_ria)}</td>

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 import { redirect } from 'next/navigation';
 import { BarChart3, ArrowLeft } from 'lucide-react';
@@ -8,25 +9,29 @@ import ReportesManager from './reportes-manager';
 export default async function ReportesPage() {
   const empresaResult = await getEmpresaActiva();
   if (!empresaResult) redirect('/login');
-  const { empresa } = empresaResult;
+  const { empresa, todasLasEmpresas } = empresaResult;
 
   const supabase = await createClient();
+  const empresaIds = todasLasEmpresas.map((e) => e.id);
 
-  // Fetch all RIAs (todos los estados) con lote + campo + campaña
+  // Fetch all RIAs (todos los estados) de todas las empresas a las que el
+  // usuario tiene acceso — el filtro por empresa se aplica del lado cliente.
   const { data: riasRaw } = await supabase
     .from('remitos_internos')
     .select(`
       id, numero_ria, fecha, estado, superficie_afectada, cultivo_descripcion,
       total_insumos, total_labores, total_ria, costo_por_ha, motivo_anulacion,
+      operador_id, empresa_id,
       lote:lotes(id, nombre, campo:campos(id, nombre)),
-      campania:campanias(id, nombre)
+      campania:campanias(id, nombre),
+      empresa:empresas(id, nombre)
     `)
-    .eq('empresa_id', empresa.id)
+    .in('empresa_id', empresaIds)
     .order('fecha', { ascending: false })
     .order('numero_correlativo', { ascending: false });
 
-  const rias = (riasRaw as any[]) ?? [];
-  const confirmedIds = rias
+  const riasBase = (riasRaw as any[]) ?? [];
+  const confirmedIds = riasBase
     .filter((r) => r.estado === 'confirmado')
     .map((r) => r.id as string);
 
@@ -66,10 +71,29 @@ export default async function ReportesPage() {
 
     supabase
       .from('campanias')
-      .select('id, nombre')
-      .eq('empresa_id', empresa.id)
+      .select('id, nombre, empresa_id')
+      .in('empresa_id', empresaIds)
       .order('nombre'),
   ]);
+
+  // auth.users no es accesible vía el cliente normal — resolvemos los emails
+  // de los operadores que generaron RIA con el cliente admin (server-only).
+  const operadorIds = Array.from(new Set(riasBase.map((r) => r.operador_id).filter(Boolean)));
+  let emailPorUsuario: Record<string, string> = {};
+  if (operadorIds.length > 0) {
+    const adminClient = createAdminClient();
+    const { data: listado } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+    emailPorUsuario = Object.fromEntries(
+      (listado?.users ?? [])
+        .filter((u) => operadorIds.includes(u.id))
+        .map((u) => [u.id, u.email ?? '—']),
+    );
+  }
+
+  const rias = riasBase.map((r) => ({
+    ...r,
+    operador_email: r.operador_id ? (emailPorUsuario[r.operador_id] ?? '—') : null,
+  }));
 
   return (
     <div className="p-6 space-y-6">
@@ -85,7 +109,7 @@ export default async function ReportesPage() {
         </div>
         <div>
           <h1 className="text-xl font-bold text-zinc-900">Reportes RIA</h1>
-          <p className="text-sm text-zinc-500">{empresa.nombre}</p>
+          <p className="text-sm text-zinc-500">Registro completo, filtrable y exportable</p>
         </div>
       </div>
 
@@ -95,7 +119,8 @@ export default async function ReportesPage() {
         labores={(laboresRes.data as any[]) ?? []}
         produccion={(produccionRes.data as any[]) ?? []}
         campanias={campaniasRes.data ?? []}
-        empresaNombre={empresa.nombre}
+        empresas={todasLasEmpresas.map((e) => ({ id: e.id, nombre: e.nombre }))}
+        empresaActivaId={empresa.id}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { BarChart3, Package, Sprout } from 'lucide-react';
+import { BarChart3, Package, Sprout, FileText } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 
@@ -31,6 +31,15 @@ const REPORTS = [
     iconColor: 'text-blue-600',
     iconBg: 'bg-blue-100',
     accent: 'group-hover:border-blue-300',
+  },
+  {
+    href: '/app/ria/reportes',
+    title: 'Reportes RIA',
+    description: 'Registro completo de RIA filtrable por fecha, campo, lote, cultivo, empresa y usuario. Exportable a Excel y PDF.',
+    icon: FileText,
+    iconColor: 'text-violet-600',
+    iconBg: 'bg-violet-100',
+    accent: 'group-hover:border-violet-300',
   },
 ];
 
