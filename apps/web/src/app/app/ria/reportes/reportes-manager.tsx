@@ -3,10 +3,11 @@
 import { useState, useMemo } from 'react';
 import {
   BarChart3, Wheat, Package, Wrench, FileText, Download,
-  ChevronDown, ChevronUp, X,
+  ChevronDown, ChevronUp, X, Filter,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ExportButtons from '@/components/export-buttons';
+import DateRangePicker from '@/components/date-range-picker';
 import { useCurrency } from '@/lib/currency-context';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -103,6 +104,7 @@ export default function ReportesManager({
   const { formatMoney, currency } = useCurrency();
   const $ = (v: number | null | undefined) => v != null ? formatMoney(v) : '—';
   const [tab, setTab] = useState<Tab>('costos');
+  const [showFilters, setShowFilters] = useState(false);
   const [empresaFilter, setEmpresaFilter] = useState(empresaActivaId);
   const [campaniaFilter, setCampaniaFilter] = useState('');
   const [estadoFilter, setEstadoFilter] = useState('');
@@ -170,10 +172,10 @@ export default function ReportesManager({
     setUsuarioFilter('');
   }
 
-  const hayFiltrosActivos = !!(
-    campaniaFilter || estadoFilter || fechaDesde || fechaHasta ||
-    campoFilter || loteFilter || cultivoFilter || usuarioFilter
-  );
+  const filtrosActivosCount = [
+    campaniaFilter, estadoFilter, (fechaDesde || fechaHasta) ? '1' : '',
+    campoFilter, loteFilter, cultivoFilter, usuarioFilter,
+  ].filter(Boolean).length;
 
   // Predicado común: campaña, fecha, campo, lote, cultivo y usuario (estado se maneja aparte)
   function passesFilters(r: RiaRow): boolean {
@@ -389,140 +391,150 @@ export default function ReportesManager({
     <div className="space-y-5">
 
       {empresas.length > 1 && (
-        <p className="text-sm text-zinc-500">
-          Mostrando: <span className="font-semibold text-zinc-800">{empresaSeleccionadaNombre}</span>
-        </p>
-      )}
-
-      {/* Filtros globales */}
-      <div className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm flex flex-wrap gap-3 items-end">
-        {empresas.length > 1 && (
-          <div>
-            <label className="block text-xs text-zinc-400 mb-1.5">Empresa</label>
-            <select
-              value={empresaFilter}
-              onChange={(e) => { setEmpresaFilter(e.target.value); setCampoFilter(''); setLoteFilter(''); }}
-              className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
-            >
-              {empresas.map((e) => (
-                <option key={e.id} value={e.id}>{e.nombre}</option>
-              ))}
-            </select>
-          </div>
-        )}
-        <div>
-          <label className="block text-xs text-zinc-400 mb-1.5">Campaña</label>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-zinc-500 shrink-0">Empresa:</label>
           <select
-            value={campaniaFilter}
-            onChange={(e) => setCampaniaFilter(e.target.value)}
-            className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+            value={empresaFilter}
+            onChange={(e) => { setEmpresaFilter(e.target.value); setCampoFilter(''); setLoteFilter(''); }}
+            className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-[#006836]/40 max-w-full"
           >
-            <option value="">Todas las campañas</option>
-            {campaniasEmpresa.map((c) => (
-              <option key={c.id} value={c.id}>{c.nombre}</option>
+            {empresas.map((e) => (
+              <option key={e.id} value={e.id}>{e.nombre}</option>
             ))}
           </select>
         </div>
-        {tab === 'listado' && (
-          <div>
-            <label className="block text-xs text-zinc-400 mb-1.5">Estado</label>
-            <select
-              value={estadoFilter}
-              onChange={(e) => setEstadoFilter(e.target.value)}
-              className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
-            >
-              <option value="">Todos</option>
-              <option value="borrador">Borrador</option>
-              <option value="confirmado">Confirmado</option>
-              <option value="anulado">Anulado</option>
-            </select>
-          </div>
-        )}
-        <div>
-          <label className="block text-xs text-zinc-400 mb-1.5">Fecha desde</label>
-          <input
-            type="date"
-            value={fechaDesde}
-            onChange={(e) => setFechaDesde(e.target.value)}
-            className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
-          />
-        </div>
-        <div>
-          <label className="block text-xs text-zinc-400 mb-1.5">Fecha hasta</label>
-          <input
-            type="date"
-            value={fechaHasta}
-            onChange={(e) => setFechaHasta(e.target.value)}
-            className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
-          />
-        </div>
-        {camposOptions.length > 0 && (
-          <div>
-            <label className="block text-xs text-zinc-400 mb-1.5">Campo</label>
-            <select
-              value={campoFilter}
-              onChange={(e) => { setCampoFilter(e.target.value); setLoteFilter(''); }}
-              className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
-            >
-              <option value="">Todos los campos</option>
-              {camposOptions.map((c) => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
-              ))}
-            </select>
-          </div>
-        )}
-        {lotesOptions.length > 0 && (
-          <div>
-            <label className="block text-xs text-zinc-400 mb-1.5">Lote</label>
-            <select
-              value={loteFilter}
-              onChange={(e) => setLoteFilter(e.target.value)}
-              className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
-            >
-              <option value="">Todos los lotes</option>
-              {lotesOptions.map((l) => (
-                <option key={l.id} value={l.id}>{l.nombre}</option>
-              ))}
-            </select>
-          </div>
-        )}
-        {cultivosOptions.length > 0 && (
-          <div>
-            <label className="block text-xs text-zinc-400 mb-1.5">Cultivo</label>
-            <select
-              value={cultivoFilter}
-              onChange={(e) => setCultivoFilter(e.target.value)}
-              className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
-            >
-              <option value="">Todos los cultivos</option>
-              {cultivosOptions.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-        )}
-        {usuariosOptions.length > 0 && (
-          <div>
-            <label className="block text-xs text-zinc-400 mb-1.5">Usuario</label>
-            <select
-              value={usuarioFilter}
-              onChange={(e) => setUsuarioFilter(e.target.value)}
-              className="text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
-            >
-              <option value="">Todos los usuarios</option>
-              {usuariosOptions.map((u) => (
-                <option key={u.id} value={u.id}>{u.email}</option>
-              ))}
-            </select>
-          </div>
-        )}
-        {hayFiltrosActivos && (
+      )}
+
+      {/* Toolbar de filtros */}
+      <div className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
           <button
-            onClick={limpiarFiltros}
-            className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-red-500 pb-1.5"
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn(
+              'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border transition-colors',
+              showFilters || filtrosActivosCount > 0
+                ? 'border-[#006836]/40 text-[#006836] bg-[#006836]/5'
+                : 'border-zinc-200 text-zinc-500 bg-white hover:bg-zinc-50',
+            )}
           >
-            <X className="w-3.5 h-3.5" /> Limpiar filtros
+            <Filter className="w-3.5 h-3.5" />
+            Filtros
+            {filtrosActivosCount > 0 && (
+              <span className="w-4 h-4 bg-[#006836] text-white rounded-full text-xs leading-none flex items-center justify-center">
+                {filtrosActivosCount}
+              </span>
+            )}
           </button>
+
+          {filtrosActivosCount > 0 && (
+            <button
+              onClick={limpiarFiltros}
+              className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-red-500"
+            >
+              <X className="w-3 h-3" /> Limpiar
+            </button>
+          )}
+        </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3 border-t border-zinc-100 mt-3">
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1.5">Campaña</label>
+              <select
+                value={campaniaFilter}
+                onChange={(e) => setCampaniaFilter(e.target.value)}
+                className="w-full text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+              >
+                <option value="">Todas las campañas</option>
+                {campaniasEmpresa.map((c) => (
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                ))}
+              </select>
+            </div>
+            {tab === 'listado' && (
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Estado</label>
+                <select
+                  value={estadoFilter}
+                  onChange={(e) => setEstadoFilter(e.target.value)}
+                  className="w-full text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+                >
+                  <option value="">Todos</option>
+                  <option value="borrador">Borrador</option>
+                  <option value="confirmado">Confirmado</option>
+                  <option value="anulado">Anulado</option>
+                </select>
+              </div>
+            )}
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1.5">Fechas</label>
+              <DateRangePicker
+                desde={fechaDesde}
+                hasta={fechaHasta}
+                onChange={(d, h) => { setFechaDesde(d); setFechaHasta(h); }}
+              />
+            </div>
+            {camposOptions.length > 0 && (
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Campo</label>
+                <select
+                  value={campoFilter}
+                  onChange={(e) => { setCampoFilter(e.target.value); setLoteFilter(''); }}
+                  className="w-full text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+                >
+                  <option value="">Todos los campos</option>
+                  {camposOptions.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {lotesOptions.length > 0 && (
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Lote</label>
+                <select
+                  value={loteFilter}
+                  onChange={(e) => setLoteFilter(e.target.value)}
+                  className="w-full text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+                >
+                  <option value="">Todos los lotes</option>
+                  {lotesOptions.map((l) => (
+                    <option key={l.id} value={l.id}>{l.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {cultivosOptions.length > 0 && (
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Cultivo</label>
+                <select
+                  value={cultivoFilter}
+                  onChange={(e) => setCultivoFilter(e.target.value)}
+                  className="w-full text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+                >
+                  <option value="">Todos los cultivos</option>
+                  {cultivosOptions.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {usuariosOptions.length > 0 && (
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Usuario</label>
+                <select
+                  value={usuarioFilter}
+                  onChange={(e) => setUsuarioFilter(e.target.value)}
+                  className="w-full text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+                >
+                  <option value="">Todos los usuarios</option>
+                  {usuariosOptions.map((u) => (
+                    <option key={u.id} value={u.id}>{u.email}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -1012,7 +1024,7 @@ function TabSection({
 }) {
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
         <h2 className="text-sm font-semibold text-zinc-700">{title}</h2>
         <ExportButtons
           data={exportData}
