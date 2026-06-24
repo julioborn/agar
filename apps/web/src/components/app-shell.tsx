@@ -13,6 +13,7 @@ import { CurrencyProvider, useCurrency } from '@/lib/currency-context';
 import { createClient } from '@/lib/supabase/client';
 import type { EmpresaConRol } from '@/lib/empresa-actual';
 import PriceTicker, { type TickerData } from './price-ticker';
+import PushNotificationsInit from './push-notifications-init';
 
 interface Props {
   children: React.ReactNode;
@@ -98,6 +99,7 @@ export default function AppShell({
 
   return (
     <CurrencyProvider usdRate={usdRate}>
+      <PushNotificationsInit />
       <div className="flex h-screen bg-zinc-50 overflow-hidden">
 
         {/* Overlay mobile */}
