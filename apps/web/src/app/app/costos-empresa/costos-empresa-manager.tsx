@@ -4,6 +4,7 @@ import { useState, useMemo, useTransition } from 'react';
 import { Plus, Trash2, FileText, Filter, X, ChevronDown, ChevronUp, Landmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { crearCostoIndirectoEmpresa, eliminarCostoIndirectoEmpresa } from '../costos-indirectos/actions';
+import ExportButtons from '@/components/export-buttons';
 
 const CATEGORIAS = {
   administrativo:  'Administrativo',
@@ -34,12 +35,13 @@ interface Props {
   costos: CostoEmpresa[];
   campanias: { id: string; nombre: string }[];
   proveedores: { id: string; nombre: string }[];
+  empresaNombre: string;
 }
 
 const num = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
 const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-export default function CostosEmpresaManager({ costos, campanias, proveedores }: Props) {
+export default function CostosEmpresaManager({ costos, campanias, proveedores, empresaNombre }: Props) {
   // Filters
   const [categoriaFiltro, setCategoriaFiltro] = useState('');
   const [campaniaFiltro, setCampaniaFiltro] = useState('');
@@ -70,6 +72,26 @@ export default function CostosEmpresaManager({ costos, campanias, proveedores }:
 
   const totalFiltrado = filtrados.reduce((acc, c) => acc + Number(c.monto_ars), 0);
   const filtrosActivos = [categoriaFiltro, campaniaFiltro, fechaDesde, fechaHasta].filter(Boolean).length;
+
+  const exportData = filtrados.map((c) => ({
+    comprobante: c.comprobante?.numero ?? '—',
+    fecha: c.fecha,
+    categoria: CATEGORIAS[c.categoria],
+    campania: c.campania?.nombre ?? '—',
+    proveedor: c.proveedor?.nombre ?? '—',
+    descripcion: c.descripcion,
+    monto_ars: Number(c.monto_ars),
+  }));
+
+  const exportColumns = [
+    { header: 'Comprobante', key: 'comprobante', width: 16 },
+    { header: 'Fecha',       key: 'fecha',       width: 12, format: fmt },
+    { header: 'Categoría',   key: 'categoria',   width: 22 },
+    { header: 'Campaña',     key: 'campania',    width: 18 },
+    { header: 'Proveedor',   key: 'proveedor',   width: 24 },
+    { header: 'Descripción', key: 'descripcion', width: 36 },
+    { header: 'Monto $',     key: 'monto_ars',   width: 16, format: (v: number) => num.format(v), align: 'right' as const, total: true },
+  ];
 
   function resetForm() {
     setCampaniaId(''); setFecha(new Date().toISOString().split('T')[0]);
@@ -121,7 +143,7 @@ export default function CostosEmpresaManager({ costos, campanias, proveedores }:
       )}
 
       {/* Acciones */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <button
           onClick={() => setShowFilters((v) => !v)}
           className={cn(
@@ -134,12 +156,20 @@ export default function CostosEmpresaManager({ costos, campanias, proveedores }:
           {showFilters ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
         </button>
 
-        <button
-          onClick={() => { setShowForm((v) => !v); setUltimoComprobante(null); }}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" /> Nuevo costo
-        </button>
+        <div className="flex items-center gap-2 ml-auto">
+          <ExportButtons
+            data={exportData}
+            columns={exportColumns}
+            filename={`costos-indirectos-${empresaNombre.replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}`}
+            title={`Costos Indirectos · ${empresaNombre}`}
+          />
+          <button
+            onClick={() => { setShowForm((v) => !v); setUltimoComprobante(null); }}
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" /> Nuevo costo
+          </button>
+        </div>
       </div>
 
       {/* Filtros */}

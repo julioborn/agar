@@ -54,6 +54,7 @@ export default async function CostosEmpresaPage() {
         costos={(costosRes.data ?? []) as any}
         campanias={campaniaRes.data ?? []}
         proveedores={provRes.data ?? []}
+        empresaNombre={empresa.nombre}
       />
     </div>
   );
