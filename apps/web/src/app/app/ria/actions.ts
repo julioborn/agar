@@ -23,6 +23,7 @@ function calcStock(movs: { tipo: string; cantidad: number | string }[]): number 
 export interface InsumoPayload {
   depositoId: string;
   productoId: string;
+  hectareasAfectadas?: number;
   cantidad: number;
   dosisPorHa?: number;
   costoUnitario: number;
@@ -37,6 +38,7 @@ export interface LaborPayload {
   prestadorId?: string;
   prestadorNombre?: string;
   unidadMedida: string;
+  hectareasAfectadas?: number;
   cantidad: number;
   tarifa: number;
   subtotal: number;
@@ -171,6 +173,7 @@ export async function saveRiaBorrador(payload: SaveRiaPayload) {
         remito_id: riaId,
         deposito_id: i.depositoId,
         producto_id: i.productoId,
+        hectareas_afectadas: i.hectareasAfectadas ?? null,
         cantidad: i.cantidad,
         dosis_por_ha: i.dosisPorHa ?? null,
         costo_unitario: i.costoUnitario,
@@ -191,6 +194,7 @@ export async function saveRiaBorrador(payload: SaveRiaPayload) {
         prestador_id: l.prestadorId || null,
         prestador_nombre: l.prestadorNombre || null,
         unidad_medida: l.unidadMedida,
+        hectareas_afectadas: l.hectareasAfectadas ?? null,
         cantidad: l.cantidad,
         tarifa: l.tarifa,
         subtotal: l.subtotal,

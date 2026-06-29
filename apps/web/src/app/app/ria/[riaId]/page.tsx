@@ -43,7 +43,7 @@ export default async function RiaDetailPage({ params }: Props) {
     supabase
       .from('remitos_insumos')
       .select(`
-        id, deposito_id, producto_id, cantidad, dosis_por_ha,
+        id, deposito_id, producto_id, hectareas_afectadas, cantidad, dosis_por_ha,
         costo_unitario, subtotal, observaciones,
         producto:productos(nombre, unidad_base)
       `)
@@ -156,6 +156,7 @@ export default async function RiaDetailPage({ params }: Props) {
       productoId: i.producto_id,
       productoNombre: i.producto?.nombre ?? '',
       unidadBase: i.producto?.unidad_base ?? '',
+      hectareasAfectadas: i.hectareas_afectadas ?? undefined,
       cantidad: i.cantidad,
       dosisPorHa: i.dosis_por_ha ?? undefined,
       costoUnitario: i.costo_unitario,
@@ -170,6 +171,7 @@ export default async function RiaDetailPage({ params }: Props) {
       prestadorId: l.prestador_id ?? undefined,
       prestadorNombre: l.prestador_nombre ?? undefined,
       unidadMedida: l.unidad_medida,
+      hectareasAfectadas: l.hectareas_afectadas ?? undefined,
       cantidad: l.cantidad,
       tarifa: l.tarifa,
       subtotal: l.subtotal,

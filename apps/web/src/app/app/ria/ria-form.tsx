@@ -60,6 +60,7 @@ export interface InsumoLine {
   _id: string;
   depositoId: string;
   productoId: string;
+  hectareasAfectadas: string;
   cantidad: string;
   dosisPorHa: string;
   costoUnitario: string;
@@ -79,6 +80,7 @@ export interface LaborLine {
   prestadorId: string;
   prestadorNombre: string;
   unidadMedida: string;
+  hectareasAfectadas: string;
   cantidad: string;
   tarifa: string;
   subtotal: number;
@@ -117,14 +119,14 @@ export interface RiaExistente {
   insumos: {
     id: string; depositoId: string; productoId: string;
     productoNombre: string; unidadBase: string;
-    cantidad: number; dosisPorHa?: number;
+    hectareasAfectadas?: number; cantidad: number; dosisPorHa?: number;
     costoUnitario: number; subtotal: number; obs?: string;
   }[];
   labores: {
     id: string; tipoLaborId?: string; tipoLaborNombre?: string;
     descripcion: string; prestadorId?: string; prestadorNombre?: string;
-    unidadMedida: string; cantidad: number; tarifa: number; subtotal: number;
-    fechaEjecucion?: string; obs?: string;
+    unidadMedida: string; hectareasAfectadas?: number; cantidad: number;
+    tarifa: number; subtotal: number; fechaEjecucion?: string; obs?: string;
   }[];
   produccion: {
     id: string; productoId: string; productoNombre: string; unidadBase: string;
@@ -198,20 +200,28 @@ export default function RiaForm({
 
   // Lines state
   const [insumos, setInsumos] = useState<InsumoLine[]>(() =>
-    (riaExistente?.insumos ?? []).map((i) => ({
-      _id: nextId(),
-      depositoId: i.depositoId,
-      productoId: i.productoId,
-      cantidad: i.cantidad.toString(),
-      dosisPorHa: i.dosisPorHa?.toString() ?? '',
-      costoUnitario: i.costoUnitario.toString(),
-      subtotal: i.subtotal,
-      obs: i.obs ?? '',
-      productoNombre: i.productoNombre,
-      unidadBase: i.unidadBase,
-      stockDisponible: null,
-      sinPrecioCompra: false,
-    })),
+    (riaExistente?.insumos ?? []).map((i) => {
+      const haAfectadas = i.hectareasAfectadas != null
+        ? i.hectareasAfectadas.toString()
+        : (i.dosisPorHa && i.dosisPorHa > 0
+          ? String(parseFloat((i.cantidad / i.dosisPorHa).toFixed(2)))
+          : '');
+      return {
+        _id: nextId(),
+        depositoId: i.depositoId,
+        productoId: i.productoId,
+        hectareasAfectadas: haAfectadas,
+        cantidad: i.cantidad.toString(),
+        dosisPorHa: i.dosisPorHa?.toString() ?? '',
+        costoUnitario: i.costoUnitario.toString(),
+        subtotal: i.subtotal,
+        obs: i.obs ?? '',
+        productoNombre: i.productoNombre,
+        unidadBase: i.unidadBase,
+        stockDisponible: null,
+        sinPrecioCompra: false,
+      };
+    }),
   );
 
   const [labores, setLabores] = useState<LaborLine[]>(() =>
@@ -223,6 +233,7 @@ export default function RiaForm({
       prestadorId: l.prestadorId ?? '',
       prestadorNombre: l.prestadorNombre ?? '',
       unidadMedida: l.unidadMedida,
+      hectareasAfectadas: l.hectareasAfectadas?.toString() ?? '',
       cantidad: l.cantidad.toString(),
       tarifa: l.tarifa.toString(),
       subtotal: l.subtotal,
@@ -411,9 +422,12 @@ export default function RiaForm({
   function addInsumo() {
     let lastDeposito = '';
     try { lastDeposito = JSON.parse(localStorage.getItem(PREF_KEY) || '{}').depositoId ?? ''; } catch {}
+    const lote = lotes.find((l) => l.id === loteId);
+    const defaultHa = lote?.hectareas ?? 0;
     setInsumos((p) => [{
-      _id: nextId(), depositoId: lastDeposito, productoId: '', cantidad: '',
-      dosisPorHa: '', costoUnitario: '', subtotal: 0, obs: '',
+      _id: nextId(), depositoId: lastDeposito, productoId: '',
+      hectareasAfectadas: defaultHa > 0 ? String(defaultHa) : '',
+      cantidad: '', dosisPorHa: '', costoUnitario: '', subtotal: 0, obs: '',
       productoNombre: '', unidadBase: '', stockDisponible: null, sinPrecioCompra: false,
     }, ...p]);
   }
@@ -432,20 +446,27 @@ export default function RiaForm({
           key === 'costoUnitario' ? val as string : i.costoUnitario,
         );
       }
-      if (key === 'cantidad' && sup > 0) {
+      const ha = parseFloat(
+        (key === 'hectareasAfectadas' ? val as string : i.hectareasAfectadas) || '0',
+      );
+      if (key === 'cantidad') {
         const cant = parseFloat(val as string || '0');
-        updated.dosisPorHa = cant > 0 ? String(parseFloat((cant / sup).toFixed(4))) : '';
+        updated.dosisPorHa = ha > 0 && cant > 0 ? String(parseFloat((cant / ha).toFixed(4))) : '';
       }
-      if (key === 'dosisPorHa' && sup > 0) {
+      if (key === 'dosisPorHa') {
         const dosis = parseFloat(val as string || '0');
-        if (dosis > 0) {
-          const newCant = (dosis * sup).toString();
+        if (ha > 0 && dosis > 0) {
+          const newCant = (dosis * ha).toString();
           updated.cantidad = newCant;
           updated.subtotal = calc(newCant, i.costoUnitario);
-        } else {
+        } else if (ha > 0) {
           updated.cantidad = '';
           updated.subtotal = 0;
         }
+      }
+      if (key === 'hectareasAfectadas') {
+        const cant = parseFloat(i.cantidad || '0');
+        updated.dosisPorHa = ha > 0 && cant > 0 ? String(parseFloat((cant / ha).toFixed(4))) : '';
       }
       return updated;
     }));
@@ -482,10 +503,12 @@ export default function RiaForm({
   function addLabor() {
     const lote = lotes.find((l) => l.id === loteId);
     const ha = lote?.hectareas ?? 0;
+    const defaultHa = ha > 0 ? String(ha) : '';
     setLabores((p) => [{
       _id: nextId(), tipoLaborId: '', tipoLaborNombre: '', descripcion: '',
       prestadorId: '', prestadorNombre: '', unidadMedida: 'has',
-      cantidad: ha > 0 ? String(ha) : '', tarifa: '', subtotal: 0, fechaEjecucion: fecha, obs: '',
+      hectareasAfectadas: defaultHa,
+      cantidad: defaultHa, tarifa: '', subtotal: 0, fechaEjecucion: fecha, obs: '',
     }, ...p]);
   }
 
@@ -597,6 +620,7 @@ export default function RiaForm({
       insumos: insumos.map((i) => ({
         depositoId: i.depositoId,
         productoId: i.productoId,
+        hectareasAfectadas: i.hectareasAfectadas ? parseFloat(i.hectareasAfectadas) : undefined,
         cantidad: parseFloat(i.cantidad),
         dosisPorHa: i.dosisPorHa ? parseFloat(i.dosisPorHa) : undefined,
         costoUnitario: parseFloat(i.costoUnitario || '0'),
@@ -610,6 +634,7 @@ export default function RiaForm({
         prestadorId: l.prestadorId || undefined,
         prestadorNombre: l.prestadorNombre || undefined,
         unidadMedida: l.unidadMedida,
+        hectareasAfectadas: l.hectareasAfectadas ? parseFloat(l.hectareasAfectadas) : undefined,
         cantidad: parseFloat(l.cantidad || '0'),
         tarifa: parseFloat(l.tarifa || '0'),
         subtotal: l.subtotal,
@@ -996,7 +1021,20 @@ export default function RiaForm({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    <div>
+                      <label className="block text-xs text-zinc-500 mb-1">Ha afectadas</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={ins.hectareasAfectadas}
+                        onChange={(e) => updateInsumo(ins._id, 'hectareasAfectadas', e.target.value)}
+                        disabled={esReadOnly}
+                        placeholder="ha del lote"
+                        className={inputCls()}
+                      />
+                    </div>
                     <div>
                       <label className="block text-xs text-zinc-500 mb-1">
                         Dosis/ha {ins.unidadBase && <span className="text-zinc-400">({ins.unidadBase}/ha)</span>}
@@ -1008,13 +1046,13 @@ export default function RiaForm({
                         value={ins.dosisPorHa}
                         onChange={(e) => updateInsumo(ins._id, 'dosisPorHa', e.target.value)}
                         disabled={esReadOnly}
-                        placeholder={sup > 0 ? 'Calcula cantidad total' : 'Ingresá sup. primero'}
+                        placeholder={parseFloat(ins.hectareasAfectadas || '0') > 0 ? 'Calcula cantidad' : 'Ingresá ha primero'}
                         className={inputCls()}
                       />
                     </div>
                     <div>
                       <label className="block text-xs text-zinc-500 mb-1">
-                        Cantidad total * {ins.unidadBase && <span className="text-zinc-400">({ins.unidadBase})</span>}
+                        Cantidad * {ins.unidadBase && <span className="text-zinc-400">({ins.unidadBase})</span>}
                       </label>
                       <input
                         type="number"
@@ -1201,7 +1239,20 @@ export default function RiaForm({
                   </div>
 
                   <div className="flex gap-3 items-start">
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div>
+                        <label className="block text-xs text-zinc-500 mb-1">Ha afectadas</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={lab.hectareasAfectadas}
+                          onChange={(e) => updateLabor(lab._id, 'hectareasAfectadas', e.target.value)}
+                          disabled={esReadOnly}
+                          placeholder="ha del lote"
+                          className={inputCls()}
+                        />
+                      </div>
                       <div>
                         <label className="block text-xs text-zinc-500 mb-1">Subtotal $</label>
                         <div className="text-sm font-semibold text-zinc-900 bg-zinc-100 rounded-lg px-2.5 py-1.5">
