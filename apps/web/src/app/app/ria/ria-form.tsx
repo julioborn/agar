@@ -1201,7 +1201,9 @@ export default function RiaForm({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-zinc-500 mb-1">Cantidad</label>
+                      <label className="block text-xs text-zinc-500 mb-1">
+                        {lab.unidadMedida === 'has' ? 'Hectáreas' : 'Cantidad'}
+                      </label>
                       <input
                         type="number"
                         step="0.01"
@@ -1239,20 +1241,22 @@ export default function RiaForm({
                   </div>
 
                   <div className="flex gap-3 items-start">
-                    <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      <div>
-                        <label className="block text-xs text-zinc-500 mb-1">Ha afectadas</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={lab.hectareasAfectadas}
-                          onChange={(e) => updateLabor(lab._id, 'hectareasAfectadas', e.target.value)}
-                          disabled={esReadOnly}
-                          placeholder="ha del lote"
-                          className={inputCls()}
-                        />
-                      </div>
+                    <div className={`flex-1 grid gap-3 ${lab.unidadMedida !== 'has' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}>
+                      {lab.unidadMedida !== 'has' && (
+                        <div>
+                          <label className="block text-xs text-zinc-500 mb-1">Ha afectadas</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={lab.hectareasAfectadas}
+                            onChange={(e) => updateLabor(lab._id, 'hectareasAfectadas', e.target.value)}
+                            disabled={esReadOnly}
+                            placeholder="ha del lote"
+                            className={inputCls()}
+                          />
+                        </div>
+                      )}
                       <div>
                         <label className="block text-xs text-zinc-500 mb-1">Subtotal $</label>
                         <div className="text-sm font-semibold text-zinc-900 bg-zinc-100 rounded-lg px-2.5 py-1.5">
