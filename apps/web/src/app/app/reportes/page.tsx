@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { BarChart3, Package, Sprout, FileText } from 'lucide-react';
+import { BarChart3, Package, Sprout, FileText, TrendingDown } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 
@@ -40,6 +40,15 @@ const REPORTS = [
     iconColor: 'text-violet-600',
     iconBg: 'bg-violet-100',
     accent: 'group-hover:border-violet-300',
+  },
+  {
+    href: '/app/reportes/costos-indirectos',
+    title: 'Reportes CI',
+    description: 'Costos indirectos de campo y empresa. Filtrable por tipo, campo, categoría, campaña y proveedor. Exportable a Excel y PDF.',
+    icon: TrendingDown,
+    iconColor: 'text-orange-600',
+    iconBg: 'bg-orange-100',
+    accent: 'group-hover:border-orange-300',
   },
 ];
 

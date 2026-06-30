@@ -61,6 +61,7 @@ export default async function CostosCampoPage() {
         campos={camposRes.data ?? []}
         campanias={campaniaRes.data ?? []}
         proveedores={provRes.data ?? []}
+        empresaNombre={empresa.nombre}
       />
     </div>
   );
