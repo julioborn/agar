@@ -57,6 +57,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { empresa, rol, esSuperAdmin, todasLasEmpresas } = empresaData;
 
+  // Dueño → dashboard visual dedicado (sin acceso a operaciones)
+  if (rol === 'dueno') redirect('/dueno');
+
   // Solo redirigir al campo si el usuario NO tiene ningún rol administrativo en ninguna empresa
   const tieneRolAdmin = todasLasEmpresas.some(
     (e) => e.rol === 'super_admin' || e.rol === 'admin_empresa' || e.rol === 'contador',
