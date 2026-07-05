@@ -9,6 +9,12 @@ html {
   background-color: #09090b;
 }
 
+/* Previene el zoom automático de iOS al enfocar inputs con font-size < 16px.
+   Se aplica globalmente para cubrir todos los formularios de la app. */
+input, textarea, select {
+  font-size: 16px;
+}
+
 /* Ticker de precios en header */
 @keyframes ticker-scroll {
   from { transform: translateX(0); }
