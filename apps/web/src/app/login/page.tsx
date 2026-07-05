@@ -3,57 +3,75 @@ import { Suspense, useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail, Lock } from 'lucide-react';
 import AppLoader from '@/components/app-loader';
 
+// ── Logo circular con anillo y sombra verde ────────────────────────────────
+
+function Logo({ size = 88 }: { size?: number }) {
+  return (
+    <div
+      className="relative flex-shrink-0"
+      style={{ width: size, height: size }}
+    >
+      {/* Anillo exterior con glow */}
+      <div
+        className="absolute inset-0 rounded-full"
+        style={{
+          background: 'conic-gradient(from 180deg, #006836 0%, #4ade80 40%, #006836 70%, #004d24 100%)',
+          padding: 2,
+          boxShadow: '0 0 28px 4px rgba(0,104,54,0.45)',
+        }}
+      >
+        <div className="w-full h-full rounded-full bg-zinc-950" />
+      </div>
+
+      {/* Imagen */}
+      <Image
+        src="/agar-final.png"
+        alt="AGAR"
+        width={size}
+        height={size}
+        className="absolute inset-0 rounded-full object-cover"
+        style={{ padding: 3 }}
+        priority
+      />
+    </div>
+  );
+}
+
+// ── Formulario ─────────────────────────────────────────────────────────────
+
 function LoginForm() {
-  const router = useRouter();
+  const router       = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail]         = useState('');
-  const [password, setPassword]   = useState('');
-  const [error, setError]         = useState<string | null>(null);
-  const [loading, setLoading]     = useState(false);
-  // Mientras intentamos recuperar la sesión desde localStorage mostramos spinner
+  const [email,    setEmail]    = useState('');
+  const [password, setPassword] = useState('');
+  const [error,    setError]    = useState<string | null>(null);
+  const [loading,  setLoading]  = useState(false);
   const [recovering, setRecovering] = useState(true);
 
-  // Recuperación silenciosa de sesión para PWA en iOS/Android.
-  // Cuando iOS mata el proceso de la PWA borra las cookies aunque tengan
-  // Max-Age, pero el localStorage sobrevive. El cliente de Supabase lee
-  // primero la cookie y cae en el fallback de localStorage, por lo que
-  // refreshSession() puede renovar el token sin pedirle al usuario que
-  // vuelva a loguearse.
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        router.replace('/');
-        return;
-      }
-      // No hay sesión en memoria/cookies. Intentamos renovar usando el
-      // refresh token que puede estar en localStorage (backup de la PWA).
+      if (session) { router.replace('/'); return; }
       supabase.auth.refreshSession().then(({ data }) => {
-        if (data.session) {
-          // ¡Sesión recuperada! Las cookies ya fueron escritas por el cliente.
-          router.replace('/');
-        } else {
-          setRecovering(false); // sin sesión recuperable → mostrar form
-        }
+        if (data.session) router.replace('/');
+        else setRecovering(false);
       }).catch(() => setRecovering(false));
     }).catch(() => setRecovering(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (searchParams.get('error') === 'link_invalido') {
-      setError('El link de invitación es inválido o expiró.');
-      return;
+      setError('El link de invitación es inválido o expiró.'); return;
     }
     const hash = window.location.hash;
     if (hash.includes('error=')) {
       const params = new URLSearchParams(hash.replace('#', ''));
       const desc = params.get('error_description');
-      if (desc?.includes('expired') || desc?.includes('invalid')) {
+      if (desc?.includes('expired') || desc?.includes('invalid'))
         setError('El link de invitación expiró. Pedí que te reenvíen la invitación.');
-      }
     }
   }, [searchParams]);
 
@@ -64,95 +82,200 @@ function LoginForm() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    if (error) {
-      setError('Email o contraseña incorrectos.');
-      return;
-    }
+    if (error) { setError('Email o contraseña incorrectos.'); return; }
     router.push('/');
     router.refresh();
   }
 
   if (recovering) {
     return (
-      <div className="w-full max-w-sm mx-auto flex flex-col items-center gap-4">
-        <Image src="/agar-final.png" alt="AGAR" width={140} height={56} className="h-14 w-auto" priority />
-        <Loader2 className="w-6 h-6 text-white/40 animate-spin mt-4" />
+      <div className="flex flex-col items-center gap-6">
+        <Logo />
+        <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-sm mx-auto">
-      {/* Logo */}
-      <div className="flex justify-center mb-8">
-        <Image src="/agar-final.png" alt="AGAR" width={140} height={56} className="h-14 w-auto" priority />
+    <div className="w-full max-w-[360px] mx-auto">
+
+      {/* Logo + nombre */}
+      <div className="flex flex-col items-center mb-8">
+        <Logo />
+        <h1 className="mt-4 text-xl font-bold text-white tracking-tight">AgroSistema</h1>
+        <p className="mt-0.5 text-xs text-white/35 tracking-wide uppercase font-medium">Gestión agropecuaria</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1.5">
-            Email
-          </label>
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="tu@email.com"
-            className="w-full bg-white/10 border border-white/10 text-white placeholder-white/30 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#4ade80]/40 focus:border-[#4ade80]/40"
-          />
-        </div>
+      {/* Card de formulario */}
+      <div
+        className="rounded-2xl p-6"
+        style={{
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          backdropFilter: 'blur(12px)',
+        }}
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
 
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1.5">
-            Contraseña
-          </label>
-          <input
-            type="password"
-            required
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            className="w-full bg-white/10 border border-white/10 text-white placeholder-white/30 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#4ade80]/40 focus:border-[#4ade80]/40"
-          />
-        </div>
-
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-            <p className="text-red-400 text-sm">{error}</p>
+          {/* Email */}
+          <div>
+            <label className="block text-xs font-semibold text-white/50 uppercase tracking-widest mb-2">
+              Email
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" />
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="tu@email.com"
+                className="w-full pl-10 pr-4 py-3 rounded-xl text-white placeholder-white/20 text-base transition-all outline-none"
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.10)',
+                }}
+                onFocus={(e) => {
+                  e.target.style.border = '1px solid rgba(74,222,128,0.45)';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(74,222,128,0.10)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.border = '1px solid rgba(255,255,255,0.10)';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
           </div>
-        )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-3.5 bg-[#006836] hover:bg-[#005228] active:bg-[#004020] text-white rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Ingresando…
-            </>
-          ) : (
-            'Ingresar'
+          {/* Contraseña */}
+          <div>
+            <label className="block text-xs font-semibold text-white/50 uppercase tracking-widest mb-2">
+              Contraseña
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" />
+              <input
+                type="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full pl-10 pr-4 py-3 rounded-xl text-white placeholder-white/20 text-base transition-all outline-none"
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.10)',
+                }}
+                onFocus={(e) => {
+                  e.target.style.border = '1px solid rgba(74,222,128,0.45)';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(74,222,128,0.10)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.border = '1px solid rgba(255,255,255,0.10)';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div
+              className="rounded-xl px-4 py-3"
+              style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.20)' }}
+            >
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
           )}
-        </button>
-      </form>
+
+          {/* Botón */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3.5 rounded-xl font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-1"
+            style={{
+              background: loading
+                ? '#005228'
+                : 'linear-gradient(135deg, #006836 0%, #008040 100%)',
+              boxShadow: '0 4px 20px rgba(0,104,54,0.35)',
+            }}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Ingresando…
+              </>
+            ) : (
+              'Ingresar'
+            )}
+          </button>
+
+        </form>
+      </div>
+
     </div>
   );
 }
 
+// ── Página ─────────────────────────────────────────────────────────────────
+
 export default function LoginPage() {
   return (
     <main
-      className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6 py-12"
-      style={{ paddingTop: 'max(3rem, calc(env(safe-area-inset-top) + 1rem))' }}
+      className="relative min-h-screen overflow-hidden flex flex-col items-center justify-center px-6 py-12"
+      style={{
+        background: '#060d08',
+        paddingTop: 'max(3rem, calc(env(safe-area-inset-top) + 1rem))',
+      }}
     >
+      {/* Orbe verde superior-derecha */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          width: 420,
+          height: 420,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(0,104,54,0.22) 0%, transparent 70%)',
+          top: '-80px',
+          right: '-100px',
+          filter: 'blur(1px)',
+        }}
+      />
+
+      {/* Orbe verde inferior-izquierda */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          width: 360,
+          height: 360,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(0,77,36,0.18) 0%, transparent 70%)',
+          bottom: '-60px',
+          left: '-80px',
+          filter: 'blur(1px)',
+        }}
+      />
+
+      {/* Línea horizontal decorativa tenue */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          height: 1,
+          width: '100%',
+          top: '55%',
+          background: 'linear-gradient(90deg, transparent 0%, rgba(0,104,54,0.12) 30%, rgba(0,104,54,0.12) 70%, transparent 100%)',
+        }}
+      />
+
       <Suspense fallback={<AppLoader size="lg" className="py-0" />}>
         <LoginForm />
       </Suspense>
+
+      {/* Tagline al pie */}
+      <p className="absolute bottom-6 text-white/15 text-xs tracking-widest uppercase">
+        Agar · Sistema Agropecuario
+      </p>
     </main>
   );
 }
