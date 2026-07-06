@@ -30,7 +30,7 @@ export default async function DuenoPage() {
 
     supabase
       .from('remitos_internos')
-      .select('lote_id, total_insumos, total_labores, total_ria')
+      .select('id, lote_id, total_insumos, total_labores, total_ria')
       .eq('empresa_id', empresa.id)
       .eq('estado', 'confirmado'),
 
@@ -51,6 +51,15 @@ export default async function DuenoPage() {
   const ciCampo   = (ciCampoRes.data   ?? []) as any[];
   const ciEmpresa = (ciEmpresaRes.data ?? []) as any[];
 
+  // ── Detalles de labores (necesita IDs de RIAs, fetch secuencial)
+  const confirmedRiaIds = rias.map((r: any) => r.id).filter(Boolean);
+  const laboresItems: any[] = confirmedRiaIds.length > 0
+    ? ((await supabase
+        .from('remitos_labores')
+        .select('tipo_labor_nombre, subtotal')
+        .in('remito_id', confirmedRiaIds)).data ?? [])
+    : [];
+
   // ── Métricas globales
   const haTotal = campos.reduce((acc: number, c: any) =>
     acc + Number(c.hectareas_totales ?? 0), 0);
@@ -70,7 +79,17 @@ export default async function DuenoPage() {
     riasPorLote[k].total_ria     += Number(r.total_ria     ?? 0);
   }
 
-  // ── Resultado por campo (margen bruto = ingresos - costos directos - CI de campo)
+  // ── Costos por tipo de labor (para gráfico)
+  const laboresPorTipoMap: Record<string, number> = {};
+  for (const l of laboresItems) {
+    const tipo = l.tipo_labor_nombre?.trim() || 'Otros';
+    laboresPorTipoMap[tipo] = (laboresPorTipoMap[tipo] ?? 0) + Number(l.subtotal ?? 0);
+  }
+  const laboresPorTipo = Object.entries(laboresPorTipoMap)
+    .map(([tipo, total]) => ({ tipo, total }))
+    .sort((a, b) => b.total - a.total);
+
+  // ── Resultado por campo
   const resultadoPorCampo = campos.map((campo: any) => {
     const cultivosDeCampo = cultivos.filter((c: any) => c.lote?.campo_id === campo.id);
     const ingreso   = cultivosDeCampo.reduce((a: number, c: any) => a + Number(c.ingreso_bruto_ars  ?? 0), 0);
@@ -85,16 +104,16 @@ export default async function DuenoPage() {
     return { nombre: campo.nombre, ingreso, costo, margen };
   });
 
-  // ── Cultivos detalle (info completa por lote para el panel del mapa)
+  // ── Cultivos detalle
   const cultivosDetalle = cultivos.map((c: any) => ({
-    id:               c.id,
-    cultivo:          c.cultivo   ?? null,
-    estado:           c.estado    ?? 'planificada',
+    id:                c.id,
+    cultivo:           c.cultivo  ?? null,
+    estado:            c.estado   ?? 'planificada',
     ingreso_bruto_ars: Number(c.ingreso_bruto_ars ?? 0),
     costo_directo_ars: Number(c.costo_directo_ars ?? 0),
     margen_bruto_ars:  Number(c.margen_bruto_ars  ?? 0),
-    lote_id:    c.lote?.id      ?? '',
-    lote_nombre: c.lote?.nombre ?? '',
+    lote_id:    c.lote?.id       ?? '',
+    lote_nombre: c.lote?.nombre  ?? '',
     campo_id:   c.lote?.campo_id ?? '',
   }));
 
@@ -119,6 +138,7 @@ export default async function DuenoPage() {
       cultivosDetalle={cultivosDetalle}
       riasPorLote={riasPorLote}
       resultadoPorCampo={resultadoPorCampo}
+      laboresPorTipo={laboresPorTipo}
     />
   );
 }

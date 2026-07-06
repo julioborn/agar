@@ -2,8 +2,12 @@
 
 import { useState, useMemo } from 'react';
 import {
+  PieChart, Pie, Cell, Tooltip as PieTooltip, Legend,
+  BarChart, Bar, XAxis, YAxis, Tooltip as BarTooltip, ResponsiveContainer, Cell as BarCell,
+} from 'recharts';
+import {
   MapPin, Sprout, Wheat, TrendingDown, Building2, Layers, BarChart3,
-  Leaf, X,
+  Leaf, X, Tractor,
 } from 'lucide-react';
 import MapaDueno from './mapa-dueno';
 import type { CampoGlobal } from './mapa-dueno-inner';
@@ -36,6 +40,7 @@ interface Props {
   cultivosDetalle: CultivoDetalle[];
   riasPorLote: Record<string, RiaTotales>;
   resultadoPorCampo: { nombre: string; ingreso: number; costo: number; margen: number }[];
+  laboresPorTipo: { tipo: string; total: number }[];
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -56,6 +61,19 @@ const ESTADO_COLOR: Record<string, { bg: string; text: string }> = {
   cancelada:   { bg: 'bg-red-50',    text: 'text-red-500'   },
 };
 
+// Paleta para cultivos (donut)
+const CULTIVO_COLORS = [
+  '#006836', '#22c55e', '#f59e0b', '#3b82f6',
+  '#8b5cf6', '#ec4899', '#f97316', '#06b6d4',
+  '#84cc16', '#14b8a6',
+];
+
+// Paleta para labores (barra)
+const LABOR_COLORS = [
+  '#005f30', '#006836', '#007a3d', '#008c45',
+  '#009e4e', '#00b057', '#22c55e', '#4ade80',
+];
+
 const numHa  = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 1 });
 const numARS = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 });
 
@@ -67,14 +85,14 @@ function fmtARS(v: number) {
 
 function capitalize(s: string | null) {
   if (!s) return 'Sin nombre';
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
 export default function DuenoDashboard({
   empresaNombre, haTotal, costoTotalCI, campos,
-  cultivosDetalle, riasPorLote, resultadoPorCampo,
+  cultivosDetalle, riasPorLote, resultadoPorCampo, laboresPorTipo,
 }: Props) {
   const hoy = new Date();
   const fechaLabel = `${hoy.getDate()} de ${MESES[hoy.getMonth()]} de ${hoy.getFullYear()}`;
@@ -116,6 +134,20 @@ export default function DuenoDashboard({
       .sort((a, b) => b.margen_bruto_ars - a.margen_bruto_ars),
     [cultivosDetalle],
   );
+
+  // Distribución de ha por tipo de cultivo (para el donut)
+  const cultivosPorTipo = useMemo(() => {
+    const map = new Map<string, { ha: number; lotes: number }>();
+    for (const c of cultivosDetalle) {
+      const key = capitalize(c.cultivo);
+      const ha  = lotesHectareas[c.lote_id] ?? 0;
+      const prev = map.get(key) ?? { ha: 0, lotes: 0 };
+      map.set(key, { ha: prev.ha + ha, lotes: prev.lotes + 1 });
+    }
+    return Array.from(map.entries())
+      .map(([cultivo, data]) => ({ cultivo, ...data }))
+      .sort((a, b) => b.ha - a.ha);
+  }, [cultivosDetalle, lotesHectareas]);
 
   // ── Lote seleccionado ──────────────────────────────────────────────────────
 
@@ -214,11 +246,9 @@ export default function DuenoDashboard({
           }
         />
 
-        {/* ── Panel de detalle del lote ────────────────────────────── */}
+        {/* Panel de detalle del lote */}
         {selectedLote && (
           <div className="mt-4 border border-zinc-100 rounded-2xl overflow-hidden">
-
-            {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 bg-zinc-50 border-b border-zinc-100">
               <div>
                 <div className="flex items-center gap-2">
@@ -240,8 +270,6 @@ export default function DuenoDashboard({
             </div>
 
             <div className="p-5 space-y-5">
-
-              {/* Cultivos del lote */}
               <div>
                 <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Cultivos</p>
                 {loteCultivos.length === 0 ? (
@@ -278,7 +306,6 @@ export default function DuenoDashboard({
                 )}
               </div>
 
-              {/* RIAs confirmadas del lote */}
               {loteRia && loteRia.total_ria > 0 && (
                 <div>
                   <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
@@ -345,6 +372,124 @@ export default function DuenoDashboard({
             })}
           </div>
         )}
+      </div>
+
+      {/* ── Gráficos: cultivos y labores ────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        {/* Distribución de cultivos (donut por ha) */}
+        <div className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <Sprout className="w-4 h-4 text-[#006836]" />
+            <p className="text-sm font-semibold text-zinc-700">Distribución de cultivos</p>
+          </div>
+          <p className="text-xs text-zinc-400 mb-4 ml-6">Hectáreas por tipo de cultivo</p>
+
+          {cultivosPorTipo.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 gap-3">
+              <Leaf className="w-8 h-8 text-zinc-200" />
+              <p className="text-zinc-400 text-sm">Sin datos de cultivos</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={cultivosPorTipo}
+                  dataKey="ha"
+                  nameKey="cultivo"
+                  cx="50%"
+                  cy="48%"
+                  outerRadius={88}
+                  innerRadius={50}
+                  paddingAngle={3}
+                >
+                  {cultivosPorTipo.map((_, i) => (
+                    <Cell key={i} fill={CULTIVO_COLORS[i % CULTIVO_COLORS.length]} />
+                  ))}
+                </Pie>
+                <PieTooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0];
+                    const color = CULTIVO_COLORS[(cultivosPorTipo.findIndex(c => c.cultivo === d.name)) % CULTIVO_COLORS.length];
+                    return (
+                      <div className="bg-white border border-zinc-200 rounded-xl px-3 py-2 shadow-lg text-sm">
+                        <p className="font-bold" style={{ color }}>{d.name}</p>
+                        <p className="text-zinc-500 text-xs">
+                          {numHa.format(Number(d.value))} ha · {(d.payload as any).lotes} lote{(d.payload as any).lotes !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    );
+                  }}
+                />
+                <Legend
+                  iconType="circle"
+                  iconSize={8}
+                  formatter={(value) => <span className="text-xs text-zinc-600">{value}</span>}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* Costos por tipo de labor */}
+        <div className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <Tractor className="w-4 h-4 text-[#006836]" />
+            <p className="text-sm font-semibold text-zinc-700">Costos por tipo de labor</p>
+          </div>
+          <p className="text-xs text-zinc-400 mb-4 ml-6">RIAs confirmadas · labores aplicadas</p>
+
+          {laboresPorTipo.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 gap-3">
+              <Tractor className="w-8 h-8 text-zinc-200" />
+              <p className="text-zinc-400 text-sm">Sin labores registradas</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={Math.max(220, laboresPorTipo.length * 44)}>
+              <BarChart
+                data={laboresPorTipo}
+                layout="vertical"
+                margin={{ left: 8, right: 40, top: 4, bottom: 4 }}
+              >
+                <XAxis
+                  type="number"
+                  tick={{ fontSize: 10, fill: '#a1a1aa' }}
+                  tickFormatter={(v) => fmtARS(v)}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  dataKey="tipo"
+                  type="category"
+                  tick={{ fontSize: 11, fill: '#52525b' }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={110}
+                  tickFormatter={(v: string) => v.length > 16 ? v.slice(0, 14) + '…' : v}
+                />
+                <BarTooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0].payload;
+                    return (
+                      <div className="bg-white border border-zinc-200 rounded-xl px-3 py-2 shadow-lg text-sm">
+                        <p className="font-bold text-zinc-700">{d.tipo}</p>
+                        <p className="text-[#006836] font-semibold">{fmtARS(d.total)}</p>
+                      </div>
+                    );
+                  }}
+                />
+                <Bar dataKey="total" name="Total" radius={[0, 5, 5, 0]}>
+                  {laboresPorTipo.map((_, i) => (
+                    <BarCell key={i} fill={LABOR_COLORS[i % LABOR_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
       </div>
 
     </div>
