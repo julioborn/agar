@@ -13,6 +13,7 @@ html {
    Se aplica globalmente para cubrir todos los formularios de la app. */
 input, textarea, select {
   font-size: 16px;
+  text-align: start;
 }
 
 /* Ticker de precios en header */
