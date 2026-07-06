@@ -12,6 +12,11 @@ const MapaDuenoInner = dynamic(() => import('./mapa-dueno-inner'), {
   ),
 });
 
-export default function MapaDueno({ campos }: { campos: CampoGlobal[] }) {
-  return <MapaDuenoInner campos={campos} />;
+interface Props {
+  campos: CampoGlobal[];
+  onLoteClick?: (loteId: string, loteNombre: string, campoNombre: string) => void;
+}
+
+export default function MapaDueno({ campos, onLoteClick }: Props) {
+  return <MapaDuenoInner campos={campos} onLoteClick={onLoteClick} />;
 }

@@ -21,6 +21,7 @@ export interface CampoGlobal {
 
 interface Props {
   campos: CampoGlobal[];
+  onLoteClick?: (loteId: string, loteNombre: string, campoNombre: string) => void;
 }
 
 const TILE_SAT = {
@@ -43,16 +44,18 @@ const COLORES = [
 const getColor = (i: number) => COLORES[i % COLORES.length];
 const ARG_CENTER: [number, number] = [-38.4, -63.6];
 
-export default function MapaDuenoInner({ campos }: Props) {
+export default function MapaDuenoInner({ campos, onLoteClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef       = useRef<L.Map | null>(null);
   const tileRef      = useRef<L.TileLayer | null>(null);
   const labelsRef    = useRef<L.TileLayer | null>(null);
   const campoLayers  = useRef<Map<string, L.Polygon[]>>(new Map());
+  const lotePolyMap  = useRef<Map<string, { poly: L.Polygon; color: string }>>(new Map());
 
-  const [ready,     setReady]     = useState(false);
-  const [satellite, setSatellite] = useState(true);
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [ready,       setReady]       = useState(false);
+  const [satellite,   setSatellite]   = useState(true);
+  const [panelOpen,   setPanelOpen]   = useState(true);
+  const [selectedId,  setSelectedId]  = useState<string | null>(null);
 
   const numHa = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 1 });
 
@@ -76,7 +79,7 @@ export default function MapaDuenoInner({ campos }: Props) {
       campo.lotes.forEach((lote) => {
         if (!lote.coordenadas?.geometry?.coordinates?.[0]?.length) return;
 
-        const ring = lote.coordenadas.geometry.coordinates[0];
+        const ring   = lote.coordenadas.geometry.coordinates[0];
         const latLngs = ring.map(([lng, lat]) => L.latLng(lat, lng));
 
         const poly = L.polygon(latLngs, {
@@ -92,7 +95,6 @@ export default function MapaDuenoInner({ campos }: Props) {
           { permanent: false, direction: 'center', className: 'lote-map-label' },
         );
 
-        // Popup sin link de navegación
         poly.bindPopup(`
           <div style="min-width:180px;padding:4px 0;">
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
@@ -101,12 +103,28 @@ export default function MapaDuenoInner({ campos }: Props) {
             </div>
             <p style="font-size:12px;color:#52525b;margin:0 0 2px;">Lote: <strong>${lote.nombre}</strong></p>
             ${lote.hectareas ? `<p style="font-size:12px;color:#006836;font-weight:600;margin:0;">${numHa.format(lote.hectareas)} ha</p>` : ''}
+            <p style="font-size:11px;color:#a1a1aa;margin:4px 0 0;">Ver detalles en el panel ↓</p>
           </div>
         `, { closeButton: true, maxWidth: 220 });
 
-        poly.on('mouseover', () => poly.setStyle({ fillOpacity: 0.45, weight: 3 }));
-        poly.on('mouseout',  () => poly.setStyle({ fillOpacity: 0.2,  weight: 2.5 }));
+        poly.on('mouseover', () => {
+          if (selectedId !== lote.id) poly.setStyle({ fillOpacity: 0.45, weight: 3 });
+        });
+        poly.on('mouseout', () => {
+          if (selectedId !== lote.id) poly.setStyle({ fillOpacity: 0.2, weight: 2.5 });
+        });
+        poly.on('click', () => {
+          // Resetear todos los polígonos
+          lotePolyMap.current.forEach(({ poly: p, color: c }) =>
+            p.setStyle({ color: c, fillColor: c, fillOpacity: 0.2, weight: 2.5 }),
+          );
+          // Destacar el lote seleccionado
+          poly.setStyle({ color, fillColor: color, fillOpacity: 0.6, weight: 3.5 });
+          setSelectedId(lote.id);
+          onLoteClick?.(lote.id, lote.nombre, campo.nombre);
+        });
 
+        lotePolyMap.current.set(lote.id, { poly, color });
         layers.push(poly);
         allLayers.push(poly);
       });
@@ -125,6 +143,7 @@ export default function MapaDuenoInner({ campos }: Props) {
       delete (el as any)._leaflet_id;
       mapRef.current = null;
       campoLayers.current.clear();
+      lotePolyMap.current.clear();
       setReady(false);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -199,7 +218,7 @@ export default function MapaDuenoInner({ campos }: Props) {
                 {campos.length === 0
                   ? <p className="px-3 py-4 text-xs text-slate-400 text-center">Sin campos</p>
                   : campos.map((campo, idx) => {
-                    const color = getColor(idx);
+                    const color   = getColor(idx);
                     const conPoly = lotesConPoligono(campo);
                     return (
                       <div key={campo.id} className="px-3 py-2.5">
@@ -218,7 +237,12 @@ export default function MapaDuenoInner({ campos }: Props) {
                         </div>
                         <div className="ml-5 mt-1 space-y-0.5">
                           {campo.lotes.map((l) => (
-                            <p key={l.id} className="text-[11px] text-slate-400 truncate">
+                            <p key={l.id} className={cn(
+                              'text-[11px] truncate cursor-pointer transition-colors',
+                              selectedId === l.id
+                                ? 'text-[#006836] font-semibold'
+                                : 'text-slate-400 hover:text-slate-600',
+                            )}>
                               {l.nombre}{l.hectareas ? ` · ${numHa.format(l.hectareas)} ha` : ''}
                             </p>
                           ))}
