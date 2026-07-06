@@ -135,6 +135,31 @@ export default function DuenoDashboard({
     [cultivosDetalle],
   );
 
+  // Costos totales por tipo de cultivo (costo directo + RIA)
+  const costosPorCultivo = useMemo(() => {
+    const map = new Map<string, { costoDir: number; costoRia: number; ingreso: number }>();
+    for (const c of cultivosDetalle) {
+      const key    = capitalize(c.cultivo);
+      const ria    = riasPorLote[c.lote_id]?.total_ria ?? 0;
+      const prev   = map.get(key) ?? { costoDir: 0, costoRia: 0, ingreso: 0 };
+      map.set(key, {
+        costoDir: prev.costoDir + c.costo_directo_ars,
+        costoRia: prev.costoRia + ria,
+        ingreso:  prev.ingreso  + c.ingreso_bruto_ars,
+      });
+    }
+    return Array.from(map.entries())
+      .map(([cultivo, d]) => ({
+        cultivo,
+        costoTotal: d.costoDir + d.costoRia,
+        costoDir:   d.costoDir,
+        costoRia:   d.costoRia,
+        ingreso:    d.ingreso,
+        margen:     d.ingreso - d.costoDir - d.costoRia,
+      }))
+      .sort((a, b) => b.costoTotal - a.costoTotal);
+  }, [cultivosDetalle, riasPorLote]);
+
   // Distribución de ha por tipo de cultivo (para el donut)
   const cultivosPorTipo = useMemo(() => {
     const map = new Map<string, { ha: number; lotes: number }>();
@@ -490,6 +515,78 @@ export default function DuenoDashboard({
           )}
         </div>
 
+      </div>
+
+      {/* Costos por tipo de cultivo */}
+      <div className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-1">
+          <Wheat className="w-4 h-4 text-[#006836]" />
+          <p className="text-sm font-semibold text-zinc-700">Costos por tipo de cultivo</p>
+        </div>
+        <p className="text-xs text-zinc-400 mb-4 ml-6">Costo directo + RIA · ordenado por mayor costo</p>
+
+        {costosPorCultivo.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 gap-3">
+            <Leaf className="w-8 h-8 text-zinc-200" />
+            <p className="text-zinc-400 text-sm">Sin datos de costos</p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={Math.max(220, costosPorCultivo.length * 52)}>
+            <BarChart
+              data={costosPorCultivo}
+              layout="vertical"
+              margin={{ left: 8, right: 56, top: 4, bottom: 4 }}
+            >
+              <XAxis
+                type="number"
+                tick={{ fontSize: 10, fill: '#a1a1aa' }}
+                tickFormatter={(v) => fmtARS(v)}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                dataKey="cultivo"
+                type="category"
+                tick={{ fontSize: 11, fill: '#52525b' }}
+                axisLine={false}
+                tickLine={false}
+                width={110}
+                tickFormatter={(v: string) => v.length > 16 ? v.slice(0, 14) + '…' : v}
+              />
+              <BarTooltip
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0].payload;
+                  const margenPos = d.margen >= 0;
+                  return (
+                    <div className="bg-white border border-zinc-200 rounded-xl px-3 py-2.5 shadow-lg text-sm space-y-1">
+                      <p className="font-bold text-zinc-700">{d.cultivo}</p>
+                      <p className="text-zinc-400 text-xs">
+                        Costo directo: <span className="text-zinc-600 font-semibold">{fmtARS(d.costoDir)}</span>
+                      </p>
+                      <p className="text-zinc-400 text-xs">
+                        Costo RIA: <span className="text-zinc-600 font-semibold">{fmtARS(d.costoRia)}</span>
+                      </p>
+                      <p className="text-zinc-400 text-xs border-t border-zinc-100 pt-1">
+                        Total: <span className="text-red-500 font-bold">{fmtARS(d.costoTotal)}</span>
+                      </p>
+                      {d.ingreso > 0 && (
+                        <p className={`text-xs font-bold ${margenPos ? 'text-green-600' : 'text-red-500'}`}>
+                          Margen: {margenPos ? '+' : ''}{fmtARS(d.margen)}
+                        </p>
+                      )}
+                    </div>
+                  );
+                }}
+              />
+              <Bar dataKey="costoTotal" name="Costo total" radius={[0, 5, 5, 0]}>
+                {costosPorCultivo.map((_, i) => (
+                  <BarCell key={i} fill={CULTIVO_COLORS[i % CULTIVO_COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
     </div>
