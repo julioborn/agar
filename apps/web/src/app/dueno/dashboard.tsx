@@ -88,6 +88,41 @@ function capitalize(s: string | null) {
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 }
 
+// ── Tick del eje Y con word-wrap ─────────────────────────────────────────────
+
+function wrapLabel(text: string, maxChars = 18): string[] {
+  if (text.length <= maxChars) return [text];
+  const lines: string[] = [];
+  let remaining = text;
+  while (remaining.length > maxChars) {
+    const cut = remaining.lastIndexOf(' ', maxChars);
+    if (cut <= 0) {
+      lines.push(remaining.slice(0, maxChars));
+      remaining = remaining.slice(maxChars).trim();
+    } else {
+      lines.push(remaining.slice(0, cut));
+      remaining = remaining.slice(cut + 1);
+    }
+  }
+  if (remaining) lines.push(remaining);
+  return lines.slice(0, 3);
+}
+
+function CustomYTick({ x, y, payload }: any) {
+  const lines  = wrapLabel(String(payload.value));
+  const lh     = 14;
+  const startY = -((lines.length - 1) * lh) / 2;
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {lines.map((line, i) => (
+        <text key={i} x={0} y={startY + i * lh} textAnchor="end" fill="#52525b" fontSize={10}>
+          {line}
+        </text>
+      ))}
+    </g>
+  );
+}
+
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
 export default function DuenoDashboard({
@@ -471,7 +506,7 @@ export default function DuenoDashboard({
               <p className="text-zinc-400 text-sm">Sin labores registradas</p>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={Math.max(220, laboresPorTipo.length * 44)}>
+            <ResponsiveContainer width="100%" height={Math.max(220, laboresPorTipo.length * 56)}>
               <BarChart
                 data={laboresPorTipo}
                 layout="vertical"
@@ -487,11 +522,10 @@ export default function DuenoDashboard({
                 <YAxis
                   dataKey="tipo"
                   type="category"
-                  tick={{ fontSize: 11, fill: '#52525b' }}
+                  tick={<CustomYTick />}
                   axisLine={false}
                   tickLine={false}
-                  width={110}
-                  tickFormatter={(v: string) => v.length > 16 ? v.slice(0, 14) + '…' : v}
+                  width={148}
                 />
                 <BarTooltip
                   content={({ active, payload }) => {
@@ -531,7 +565,7 @@ export default function DuenoDashboard({
             <p className="text-zinc-400 text-sm">Sin datos de costos</p>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={Math.max(220, costosPorCultivo.length * 52)}>
+          <ResponsiveContainer width="100%" height={Math.max(220, costosPorCultivo.length * 56)}>
             <BarChart
               data={costosPorCultivo}
               layout="vertical"
@@ -547,11 +581,10 @@ export default function DuenoDashboard({
               <YAxis
                 dataKey="cultivo"
                 type="category"
-                tick={{ fontSize: 11, fill: '#52525b' }}
+                tick={<CustomYTick />}
                 axisLine={false}
                 tickLine={false}
-                width={110}
-                tickFormatter={(v: string) => v.length > 16 ? v.slice(0, 14) + '…' : v}
+                width={148}
               />
               <BarTooltip
                 content={({ active, payload }) => {
