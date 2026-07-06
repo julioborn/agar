@@ -95,18 +95,6 @@ export default function MapaDuenoInner({ campos, onLoteClick }: Props) {
           { permanent: false, direction: 'center', className: 'lote-map-label' },
         );
 
-        poly.bindPopup(`
-          <div style="min-width:180px;padding:4px 0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;"></span>
-              <p style="font-weight:700;font-size:13px;color:#18181b;margin:0;">${campo.nombre}</p>
-            </div>
-            <p style="font-size:12px;color:#52525b;margin:0 0 2px;">Lote: <strong>${lote.nombre}</strong></p>
-            ${lote.hectareas ? `<p style="font-size:12px;color:#006836;font-weight:600;margin:0;">${numHa.format(lote.hectareas)} ha</p>` : ''}
-            <p style="font-size:11px;color:#a1a1aa;margin:4px 0 0;">Ver detalles en el panel ↓</p>
-          </div>
-        `, { closeButton: true, maxWidth: 220 });
-
         poly.on('mouseover', () => {
           if (selectedId !== lote.id) poly.setStyle({ fillOpacity: 0.45, weight: 3 });
         });

@@ -2,9 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine,
-} from 'recharts';
-import {
   MapPin, Sprout, Wheat, TrendingDown, Building2, Layers, BarChart3,
   Leaf, X,
 } from 'lucide-react';
@@ -31,13 +28,6 @@ interface RiaTotales {
   total_ria: number;
 }
 
-interface ResultadoCampo {
-  nombre: string;
-  ingreso: number;
-  costo: number;
-  margen: number;
-}
-
 interface Props {
   empresaNombre: string;
   haTotal: number;
@@ -45,7 +35,7 @@ interface Props {
   campos: CampoGlobal[];
   cultivosDetalle: CultivoDetalle[];
   riasPorLote: Record<string, RiaTotales>;
-  resultadoPorCampo: ResultadoCampo[];
+  resultadoPorCampo: { nombre: string; ingreso: number; costo: number; margen: number }[];
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -126,18 +116,6 @@ export default function DuenoDashboard({
       .sort((a, b) => b.margen_bruto_ars - a.margen_bruto_ars),
     [cultivosDetalle],
   );
-
-  const chartData = useMemo(
-    () => resultadoPorCampo
-      .sort((a, b) => b.margen - a.margen)
-      .map((d) => ({
-        ...d,
-        nombreCorto: d.nombre.length > 14 ? d.nombre.slice(0, 12) + '…' : d.nombre,
-      })),
-    [resultadoPorCampo],
-  );
-
-  const hasChartData = chartData.some((d) => d.ingreso !== 0 || d.costo !== 0);
 
   // ── Lote seleccionado ──────────────────────────────────────────────────────
 
@@ -327,115 +305,46 @@ export default function DuenoDashboard({
         )}
       </div>
 
-      {/* ── Estadísticas ────────────────────────────────────────────────── */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
+      {/* ── Cultivos en curso ───────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-1">
           <BarChart3 className="w-4 h-4 text-[#006836]" />
-          <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">Estadísticas</h2>
+          <p className="text-sm font-semibold text-zinc-700">Cultivos en curso</p>
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-          {/* Resultado por campo */}
-          <div className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
-            <p className="text-sm font-semibold text-zinc-700 mb-0.5">Resultado por campo</p>
-            <p className="text-xs text-zinc-400 mb-4">Margen = ingresos − costos directos − gastos CI</p>
-            {!hasChartData ? (
-              <p className="text-zinc-400 text-sm text-center py-10">Sin datos de producción cargados</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={Math.max(220, chartData.length * 48)}>
-                <BarChart
-                  data={chartData}
-                  layout="vertical"
-                  margin={{ left: 8, right: 36, top: 4, bottom: 4 }}
-                >
-                  <XAxis
-                    type="number"
-                    tick={{ fontSize: 10, fill: '#a1a1aa' }}
-                    tickFormatter={(v) => fmtARS(v)}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    dataKey="nombreCorto"
-                    type="category"
-                    tick={{ fontSize: 11, fill: '#52525b' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={100}
-                  />
-                  <ReferenceLine x={0} stroke="#e4e4e7" strokeWidth={1} />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (!active || !payload?.length) return null;
-                      const d = payload[0].payload;
-                      const pos = d.margen >= 0;
-                      return (
-                        <div className="bg-white border border-zinc-200 rounded-xl px-3 py-2.5 shadow-lg text-sm space-y-1">
-                          <p className="font-bold text-zinc-700">{d.nombre}</p>
-                          <p className="text-zinc-400 text-xs">
-                            Ingreso: <span className="text-green-600 font-semibold">{fmtARS(d.ingreso)}</span>
-                          </p>
-                          <p className="text-zinc-400 text-xs">
-                            Costos: <span className="text-red-500 font-semibold">{fmtARS(d.costo)}</span>
-                          </p>
-                          <p className={`text-xs font-bold border-t border-zinc-100 pt-1 mt-1 ${pos ? 'text-green-600' : 'text-red-500'}`}>
-                            Margen: {pos ? '+' : ''}{fmtARS(d.margen)}
-                          </p>
-                        </div>
-                      );
-                    }}
-                  />
-                  <Bar dataKey="margen" name="Margen" radius={[0, 5, 5, 0]}>
-                    {chartData.map((entry, i) => (
-                      <Cell key={i} fill={entry.margen >= 0 ? '#22c55e' : '#ef4444'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+        <p className="text-xs text-zinc-400 mb-4 ml-6">Activos ordenados por margen bruto</p>
+        {cultivosActivos.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 gap-3">
+            <Leaf className="w-8 h-8 text-zinc-200" />
+            <p className="text-zinc-400 text-sm">Sin cultivos en curso</p>
           </div>
-
-          {/* Cultivos en curso */}
-          <div className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
-            <p className="text-sm font-semibold text-zinc-700 mb-0.5">Cultivos en curso</p>
-            <p className="text-xs text-zinc-400 mb-4">Activos ordenados por margen bruto</p>
-            {cultivosActivos.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 gap-3">
-                <Leaf className="w-8 h-8 text-zinc-200" />
-                <p className="text-zinc-400 text-sm">Sin cultivos en curso</p>
-              </div>
-            ) : (
-              <div className="space-y-2 overflow-y-auto" style={{ maxHeight: 300 }}>
-                {cultivosActivos.map((c) => {
-                  const campo = campoNombres[c.campo_id] ?? '';
-                  const margenPos = c.margen_bruto_ars >= 0;
-                  return (
-                    <div key={c.id} className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
-                      <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
-                        <Sprout className="w-4 h-4 text-green-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-zinc-800 truncate">
-                          {capitalize(c.cultivo)}
-                        </p>
-                        <p className="text-xs text-zinc-400 truncate">
-                          {c.lote_nombre}{campo ? ` · ${campo}` : ''}
-                        </p>
-                      </div>
-                      {c.margen_bruto_ars !== 0 && (
-                        <span className={`text-xs font-bold flex-shrink-0 ${margenPos ? 'text-green-600' : 'text-red-500'}`}>
-                          {margenPos ? '+' : ''}{fmtARS(c.margen_bruto_ars)}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+        ) : (
+          <div className="space-y-2 overflow-y-auto" style={{ maxHeight: 320 }}>
+            {cultivosActivos.map((c) => {
+              const campo = campoNombres[c.campo_id] ?? '';
+              const margenPos = c.margen_bruto_ars >= 0;
+              return (
+                <div key={c.id} className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
+                  <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+                    <Sprout className="w-4 h-4 text-green-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-zinc-800 truncate">
+                      {capitalize(c.cultivo)}
+                    </p>
+                    <p className="text-xs text-zinc-400 truncate">
+                      {c.lote_nombre}{campo ? ` · ${campo}` : ''}
+                    </p>
+                  </div>
+                  {c.margen_bruto_ars !== 0 && (
+                    <span className={`text-xs font-bold flex-shrink-0 ${margenPos ? 'text-green-600' : 'text-red-500'}`}>
+                      {margenPos ? '+' : ''}{fmtARS(c.margen_bruto_ars)}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
-
-        </div>
+        )}
       </div>
 
     </div>
