@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'ar.agar.sistema',
+  appId: 'com.agar.sistema',
   appName: 'AGAR',
   webDir: 'www',
   server: {

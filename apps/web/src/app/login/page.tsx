@@ -102,8 +102,6 @@ function LoginForm() {
       {/* Logo + nombre */}
       <div className="flex flex-col items-center mb-8">
         <Logo />
-        <h1 className="mt-4 text-xl font-bold text-white tracking-tight">AgroSistema</h1>
-        <p className="mt-0.5 text-xs text-white/35 tracking-wide uppercase font-medium">Gestión agropecuaria</p>
       </div>
 
       {/* Card de formulario */}
