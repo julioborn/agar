@@ -26,7 +26,6 @@ interface Cultivo {
   id: string;
   cultivo: string | null;
   estado: string;
-  hectareas: number | null;
   campania_id: string | null;
 }
 

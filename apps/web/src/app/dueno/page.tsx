@@ -23,7 +23,7 @@ export default async function DuenoPage() {
     // Los cultivos se filtran via lotes → campos → empresa_id gracias a RLS
     supabase
       .from('cultivos')
-      .select('id, cultivo, estado, hectareas, campania_id, lote:lotes!inner(id, nombre, campo_id)'),
+      .select('id, cultivo, estado, campania_id, lote:lotes!inner(id, nombre, campo_id)'),
 
     supabase
       .from('costos_indirectos_campo')
