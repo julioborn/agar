@@ -270,7 +270,7 @@ export default function LoginPage() {
 
       {/* Tagline al pie */}
       <p className="absolute bottom-6 text-white/15 text-xs tracking-widest uppercase">
-        Agar · Sistema Agropecuario
+        Agar
       </p>
     </main>
   );
