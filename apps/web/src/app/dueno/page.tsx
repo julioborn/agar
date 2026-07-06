@@ -13,14 +13,13 @@ export default async function DuenoPage() {
   const { empresa, rol } = empresaData;
   if (rol !== 'dueno') redirect('/app');
 
-  const [camposRes, cultivosRes, ciCampoRes, ciEmpresaRes, campaniaRes] = await Promise.all([
+  const [camposRes, cultivosRes, ciCampoRes, ciEmpresaRes] = await Promise.all([
     supabase
       .from('campos')
       .select('id, nombre, hectareas_totales, lotes(id, nombre, hectareas, coordenadas)')
       .eq('empresa_id', empresa.id)
       .order('nombre'),
 
-    // Los cultivos se filtran via lotes → campos → empresa_id gracias a RLS
     supabase
       .from('cultivos')
       .select('id, cultivo, estado, campania_id, lote:lotes!inner(id, nombre, campo_id)'),
@@ -34,38 +33,38 @@ export default async function DuenoPage() {
       .from('costos_indirectos_empresa')
       .select('monto_ars')
       .eq('empresa_id', empresa.id),
-
-    supabase
-      .from('campanias')
-      .select('id, nombre')
-      .eq('empresa_id', empresa.id)
-      .order('nombre'),
   ]);
 
   const campos = (camposRes.data ?? []) as any[];
   const cultivos = (cultivosRes.data ?? []) as any[];
 
-  const haTotal = campos.reduce((acc, c) => acc + Number(c.hectareas_totales ?? 0), 0);
+  const haTotal = campos.reduce((acc: number, c: any) =>
+    acc + Number(c.hectareas_totales ?? 0), 0);
+
   const costoTotalCI =
     (ciCampoRes.data ?? []).reduce((acc: number, c: any) => acc + Number(c.monto_ars), 0) +
     (ciEmpresaRes.data ?? []).reduce((acc: number, c: any) => acc + Number(c.monto_ars), 0);
 
+  // Datos del mapa: campos con sus lotes y coordenadas
   const camposParaMapa = campos.map((c: any) => ({
-    id: c.id,
+    id:     c.id,
     nombre: c.nombre,
-    lotes: (Array.isArray(c.lotes) ? c.lotes : []).map((l: any) => ({
-      id: l.id,
-      nombre: l.nombre,
-      hectareas: l.hectareas ?? 0,
+    lotes:  (Array.isArray(c.lotes) ? c.lotes : []).map((l: any) => ({
+      id:          l.id,
+      nombre:      l.nombre,
+      hectareas:   Number(l.hectareas ?? 0),
       coordenadas: l.coordenadas ?? null,
     })),
   }));
 
-  const camposStats = campos.map((c: any) => ({
-    id: c.id,
-    nombre: c.nombre,
-    hectareas: Number(c.hectareas_totales ?? 0),
-  }));
+  // Un ítem por lote para el gráfico de hectáreas
+  const lotesStats = campos.flatMap((c: any) =>
+    (Array.isArray(c.lotes) ? c.lotes : []).map((l: any) => ({
+      nombre:    `${l.nombre} · ${c.nombre}`,
+      campo:     c.nombre,
+      hectareas: Number(l.hectareas ?? 0),
+    })),
+  );
 
   return (
     <DuenoDashboard
@@ -73,9 +72,8 @@ export default async function DuenoPage() {
       haTotal={haTotal}
       costoTotalCI={costoTotalCI}
       campos={camposParaMapa}
-      camposStats={camposStats}
+      lotesStats={lotesStats}
       cultivos={cultivos}
-      campanias={campaniaRes.data ?? []}
     />
   );
 }
