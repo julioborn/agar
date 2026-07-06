@@ -3,7 +3,7 @@ import { Suspense, useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { Loader2, Mail, Lock } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import AppLoader from '@/components/app-loader';
 
 // ── Logo circular con anillo y sombra verde ────────────────────────────────
@@ -121,7 +121,6 @@ function LoginForm() {
               Email
             </label>
             <div className="relative">
-              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" />
               <input
                 type="email"
                 required
@@ -129,7 +128,7 @@ function LoginForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="tu@email.com"
-                className="w-full pl-10 pr-4 py-3 rounded-xl text-white placeholder-white/20 text-base text-left transition-all outline-none"
+                className="w-full px-4 py-3 rounded-xl text-white placeholder-white/20 text-base text-left transition-all outline-none"
                 style={{
                   background: 'rgba(255,255,255,0.06)',
                   border: '1px solid rgba(255,255,255,0.10)',
@@ -152,7 +151,6 @@ function LoginForm() {
               Contraseña
             </label>
             <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" />
               <input
                 type="password"
                 required
@@ -160,7 +158,7 @@ function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-3 rounded-xl text-white placeholder-white/20 text-base text-left transition-all outline-none"
+                className="w-full px-4 py-3 rounded-xl text-white placeholder-white/20 text-base text-left transition-all outline-none"
                 style={{
                   background: 'rgba(255,255,255,0.06)',
                   border: '1px solid rgba(255,255,255,0.10)',
