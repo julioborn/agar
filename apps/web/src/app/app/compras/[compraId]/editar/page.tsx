@@ -13,10 +13,11 @@ export default async function EditarCompraPage({ params }: Props) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
-  if (user.email !== 'juliobornes10@gmail.com') redirect(`/app/compras/${compraId}`);
 
   const empresaData = await getEmpresaActiva();
   if (!empresaData) redirect('/login');
+  const { rol, esSuperAdmin } = empresaData;
+  if (!esSuperAdmin && rol !== 'admin_empresa') redirect(`/app/compras/${compraId}`);
 
   const { data: compra } = await supabase
     .from('compras')

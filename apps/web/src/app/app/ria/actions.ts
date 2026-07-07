@@ -286,7 +286,10 @@ export async function eliminarRia(riaId: string): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'No autenticado.' };
-  if (user.email !== 'juliobornes10@gmail.com') return { error: 'Sin permiso.' };
+  const empresaRia = await getEmpresaActiva();
+  if (!empresaRia) return { error: 'Sin empresa activa.' };
+  const { rol: rolRia, esSuperAdmin: esAdminRia } = empresaRia;
+  if (!esAdminRia && rolRia !== 'admin_empresa') return { error: 'Sin permiso.' };
 
   // Obtener el estado y cultivo_id del RIA
   const { data: remito } = await supabase

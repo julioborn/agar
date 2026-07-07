@@ -229,10 +229,11 @@ export async function editarCompraCompleta(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'No autenticado' };
-  if (user.email !== 'juliobornes10@gmail.com') return { error: 'Sin permiso.' };
 
   const empresaData = await getEmpresaActiva();
   if (!empresaData) return { error: 'Sin empresa activa' };
+  const { rol, esSuperAdmin } = empresaData;
+  if (!esSuperAdmin && rol !== 'admin_empresa') return { error: 'Sin permiso.' };
 
   // 1. Obtener los movimientos actuales para saber depósitos/productos anteriores
   const { data: movsActuales } = await supabase
@@ -347,7 +348,10 @@ export async function eliminarCompra(compraId: string): Promise<{ error?: string
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'No autenticado' };
-  if (user.email !== 'juliobornes10@gmail.com') return { error: 'Sin permiso.' };
+  const empresaElim = await getEmpresaActiva();
+  if (!empresaElim) return { error: 'Sin empresa activa' };
+  const { rol: rolElim, esSuperAdmin: esAdminElim } = empresaElim;
+  if (!esAdminElim && rolElim !== 'admin_empresa') return { error: 'Sin permiso.' };
 
   // 1. Obtener movimientos para saber qué stock recalcular
   const { data: movs } = await supabase

@@ -13,7 +13,7 @@ export default async function ComprasPage() {
   const empresaData = await getEmpresaActiva();
   if (!empresaData) redirect('/login');
 
-  const { empresa } = empresaData;
+  const { empresa, rol, esSuperAdmin } = empresaData;
 
   const [comprasRes, provRes] = await Promise.all([
     supabase
@@ -62,7 +62,7 @@ export default async function ComprasPage() {
         compras={compras}
         proveedores={provRes.data ?? []}
         empresaNombre={empresa.nombre}
-        esAdmin={user.email === 'juliobornes10@gmail.com'}
+        esAdmin={esSuperAdmin || rol === 'admin_empresa'}
       />
     </div>
   );
