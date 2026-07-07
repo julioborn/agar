@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Filter, X, ChevronDown, ChevronUp, ShoppingCart, Calendar, Truck, FileText, DollarSign, Trash2, Pencil } from 'lucide-react';
+import { Filter, X, ChevronDown, ChevronUp, ShoppingCart, Calendar, Truck, FileText, DollarSign, Trash2, Pencil, Search } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
@@ -54,6 +54,7 @@ export default function ComprasManager({ compras, proveedores, empresaNombre, es
   const [proveedorId, setProveedorId] = useState('');
   const [estado, setEstado] = useState('');
   const [moneda, setMoneda]  = useState('');
+  const [texto, setTexto] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [limpiando, setLimpiando] = useState(false);
 
@@ -65,14 +66,18 @@ export default function ComprasManager({ compras, proveedores, empresaNombre, es
   const [elimLoading, setElimLoading] = useState(false);
   const [elimError, setElimError] = useState<string | null>(null);
 
-  const filtradas = useMemo(() => compras.filter((c) => {
-    if (fechaDesde && c.fecha < fechaDesde) return false;
-    if (fechaHasta && c.fecha > fechaHasta) return false;
-    if (proveedorId && !c.proveedor_nombre.includes(proveedores.find(p => p.id === proveedorId)?.nombre ?? '')) return false;
-    if (estado && c.estado !== estado) return false;
-    if (moneda && c.moneda !== moneda) return false;
-    return true;
-  }), [compras, fechaDesde, fechaHasta, proveedorId, estado, moneda, proveedores]);
+  const filtradas = useMemo(() => {
+    const q = texto.toLowerCase().trim();
+    return compras.filter((c) => {
+      if (fechaDesde && c.fecha < fechaDesde) return false;
+      if (fechaHasta && c.fecha > fechaHasta) return false;
+      if (proveedorId && !c.proveedor_nombre.includes(proveedores.find(p => p.id === proveedorId)?.nombre ?? '')) return false;
+      if (estado && c.estado !== estado) return false;
+      if (moneda && c.moneda !== moneda) return false;
+      if (q && !c.proveedor_nombre.toLowerCase().includes(q) && !(c.numero_factura ?? '').toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [compras, fechaDesde, fechaHasta, proveedorId, estado, moneda, texto, proveedores]);
 
   const totalArs = filtradas.reduce((acc, c) => acc + Number(c.total_en_ars ?? 0), 0);
   const confirmadas = filtradas.filter((c) => c.estado === 'confirmada').length;
@@ -161,9 +166,9 @@ export default function ComprasManager({ compras, proveedores, empresaNombre, es
 
       {/* Filtros */}
       <div className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2 mb-3">
           <button onClick={() => setShowFilters(!showFilters)}
-            className={cn('inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border transition-colors',
+            className={cn('inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border transition-colors shrink-0',
               showFilters || filtrosActivos > 0
                 ? 'border-[#006836]/40 text-[#006836] bg-[#006836]/5'
                 : 'border-zinc-200 text-zinc-500 bg-white hover:bg-zinc-50')}>
@@ -173,9 +178,23 @@ export default function ComprasManager({ compras, proveedores, empresaNombre, es
               <span className="w-4 h-4 bg-[#006836] text-white rounded-full text-xs leading-none flex items-center justify-center">{filtrosActivos}</span>
             )}
           </button>
-          <div className="flex items-center gap-3">
-            {filtrosActivos > 0 && (
-              <button onClick={() => { setFechaDesde(''); setFechaHasta(''); setProveedorId(''); setEstado(''); setMoneda(''); }}
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
+            <input
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              placeholder="Buscar proveedor o N° factura…"
+              className="w-full pl-8 pr-7 py-1.5 text-xs border border-zinc-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+            />
+            {texto && (
+              <button onClick={() => setTexto('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600">
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {(filtrosActivos > 0 || texto) && (
+              <button onClick={() => { setFechaDesde(''); setFechaHasta(''); setProveedorId(''); setEstado(''); setMoneda(''); setTexto(''); }}
                 className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-red-500 transition-colors">
                 <X className="w-3 h-3" /> Limpiar
               </button>

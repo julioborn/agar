@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import {
   Plus, Filter, X, ChevronDown,
   FileText, Ban,
-  Package, Wrench, Wheat, BarChart3, Trash2, Download,
+  Package, Wrench, Wheat, BarChart3, Trash2, Download, Search,
 } from 'lucide-react';
 import { anularRia, eliminarRia } from './actions';
 import { generateRiaPdf } from './ria-pdf-button';
@@ -91,6 +91,7 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
   const { formatMoney } = useCurrency();
   const [estado, setEstado] = useState('');
   const [campaniaId, setCampaniaId] = useState('');
+  const [texto, setTexto] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -109,11 +110,23 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
   const [bulkLoading, setBulkLoading] = useState(false);
   const selectAllRef = useRef<HTMLInputElement>(null);
 
-  const filtradas = useMemo(() => rias.filter((r) => {
-    if (estado && r.estado !== estado) return false;
-    if (campaniaId && r.campania?.id !== campaniaId) return false;
-    return true;
-  }), [rias, estado, campaniaId]);
+  const filtradas = useMemo(() => {
+    const q = texto.toLowerCase().trim();
+    return rias.filter((r) => {
+      if (estado && r.estado !== estado) return false;
+      if (campaniaId && r.campania?.id !== campaniaId) return false;
+      if (q) {
+        const haystack = [
+          r.numero_ria,
+          r.lote?.nombre ?? '',
+          r.lote?.campo?.nombre ?? '',
+          r.cultivo_descripcion ?? '',
+        ].join(' ').toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [rias, estado, campaniaId, texto]);
 
   useEffect(() => {
     if (selectAllRef.current) {
@@ -123,7 +136,7 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
   }, [selectedIds.size, filtradas.length]);
 
   // Limpiar selección cuando cambian los filtros
-  useEffect(() => { setSelectedIds(new Set()); }, [estado, campaniaId]);
+  useEffect(() => { setSelectedIds(new Set()); }, [estado, campaniaId, texto]);
 
   const totales = filtradas.reduce(
     (acc, r) => ({ ins: acc.ins + r.total_insumos, lab: acc.lab + r.total_labores, tot: acc.tot + r.total_ria }),
@@ -271,11 +284,11 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
 
       {/* Toolbar */}
       <div className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border transition-colors',
+              'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border transition-colors shrink-0',
               showFilters || filtrosActivos > 0
                 ? 'border-[#006836]/40 text-[#006836] bg-[#006836]/5'
                 : 'border-zinc-200 text-zinc-500 bg-white hover:bg-zinc-50',
@@ -290,10 +303,25 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
             )}
           </button>
 
-          <div className="flex items-center gap-2">
-            {filtrosActivos > 0 && (
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
+            <input
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              placeholder="Buscar N° RIA, lote, campo…"
+              className="w-full pl-8 pr-7 py-1.5 text-xs border border-zinc-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+            />
+            {texto && (
+              <button onClick={() => setTexto('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600">
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {(filtrosActivos > 0 || texto) && (
               <button
-                onClick={() => { setEstado(''); setCampaniaId(''); }}
+                onClick={() => { setEstado(''); setCampaniaId(''); setTexto(''); }}
                 className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-red-500"
               >
                 <X className="w-3 h-3" /> Limpiar
