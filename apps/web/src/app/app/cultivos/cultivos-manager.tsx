@@ -3,11 +3,10 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Sprout, ChevronDown, ChevronUp, Plus, ExternalLink, Filter, X, Search } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { Sprout, ChevronDown, ChevronUp, Plus, ExternalLink, Filter, X, Search, Trash2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import CultivoForm, { type CultivoRow, type LoteConCampo, type UnidadNegocio, type CampaniaTemporada } from './cultivo-form';
-import DeleteButton from '@/components/ui/delete-button';
+import { eliminarCultivo } from './actions';
 
 const ESTADO_BADGE: Record<string, string> = {
   planificada: 'bg-blue-100 text-blue-700',
@@ -62,9 +61,18 @@ export default function CultivosManager({ cultivos, lotes, unidadesNegocio, camp
     router.refresh();
   }
 
-  async function handleDelete(id: string) {
-    const supabase = createClient();
-    await supabase.from('cultivos').delete().eq('id', id);
+  const [deleteDialog, setDeleteDialog] = useState<{ id: string; nombre: string } | null>(null);
+  const [deletando, setDeletando] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  async function handleDelete(restaurarStock: boolean) {
+    if (!deleteDialog) return;
+    setDeletando(true);
+    setDeleteError('');
+    const res = await eliminarCultivo(deleteDialog.id, restaurarStock);
+    setDeletando(false);
+    if (res?.error) { setDeleteError(res.error); return; }
+    setDeleteDialog(null);
     router.refresh();
   }
 
@@ -296,12 +304,69 @@ export default function CultivosManager({ cultivos, lotes, unidadesNegocio, camp
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                       </svg>
                     </button>
-                    <DeleteButton onDelete={() => handleDelete(c.id)} />
+                    <button
+                      onClick={() => { setDeleteDialog({ id: c.id, nombre: c.cultivo }); setDeleteError(''); }}
+                      className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Modal eliminar cultivo ────────────────────────────────────── */}
+      {deleteDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl border border-zinc-200 w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-zinc-900">Eliminar cultivo</p>
+                <p className="text-sm text-zinc-500 mt-0.5">
+                  <span className="font-medium text-zinc-800">{deleteDialog.nombre}</span>
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-zinc-600">
+              ¿Querés reincorporar al stock los insumos usados en este cultivo (aplicaciones directas y RIAs)?
+            </p>
+
+            {deleteError && (
+              <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{deleteError}</p>
+            )}
+
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                onClick={() => handleDelete(true)}
+                disabled={deletando}
+                className="w-full py-2.5 px-4 rounded-xl bg-[#006836] text-white text-sm font-medium hover:bg-[#005228] disabled:opacity-50 transition-colors"
+              >
+                {deletando ? 'Eliminando…' : 'Eliminar y restaurar stock'}
+              </button>
+              <button
+                onClick={() => handleDelete(false)}
+                disabled={deletando}
+                className="w-full py-2.5 px-4 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                Eliminar sin restaurar stock
+              </button>
+              <button
+                onClick={() => { setDeleteDialog(null); setDeleteError(''); }}
+                disabled={deletando}
+                className="w-full py-2.5 px-4 rounded-xl border border-zinc-200 text-zinc-600 text-sm font-medium hover:bg-zinc-50 disabled:opacity-50 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

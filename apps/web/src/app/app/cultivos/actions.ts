@@ -517,3 +517,80 @@ export async function eliminarCostoCosecha(id: string, cultivoId: string): Promi
   revalidatePath(`/app/cultivos/${cultivoId}`);
   return {};
 }
+
+// ─── Eliminar cultivo ──────────────────────────────────────────────────────────
+export async function eliminarCultivo(cultivoId: string, restaurarStock: boolean): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autenticado' };
+
+  if (restaurarStock) {
+    // Restaurar stock de aplicaciones directas
+    const { data: aplicaciones } = await supabase
+      .from('aplicaciones').select('id').eq('cultivo_id', cultivoId);
+
+    for (const aplic of aplicaciones ?? []) {
+      const { data: items } = await supabase
+        .from('aplicaciones_items')
+        .select('id, producto_id, deposito_origen_id')
+        .eq('aplicacion_id', aplic.id);
+
+      for (const item of items ?? []) {
+        await supabase.from('movimientos_stock').delete()
+          .eq('referencia_id', item.id)
+          .eq('referencia_tipo', 'aplicaciones_items');
+
+        const { data: movs } = await supabase.from('movimientos_stock')
+          .select('tipo, cantidad')
+          .eq('producto_id', (item as any).producto_id)
+          .eq('deposito_id', (item as any).deposito_origen_id);
+
+        const nueva = (movs ?? []).reduce((acc: number, m: any) =>
+          acc + (String(m.tipo).startsWith('entrada') ? Number(m.cantidad) : -Number(m.cantidad)), 0);
+
+        await supabase.from('stock')
+          .update({ cantidad_actual: nueva })
+          .eq('producto_id', (item as any).producto_id)
+          .eq('deposito_id', (item as any).deposito_origen_id);
+      }
+    }
+
+    // Restaurar stock de RIAs confirmados
+    const { data: rias } = await supabase
+      .from('remitos_internos').select('id')
+      .eq('cultivo_id', cultivoId).eq('estado', 'confirmado');
+
+    for (const ria of rias ?? []) {
+      const { data: movs } = await supabase.from('movimientos_stock')
+        .select('id, producto_id, deposito_id')
+        .eq('referencia_id', ria.id);
+
+      if (movs && movs.length > 0) {
+        await supabase.from('movimientos_stock').delete().eq('referencia_id', ria.id);
+
+        const pares = [...new Map(movs.map((m: any) => [`${m.producto_id}::${m.deposito_id}`, m])).values()];
+        for (const m of pares as any[]) {
+          const { data: restantes } = await supabase.from('movimientos_stock')
+            .select('tipo, cantidad')
+            .eq('producto_id', (m as any).producto_id)
+            .eq('deposito_id', (m as any).deposito_id);
+
+          const nueva = (restantes ?? []).reduce((acc: number, r: any) =>
+            acc + (String(r.tipo).startsWith('entrada') ? Number(r.cantidad) : -Number(r.cantidad)), 0);
+
+          await supabase.from('stock')
+            .update({ cantidad_actual: nueva })
+            .eq('producto_id', (m as any).producto_id)
+            .eq('deposito_id', (m as any).deposito_id);
+        }
+      }
+    }
+  }
+
+  const { error } = await supabase.from('cultivos').delete().eq('id', cultivoId);
+  if (error) return { error: error.message };
+
+  revalidatePath('/app/cultivos');
+  revalidatePath('/app/stock');
+  return {};
+}
