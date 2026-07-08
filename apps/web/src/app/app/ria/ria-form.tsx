@@ -333,9 +333,15 @@ export default function RiaForm({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Guardar en localStorage con debounce siempre que cambie algo (solo modo nuevo)
+  // Auto-save localStorage solo si hay al menos una línea cargada (insumo/labor/producción)
   useEffect(() => {
     if (mode !== 'nuevo' || riaExistente) return;
+    const tieneContenido = insumos.length > 0 || labores.length > 0 || produccion.length > 0;
+    if (!tieneContenido) {
+      // Sin contenido: limpiar cualquier borrador previo para no mostrar el banner
+      try { localStorage.removeItem(LS_KEY); } catch {}
+      return;
+    }
     const timer = setTimeout(() => {
       try {
         localStorage.setItem(LS_KEY, JSON.stringify({
