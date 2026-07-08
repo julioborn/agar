@@ -587,6 +587,9 @@ export async function eliminarCultivo(cultivoId: string, restaurarStock: boolean
     }
   }
 
+  // Desvincular RIAs (borrador y confirmados) antes de borrar para evitar FK violation
+  await supabase.from('remitos_internos').update({ cultivo_id: null }).eq('cultivo_id', cultivoId);
+
   const { error } = await supabase.from('cultivos').delete().eq('id', cultivoId);
   if (error) return { error: error.message };
 
