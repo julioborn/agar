@@ -203,10 +203,9 @@ export default async function CultivoDetallePage({ params }: Props) {
             </div>
           ))}
         </div>
-      </div>
 
-      {/* ── Resumen financiero ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {/* ── Resumen financiero ─────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-3">
 
         {/* Trabajos y Servicios */}
         <div className="bg-white rounded-xl border border-indigo-100 px-4 py-3 shadow-sm">
@@ -288,6 +287,7 @@ export default async function CultivoDetallePage({ params }: Props) {
           )}
         </div>
 
+        </div>
       </div>
 
       {/* ── Card 1: Trabajos y Servicios ──────────────────────────────── */}
