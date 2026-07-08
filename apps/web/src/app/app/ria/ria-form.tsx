@@ -915,9 +915,9 @@ export default function RiaForm({
                 >
                   <option value="">Seleccioná un cultivo…</option>
                   {cultivosDelLote.map((c) => (
-                    <option key={c.id} value={c.id}>{c.cultivo}</option>
+                    <option key={c.id} value={c.id}>Cultivo activo: {c.cultivo}</option>
                   ))}
-                  {!esReadOnly && <option value="_nuevo_">+ Crear nuevo cultivo…</option>}
+                  {!esReadOnly && <option value="_nuevo_">Nuevo cultivo…</option>}
                 </select>
                 {cultivoId === '_nuevo_' && !esReadOnly && (
                   tiposCultivo.length > 0 ? (
@@ -931,7 +931,7 @@ export default function RiaForm({
                       }}
                       className={inputCls(!nuevoCultivoTipoId)}
                     >
-                      <option value="">Seleccioná el tipo de cultivo…</option>
+                      <option value="">Seleccioná el cultivo a crear…</option>
                       {tiposCultivo.map((t) => (
                         <option key={t.id} value={t.id}>{t.nombre}</option>
                       ))}
