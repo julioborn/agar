@@ -203,91 +203,91 @@ export default async function CultivoDetallePage({ params }: Props) {
             </div>
           ))}
         </div>
+      </div>
 
-        {/* Resumen financiero — dentro del banner */}
-        <div className="mt-3 pt-3 border-t border-white/10">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+      {/* ── Resumen financiero ─────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
 
-            {/* Trabajos y Servicios */}
-            <div className="bg-white/[0.08] rounded-xl px-3 py-2.5 border border-white/[0.08]">
-              <p className="text-white/45 text-[9px] uppercase tracking-wider font-medium leading-tight">Trabajos y Servicios</p>
-              <p className="text-white font-bold text-sm mt-1.5 leading-none">
-                {totalTrabajosServicios > 0 ? <Money ars={totalTrabajosServicios} /> : '—'}
-              </p>
-              {pHa(totalTrabajosServicios) != null && (
-                <p className="text-white/45 text-[10px] mt-1 leading-none">
-                  <Money ars={pHa(totalTrabajosServicios)!} />/ha
-                </p>
-              )}
-            </div>
-
-            {/* Uso de Productos */}
-            <div className="bg-white/[0.08] rounded-xl px-3 py-2.5 border border-white/[0.08]">
-              <p className="text-white/45 text-[9px] uppercase tracking-wider font-medium leading-tight">Uso de Productos</p>
-              <p className="text-white font-bold text-sm mt-1.5 leading-none">
-                {costoInsumosTotalDisplay > 0 ? <Money ars={costoInsumosTotalDisplay} /> : '—'}
-              </p>
-              {pHa(costoInsumosTotalDisplay) != null && (
-                <p className="text-white/45 text-[10px] mt-1 leading-none">
-                  <Money ars={pHa(costoInsumosTotalDisplay)!} />/ha
-                </p>
-              )}
-            </div>
-
-            {/* Costos Directos — subtotal destacado */}
-            <div className="bg-white/[0.14] rounded-xl px-3 py-2.5 border border-white/20 col-span-2 sm:col-span-1">
-              <p className="text-white/55 text-[9px] uppercase tracking-wider font-semibold leading-tight">Costos Directos</p>
-              <p className="text-white font-bold text-sm mt-1.5 leading-none">
-                {costosDirectosTotal > 0 ? <Money ars={costosDirectosTotal} /> : '—'}
-              </p>
-              {pHa(costosDirectosTotal) != null && (
-                <p className="text-white/50 text-[10px] mt-1 leading-none">
-                  <Money ars={pHa(costosDirectosTotal)!} />/ha
-                </p>
-              )}
-            </div>
-
-            {/* Producción */}
-            <div className="bg-white/[0.08] rounded-xl px-3 py-2.5 border border-white/[0.08]">
-              <p className="text-white/45 text-[9px] uppercase tracking-wider font-medium leading-tight">Cosecha / Producción</p>
-              <p className="text-white font-bold text-sm mt-1.5 leading-none">
-                {ingresoBruto != null && ingresoBruto > 0 ? <Money ars={ingresoBruto} /> : '—'}
-              </p>
-              {pHa(ingresoBruto) != null && (
-                <p className="text-white/45 text-[10px] mt-1 leading-none">
-                  <Money ars={pHa(ingresoBruto)!} />/ha
-                </p>
-              )}
-            </div>
-
-            {/* Margen Bruto — resultado final */}
-            <div className={cn(
-              'rounded-xl px-3 py-2.5 border',
-              margenBruto != null && margenBruto >= 0
-                ? 'bg-emerald-400/10 border-emerald-300/25'
-                : margenBruto != null
-                  ? 'bg-red-400/10 border-red-300/25'
-                  : 'bg-white/[0.08] border-white/[0.08]',
-            )}>
-              <p className="text-white/55 text-[9px] uppercase tracking-wider font-semibold leading-tight">Margen Bruto</p>
-              <p className={cn(
-                'font-bold text-sm mt-1.5 leading-none',
-                margenBruto != null && margenBruto >= 0 ? 'text-emerald-300' : margenBruto != null ? 'text-red-300' : 'text-white',
-              )}>
-                {margenBruto != null ? <Money ars={margenBruto} /> : '—'}
-              </p>
-              {pHa(margenBruto) != null && (
-                <p className={cn(
-                  'text-[10px] mt-1 leading-none',
-                  margenBruto != null && margenBruto >= 0 ? 'text-emerald-300/60' : 'text-red-300/60',
-                )}>
-                  <Money ars={pHa(margenBruto)!} />/ha
-                </p>
-              )}
-            </div>
-
-          </div>
+        {/* Trabajos y Servicios */}
+        <div className="bg-white rounded-xl border border-indigo-100 px-4 py-3 shadow-sm">
+          <p className="text-indigo-400 text-[9px] uppercase tracking-wider font-semibold leading-tight">Trabajos y Servicios</p>
+          <p className="text-zinc-800 font-bold text-sm mt-1.5 leading-none">
+            {totalTrabajosServicios > 0 ? <Money ars={totalTrabajosServicios} /> : '—'}
+          </p>
+          {pHa(totalTrabajosServicios) != null && (
+            <p className="text-indigo-300 text-[10px] mt-1 leading-none">
+              <Money ars={pHa(totalTrabajosServicios)!} />/ha
+            </p>
+          )}
         </div>
+
+        {/* Uso de Productos */}
+        <div className="bg-white rounded-xl border border-orange-100 px-4 py-3 shadow-sm">
+          <p className="text-orange-400 text-[9px] uppercase tracking-wider font-semibold leading-tight">Uso de Productos</p>
+          <p className="text-zinc-800 font-bold text-sm mt-1.5 leading-none">
+            {costoInsumosTotalDisplay > 0 ? <Money ars={costoInsumosTotalDisplay} /> : '—'}
+          </p>
+          {pHa(costoInsumosTotalDisplay) != null && (
+            <p className="text-orange-300 text-[10px] mt-1 leading-none">
+              <Money ars={pHa(costoInsumosTotalDisplay)!} />/ha
+            </p>
+          )}
+        </div>
+
+        {/* Costos Directos — subtotal */}
+        <div className="bg-white rounded-xl border border-zinc-200 px-4 py-3 shadow-sm col-span-2 sm:col-span-1">
+          <p className="text-zinc-400 text-[9px] uppercase tracking-wider font-semibold leading-tight">Costos Directos</p>
+          <p className="text-zinc-800 font-bold text-sm mt-1.5 leading-none">
+            {costosDirectosTotal > 0 ? <Money ars={costosDirectosTotal} /> : '—'}
+          </p>
+          {pHa(costosDirectosTotal) != null && (
+            <p className="text-zinc-400 text-[10px] mt-1 leading-none">
+              <Money ars={pHa(costosDirectosTotal)!} />/ha
+            </p>
+          )}
+        </div>
+
+        {/* Cosecha / Producción */}
+        <div className="bg-white rounded-xl border border-[#006836]/20 px-4 py-3 shadow-sm">
+          <p className="text-[#006836]/70 text-[9px] uppercase tracking-wider font-semibold leading-tight">Cosecha / Producción</p>
+          <p className="text-zinc-800 font-bold text-sm mt-1.5 leading-none">
+            {ingresoBruto != null && ingresoBruto > 0 ? <Money ars={ingresoBruto} /> : '—'}
+          </p>
+          {pHa(ingresoBruto) != null && (
+            <p className="text-[#006836]/50 text-[10px] mt-1 leading-none">
+              <Money ars={pHa(ingresoBruto)!} />/ha
+            </p>
+          )}
+        </div>
+
+        {/* Margen Bruto */}
+        <div className={cn(
+          'bg-white rounded-xl px-4 py-3 shadow-sm border',
+          margenBruto != null && margenBruto >= 0 ? 'border-emerald-200' :
+          margenBruto != null ? 'border-red-200' : 'border-zinc-200',
+        )}>
+          <p className={cn(
+            'text-[9px] uppercase tracking-wider font-semibold leading-tight',
+            margenBruto != null && margenBruto >= 0 ? 'text-emerald-500' :
+            margenBruto != null ? 'text-red-400' : 'text-zinc-400',
+          )}>Margen Bruto</p>
+          <p className={cn(
+            'font-bold text-sm mt-1.5 leading-none',
+            margenBruto != null && margenBruto >= 0 ? 'text-emerald-600' :
+            margenBruto != null ? 'text-red-600' : 'text-zinc-800',
+          )}>
+            {margenBruto != null ? <Money ars={margenBruto} /> : '—'}
+          </p>
+          {pHa(margenBruto) != null && (
+            <p className={cn(
+              'text-[10px] mt-1 leading-none',
+              margenBruto != null && margenBruto >= 0 ? 'text-emerald-400' : 'text-red-400',
+            )}>
+              <Money ars={pHa(margenBruto)!} />/ha
+            </p>
+          )}
+        </div>
+
       </div>
 
       {/* ── Card 1: Trabajos y Servicios ──────────────────────────────── */}
