@@ -198,7 +198,7 @@ export default async function CultivoDetallePage({ params }: Props) {
           ].map(({ label, value }) => (
             <div key={label} className="bg-white/[0.08] backdrop-blur-sm rounded-xl px-3 py-2.5 border border-white/[0.08]">
               <p className="text-white/45 text-[10px] uppercase tracking-wider font-medium">{label}</p>
-              <p className="text-white font-semibold text-sm mt-1 leading-none">{value}</p>
+              <p className="text-white font-semibold text-xs mt-1 leading-none">{value}</p>
             </div>
           ))}
         </div>
