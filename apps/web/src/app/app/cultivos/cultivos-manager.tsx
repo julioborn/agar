@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Sprout, ChevronDown, ChevronUp, Plus, ExternalLink, Filter, X, Search, Trash2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import CultivoForm, { type CultivoRow, type LoteConCampo, type UnidadNegocio, type CampaniaTemporada } from './cultivo-form';
+import CultivoForm, { type CultivoRow, type LoteConCampo, type UnidadNegocio, type CampaniaTemporada, type TipoCultivo } from './cultivo-form';
 import { eliminarCultivo } from './actions';
 
 const ESTADO_BADGE: Record<string, string> = {
@@ -39,13 +39,14 @@ interface Props {
   lotes: LoteConCampo[];
   unidadesNegocio: UnidadNegocio[];
   campanias: CampaniaTemporada[];
+  tiposCultivo?: TipoCultivo[];
   defaultLoteId?: string;
 }
 
 const fmt = (d: string | null) =>
   d ? new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
 
-export default function CultivosManager({ cultivos, lotes, unidadesNegocio, campanias, defaultLoteId }: Props) {
+export default function CultivosManager({ cultivos, lotes, unidadesNegocio, campanias, tiposCultivo = [], defaultLoteId }: Props) {
   const router = useRouter();
   const [editando, setEditando] = useState<CultivoRow | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -156,6 +157,7 @@ export default function CultivosManager({ cultivos, lotes, unidadesNegocio, camp
               lotes={lotes}
               unidadesNegocio={unidadesNegocio}
               campanias={campanias}
+              tiposCultivo={tiposCultivo}
               cultivoEditando={editando}
               defaultLoteId={defaultLoteId}
               onSuccess={handleSuccess}

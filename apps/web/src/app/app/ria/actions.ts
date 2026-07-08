@@ -65,6 +65,7 @@ export interface SaveRiaPayload {
   cultivoId?: string;
   superficieAfectada?: number;
   cultivoDescripcion?: string;
+  tipoCultivoId?: string;
   observaciones?: string;
   insumos: InsumoPayload[];
   labores: LaborPayload[];
@@ -94,6 +95,7 @@ export async function saveRiaBorrador(payload: SaveRiaPayload) {
         lote_id: payload.loteId,
         campania_id: payload.campaniaId ?? null,
         cultivo: payload.cultivoDescripcion.trim(),
+        tipo_cultivo_id: payload.tipoCultivoId ?? null,
         estado: 'en_curso',
         fecha_siembra: payload.fecha,
       })

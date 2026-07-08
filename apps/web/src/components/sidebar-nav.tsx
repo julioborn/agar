@@ -58,8 +58,9 @@ const navSections: NavSection[] = [
   {
     label: 'Costos directos',
     items: [
-      { href: '/app/cultivos',    label: 'Cultivos', icon: Sprout },
-      { href: '/app/tipos-labor', label: 'Labores',  icon: Wrench },
+      { href: '/app/cultivos',       label: 'Cultivos',         icon: Sprout },
+      { href: '/app/cultivos/tipos', label: 'Tipos de Cultivo', icon: Layers },
+      { href: '/app/tipos-labor',    label: 'Labores',          icon: Wrench },
     ],
   },
   {

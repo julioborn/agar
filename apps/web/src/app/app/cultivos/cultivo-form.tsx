@@ -81,10 +81,16 @@ const ESTADOS = [
   { value: 'cancelada',   label: 'Cancelada' },
 ] as const;
 
+export interface TipoCultivo {
+  id: string;
+  nombre: string;
+}
+
 interface Props {
   lotes: LoteConCampo[];
   unidadesNegocio: UnidadNegocio[];
   campanias: CampaniaTemporada[];
+  tiposCultivo?: TipoCultivo[];
   cultivoEditando: CultivoRow | null;
   defaultLoteId?: string;
   onSuccess: () => void;
@@ -92,7 +98,7 @@ interface Props {
 }
 
 export default function CultivoForm({
-  lotes, unidadesNegocio, campanias, cultivoEditando, defaultLoteId, onSuccess, onCancel,
+  lotes, unidadesNegocio, campanias, tiposCultivo = [], cultivoEditando, defaultLoteId, onSuccess, onCancel,
 }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -102,6 +108,7 @@ export default function CultivoForm({
   const [unidadNegocioId, setUnidadNegocioId] = useState('');
   const [campaniaId, setCampaniaId] = useState('');
   const [cultivo, setCultivo] = useState('');
+  const [tipoCultivoId, setTipoCultivoId] = useState('');
   const [cultivoPersonalizado, setCultivoPersonalizado] = useState(false);
   const [productoFinal, setProductoFinal] = useState('');
   const [unidadProduccion, setUnidadProduccion] = useState('kg');
@@ -117,7 +124,9 @@ export default function CultivoForm({
       setUnidadNegocioId(cultivoEditando.unidad_negocio_id);
       setCampaniaId(cultivoEditando.campania_id ?? '');
       setCultivo(cultivoEditando.cultivo);
-      setCultivoPersonalizado(!CULTIVOS_COMUNES.includes(cultivoEditando.cultivo));
+      setTipoCultivoId((cultivoEditando as any).tipo_cultivo_id ?? '');
+      const enTipos = tiposCultivo.some((t) => t.nombre === cultivoEditando.cultivo);
+      setCultivoPersonalizado(!enTipos && !CULTIVOS_COMUNES.includes(cultivoEditando.cultivo));
       setProductoFinal(cultivoEditando.producto_final ?? '');
       setUnidadProduccion(cultivoEditando.unidad_produccion ?? 'kg');
       setFechaSiembra(cultivoEditando.fecha_siembra);
@@ -158,6 +167,7 @@ export default function CultivoForm({
       unidad_negocio_id: unidadNegocioId,
       campania_id: campaniaId || null,
       cultivo: cultivo.trim(),
+      tipo_cultivo_id: tipoCultivoId || null,
       fecha_siembra: fechaSiembra,
       fecha_cosecha_estimada: fechaCosechaEstimada || null,
       fecha_cosecha_real: fechaCosechaReal || null,
@@ -220,7 +230,24 @@ export default function CultivoForm({
 
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">Especie / cultivo</label>
-        {!cultivoPersonalizado ? (
+        {tiposCultivo.length > 0 ? (
+          // Si hay tipos definidos, usar solo esa lista
+          <select
+            value={tipoCultivoId}
+            onChange={(e) => {
+              const tid = e.target.value;
+              setTipoCultivoId(tid);
+              const tipo = tiposCultivo.find((t) => t.id === tid);
+              setCultivo(tipo?.nombre ?? '');
+            }}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="">Seleccioná un tipo de cultivo…</option>
+            {tiposCultivo.map((t) => (
+              <option key={t.id} value={t.id}>{t.nombre}</option>
+            ))}
+          </select>
+        ) : !cultivoPersonalizado ? (
           <select
             value={cultivo}
             onChange={(e) => {

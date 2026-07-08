@@ -39,6 +39,7 @@ export default async function RiaDetailPage({ params }: Props) {
     { data: contratistas },
     { data: tiposLabor },
     { data: cultivosActivos },
+    { data: tiposCultivo },
   ] = await Promise.all([
     supabase
       .from('remitos_insumos')
@@ -97,6 +98,7 @@ export default async function RiaDetailPage({ params }: Props) {
       .select('id, cultivo, lote_id, estado')
       .in('estado', ['planificada', 'en_curso'])
       .order('cultivo'),
+    supabase.from('tipos_cultivo').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
   ]);
 
   const { data: config } = await supabase
@@ -207,6 +209,7 @@ export default async function RiaDetailPage({ params }: Props) {
         contratistas={contratistas ?? []}
         tiposLabor={(tiposLabor as any) ?? []}
         cultivosActivos={cultivosActivos ?? []}
+        tiposCultivo={tiposCultivo ?? []}
         empresaId={empresa.id}
         empresaNombre={empresa.nombre}
         usuarioId={user.id}

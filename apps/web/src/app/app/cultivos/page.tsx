@@ -21,7 +21,7 @@ export default async function CultivosPage({ searchParams }: Props) {
 
   const { empresa } = empresaData;
 
-  const [cultivosRes, lotesRes, unidadesRes, campaniasRes] = await Promise.all([
+  const [cultivosRes, lotesRes, unidadesRes, campaniasRes, tiposCultivoRes] = await Promise.all([
     supabase
       .from('cultivos')
       .select(`
@@ -37,6 +37,7 @@ export default async function CultivosPage({ searchParams }: Props) {
     supabase.from('lotes').select('id, nombre, campo:campos(id, nombre)').order('nombre'),
     supabase.from('unidades_negocio').select('id, nombre').order('nombre'),
     supabase.from('campanias').select('id, nombre').eq('activa', true).order('nombre'),
+    supabase.from('tipos_cultivo').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
   ]);
 
   const cultivos = (cultivosRes.data ?? []).map((c: any) => ({
@@ -112,6 +113,7 @@ export default async function CultivosPage({ searchParams }: Props) {
         lotes={lotes}
         unidadesNegocio={unidadesRes.data ?? []}
         campanias={campaniasRes.data ?? []}
+        tiposCultivo={tiposCultivoRes.data ?? []}
         defaultLoteId={defaultLoteId}
       />
     </div>

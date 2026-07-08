@@ -20,6 +20,7 @@ export default async function CampoRiaNuevoPage() {
     { data: contratistas },
     { data: tiposLabor },
     { data: cultivosActivos },
+    { data: tiposCultivo },
   ] = await Promise.all([
     supabase
       .from('lotes')
@@ -32,6 +33,7 @@ export default async function CampoRiaNuevoPage() {
     supabase.from('contratistas').select('id, nombre').eq('empresa_id', empresa.id).eq('activo', true).order('nombre'),
     supabase.from('tipos_labor').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
     supabase.from('cultivos').select('id, cultivo, lote_id, estado').in('estado', ['planificada', 'en_curso']).order('cultivo'),
+    supabase.from('tipos_cultivo').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
   ]);
 
   // Enriquecer lotes con cultivo activo para auto-fill
@@ -59,6 +61,7 @@ export default async function CampoRiaNuevoPage() {
         contratistas={contratistas ?? []}
         tiposLabor={tiposLabor ?? []}
         cultivosActivos={cultivosActivos ?? []}
+        tiposCultivo={tiposCultivo ?? []}
         empresaId={empresa.id}
         empresaNombre={empresa.nombre}
         usuarioId={user.id}

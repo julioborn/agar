@@ -151,6 +151,7 @@ interface Props {
   riaExistente?: RiaExistente;
   basePath?: string;
   cultivosActivos?: CultivoOpcion[];
+  tiposCultivo?: { id: string; nombre: string }[];
   precioGasoil?: number;
   litrosPorUta?: number;
 }
@@ -179,7 +180,7 @@ const calc = (cant: string, costo: string) =>
 export default function RiaForm({
   mode, lotes, depositos, productos, campanias, proveedores, contratistas,
   tiposLabor, empresaId, empresaNombre, usuarioId, riaExistente,
-  basePath = '/app/ria', cultivosActivos = [],
+  basePath = '/app/ria', cultivosActivos = [], tiposCultivo = [],
   precioGasoil = 0, litrosPorUta = 35,
 }: Props) {
   const router = useRouter();
@@ -196,6 +197,7 @@ export default function RiaForm({
   const [cultivoDesc, setCultivoDesc] = useState(riaExistente?.cultivo_descripcion ?? '');
   const [crearCultivo, setCrearCultivo] = useState(false);
   const [nuevoCultivoDesc, setNuevoCultivoDesc] = useState('');
+  const [nuevoCultivoTipoId, setNuevoCultivoTipoId] = useState('');
   const [observaciones, setObservaciones] = useState(riaExistente?.observaciones ?? '');
 
   // Lines state
@@ -613,6 +615,7 @@ export default function RiaForm({
       cultivoId: (cultivoId && cultivoId !== '_nuevo_') ? cultivoId : undefined,
       superficieAfectada: sup > 0 ? sup : undefined,
       cultivoDescripcion: (cultivoId === '_nuevo_' ? nuevoCultivoDesc.trim() : cultivoDesc.trim()) || undefined,
+      tipoCultivoId: cultivoId === '_nuevo_' ? (nuevoCultivoTipoId || undefined) : undefined,
       crearNuevoCultivo:
         (cultivoId === '_nuevo_' && !!nuevoCultivoDesc.trim()) ||
         (crearCultivo && !cultivoId && !!cultivoDesc.trim()),
@@ -917,37 +920,79 @@ export default function RiaForm({
                   {!esReadOnly && <option value="_nuevo_">+ Crear nuevo cultivo…</option>}
                 </select>
                 {cultivoId === '_nuevo_' && !esReadOnly && (
-                  <input
-                    type="text"
-                    value={nuevoCultivoDesc}
-                    onChange={(e) => setNuevoCultivoDesc(cap(e.target.value))}
-                    placeholder="Nombre del nuevo cultivo (ej: Soja RR)"
-                    className={inputCls(!nuevoCultivoDesc.trim())}
-                  />
+                  tiposCultivo.length > 0 ? (
+                    <select
+                      value={nuevoCultivoTipoId}
+                      onChange={(e) => {
+                        const tid = e.target.value;
+                        setNuevoCultivoTipoId(tid);
+                        const tipo = tiposCultivo.find((t) => t.id === tid);
+                        setNuevoCultivoDesc(tipo?.nombre ?? '');
+                      }}
+                      className={inputCls(!nuevoCultivoTipoId)}
+                    >
+                      <option value="">Seleccioná el tipo de cultivo…</option>
+                      {tiposCultivo.map((t) => (
+                        <option key={t.id} value={t.id}>{t.nombre}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={nuevoCultivoDesc}
+                      onChange={(e) => setNuevoCultivoDesc(cap(e.target.value))}
+                      placeholder="Nombre del nuevo cultivo (ej: Soja RR)"
+                      className={inputCls(!nuevoCultivoDesc.trim())}
+                    />
+                  )
                 )}
               </>
             ) : (
               <>
-                <input
-                  type="text"
-                  value={cultivoDesc}
-                  onChange={(e) => { const v = cap(e.target.value); setCultivoDesc(v); if (!v.trim()) setCrearCultivo(false); }}
-                  disabled={esReadOnly}
-                  placeholder={loteId ? 'Sin cultivos activos — escribí la actividad' : 'Seleccioná un lote primero'}
-                  className={inputCls()}
-                />
-                {!esReadOnly && cultivoDesc.trim() && !cultivoId && (
-                  <label className="inline-flex items-center gap-2 mt-1.5 cursor-pointer">
+                {tiposCultivo.length > 0 && !esReadOnly ? (
+                  // Sin cultivos activos en el lote y hay tipos definidos: selector de tipos
+                  <select
+                    value={nuevoCultivoTipoId}
+                    disabled={!loteId}
+                    onChange={(e) => {
+                      const tid = e.target.value;
+                      setNuevoCultivoTipoId(tid);
+                      const tipo = tiposCultivo.find((t) => t.id === tid);
+                      const nombre = tipo?.nombre ?? '';
+                      setCultivoDesc(nombre);
+                      setCrearCultivo(!!nombre);
+                    }}
+                    className={inputCls(!nuevoCultivoTipoId && !!loteId)}
+                  >
+                    <option value="">{loteId ? 'Sin cultivos activos — seleccioná tipo para crear uno…' : 'Seleccioná un lote primero'}</option>
+                    {tiposCultivo.map((t) => (
+                      <option key={t.id} value={t.id}>{t.nombre}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <>
                     <input
-                      type="checkbox"
-                      checked={crearCultivo}
-                      onChange={(e) => setCrearCultivo(e.target.checked)}
-                      className="w-3.5 h-3.5 accent-[#006836] rounded"
+                      type="text"
+                      value={cultivoDesc}
+                      onChange={(e) => { const v = cap(e.target.value); setCultivoDesc(v); if (!v.trim()) setCrearCultivo(false); }}
+                      disabled={esReadOnly}
+                      placeholder={loteId ? 'Sin cultivos activos — escribí la actividad' : 'Seleccioná un lote primero'}
+                      className={inputCls()}
                     />
-                    <span className="text-xs text-zinc-500">
-                      Crear <strong>"{cultivoDesc.trim()}"</strong> como cultivo en el sistema
-                    </span>
-                  </label>
+                    {!esReadOnly && cultivoDesc.trim() && !cultivoId && (
+                      <label className="inline-flex items-center gap-2 mt-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={crearCultivo}
+                          onChange={(e) => setCrearCultivo(e.target.checked)}
+                          className="w-3.5 h-3.5 accent-[#006836] rounded"
+                        />
+                        <span className="text-xs text-zinc-500">
+                          Crear <strong>"{cultivoDesc.trim()}"</strong> como cultivo en el sistema
+                        </span>
+                      </label>
+                    )}
+                  </>
                 )}
               </>
             )}
