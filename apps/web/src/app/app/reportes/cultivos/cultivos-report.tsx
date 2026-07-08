@@ -33,13 +33,6 @@ interface Props {
 
 const fmt = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 1 });
 
-function fmtAxis(v: number) {
-  const abs = Math.abs(v);
-  const prefix = '$ ';
-  if (abs >= 1_000_000) return `${prefix}${(v / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `${prefix}${(v / 1_000).toFixed(0)}K`;
-  return `${prefix}${v.toFixed(0)}`;
-}
 
 function wrapLabel(text: string, maxChars = 20): string[] {
   if (text.length <= maxChars) return [text];
@@ -67,7 +60,16 @@ function CustomYTick({ x, y, payload }: any) {
 }
 
 export default function CultivosReport({ cultivos, rias, campanias }: Props) {
-  const { formatMoney } = useCurrency();
+  const { formatMoney, currency, usdRate } = useCurrency();
+
+  function fmtAxis(v: number) {
+    const val = currency === 'USD' && usdRate ? v / usdRate : v;
+    const prefix = currency === 'USD' ? 'U$S ' : '$ ';
+    const abs = Math.abs(val);
+    if (abs >= 1_000_000) return `${prefix}${(val / 1_000_000).toFixed(1)}M`;
+    if (abs >= 1_000) return `${prefix}${(val / 1_000).toFixed(0)}K`;
+    return `${prefix}${val.toFixed(0)}`;
+  }
   const [campaniaFiltro, setCampaniaFiltro] = useState('');
 
   function ChartTooltip({ active, payload, label }: any) {

@@ -32,11 +32,6 @@ interface Props {
 
 const qty = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
 
-function fmtAxis(v: number) {
-  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `${(v / 1_000).toFixed(0)}K`;
-  return String(v);
-}
 
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
@@ -78,7 +73,16 @@ function CustomYTick({ x, y, payload }: any) {
 }
 
 export default function ProduccionReport({ rias, produccion, campanias }: Props) {
-  const { formatMoney } = useCurrency();
+  const { formatMoney, currency, usdRate } = useCurrency();
+
+  function fmtAxis(v: number) {
+    const val = currency === 'USD' && usdRate ? v / usdRate : v;
+    const prefix = currency === 'USD' ? 'U$S ' : '$ ';
+    const abs = Math.abs(val);
+    if (abs >= 1_000_000) return `${prefix}${(val / 1_000_000).toFixed(1)}M`;
+    if (abs >= 1_000) return `${prefix}${(val / 1_000).toFixed(0)}K`;
+    return `${prefix}${val.toFixed(0)}`;
+  }
   const [tab, setTab] = useState<'cultivo' | 'lote'>('cultivo');
   const [campaniaFiltro, setCampaniaFiltro] = useState('');
 

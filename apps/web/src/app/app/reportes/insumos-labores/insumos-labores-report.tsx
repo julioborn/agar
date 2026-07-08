@@ -42,11 +42,6 @@ interface Props {
 
 const qty = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
 
-function fmtAxis(v: number) {
-  if (Math.abs(v) >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-  if (Math.abs(v) >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
-  return `$${v}`;
-}
 
 function wrapLabel(text: string, maxChars = 20): string[] {
   if (text.length <= maxChars) return [text];
@@ -74,7 +69,16 @@ function CustomYTick({ x, y, payload }: any) {
 }
 
 export default function InsumosLaboresReport({ rias, insumos, labores, campanias }: Props) {
-  const { formatMoney } = useCurrency();
+  const { formatMoney, currency, usdRate } = useCurrency();
+
+  function fmtAxis(v: number) {
+    const val = currency === 'USD' && usdRate ? v / usdRate : v;
+    const prefix = currency === 'USD' ? 'U$S ' : '$ ';
+    const abs = Math.abs(val);
+    if (abs >= 1_000_000) return `${prefix}${(val / 1_000_000).toFixed(1)}M`;
+    if (abs >= 1_000) return `${prefix}${(val / 1_000).toFixed(0)}K`;
+    return `${prefix}${val.toFixed(0)}`;
+  }
   const [tab, setTab] = useState<'insumos' | 'labores'>('insumos');
 
   function ChartTooltip({ active, payload, label }: any) {
