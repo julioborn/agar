@@ -134,6 +134,12 @@ export default async function CultivoDetallePage({ params }: Props) {
   const cantRiaLabores   = (riasConfirmados ?? []).reduce((acc, r: any) => acc + (r.remitos_labores?.length ?? 0), 0);
   const cantRiaInsumos   = (riasConfirmados ?? []).reduce((acc, r: any) => acc + (r.remitos_insumos?.length ?? 0), 0);
 
+  const ha = lote?.hectareas ?? null;
+  const costosDirectosTotal = totalTrabajosServicios + costoInsumosTotalDisplay;
+  const ingresoBruto = (cultivo as any).ingreso_bruto_ars as number | null;
+  const margenBruto  = (cultivo as any).margen_bruto_ars  as number | null;
+  const pHa = (v: number | null) => (ha && v != null && v > 0) ? v / ha : null;
+
   const activo   = cultivo.estado !== 'cancelada';
   const editable = cultivo.estado === 'en_curso' || cultivo.estado === 'planificada';
 
@@ -184,50 +190,105 @@ export default async function CultivoDetallePage({ params }: Props) {
           </div>
         </div>
 
-        {/* Fechas y costo — glass cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-5">
+        {/* Fechas — glass cards */}
+        <div className="grid grid-cols-3 gap-2.5 mt-5">
           {[
-            { label: 'Siembra',       value: fmt(cultivo.fecha_siembra) },
-            { label: 'Est. cosecha',  value: fmt(cultivo.fecha_cosecha_estimada) },
-            { label: 'Cosecha real',  value: fmt(cultivo.fecha_cosecha_real) },
+            { label: 'Siembra',      value: fmt(cultivo.fecha_siembra) },
+            { label: 'Est. cosecha', value: fmt(cultivo.fecha_cosecha_estimada) },
+            { label: 'Cosecha real', value: fmt(cultivo.fecha_cosecha_real) },
           ].map(({ label, value }) => (
             <div key={label} className="bg-white/[0.08] backdrop-blur-sm rounded-xl px-3 py-2.5 border border-white/[0.08]">
               <p className="text-white/45 text-[10px] uppercase tracking-wider font-medium">{label}</p>
               <p className="text-white font-semibold text-sm mt-1 leading-none">{value}</p>
             </div>
           ))}
-          <div className="bg-white/[0.08] backdrop-blur-sm rounded-xl px-3 py-2.5 border border-white/[0.08]">
-            <p className="text-white/45 text-[10px] uppercase tracking-wider font-medium">Costo acumulado</p>
-            <p className="text-white font-semibold text-sm mt-1 leading-none">
-              {costoTotal > 0 ? <Money ars={costoTotal} /> : '—'}
-            </p>
+        </div>
+
+        {/* Resumen financiero — dentro del banner */}
+        <div className="mt-3 pt-3 border-t border-white/10">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+
+            {/* Trabajos y Servicios */}
+            <div className="bg-white/[0.08] rounded-xl px-3 py-2.5 border border-white/[0.08]">
+              <p className="text-white/45 text-[9px] uppercase tracking-wider font-medium leading-tight">Trabajos y Servicios</p>
+              <p className="text-white font-bold text-sm mt-1.5 leading-none">
+                {totalTrabajosServicios > 0 ? <Money ars={totalTrabajosServicios} /> : '—'}
+              </p>
+              {pHa(totalTrabajosServicios) != null && (
+                <p className="text-white/45 text-[10px] mt-1 leading-none">
+                  <Money ars={pHa(totalTrabajosServicios)!} />/ha
+                </p>
+              )}
+            </div>
+
+            {/* Uso de Productos */}
+            <div className="bg-white/[0.08] rounded-xl px-3 py-2.5 border border-white/[0.08]">
+              <p className="text-white/45 text-[9px] uppercase tracking-wider font-medium leading-tight">Uso de Productos</p>
+              <p className="text-white font-bold text-sm mt-1.5 leading-none">
+                {costoInsumosTotalDisplay > 0 ? <Money ars={costoInsumosTotalDisplay} /> : '—'}
+              </p>
+              {pHa(costoInsumosTotalDisplay) != null && (
+                <p className="text-white/45 text-[10px] mt-1 leading-none">
+                  <Money ars={pHa(costoInsumosTotalDisplay)!} />/ha
+                </p>
+              )}
+            </div>
+
+            {/* Costos Directos — subtotal destacado */}
+            <div className="bg-white/[0.14] rounded-xl px-3 py-2.5 border border-white/20 col-span-2 sm:col-span-1">
+              <p className="text-white/55 text-[9px] uppercase tracking-wider font-semibold leading-tight">Costos Directos</p>
+              <p className="text-white font-bold text-sm mt-1.5 leading-none">
+                {costosDirectosTotal > 0 ? <Money ars={costosDirectosTotal} /> : '—'}
+              </p>
+              {pHa(costosDirectosTotal) != null && (
+                <p className="text-white/50 text-[10px] mt-1 leading-none">
+                  <Money ars={pHa(costosDirectosTotal)!} />/ha
+                </p>
+              )}
+            </div>
+
+            {/* Producción */}
+            <div className="bg-white/[0.08] rounded-xl px-3 py-2.5 border border-white/[0.08]">
+              <p className="text-white/45 text-[9px] uppercase tracking-wider font-medium leading-tight">Cosecha / Producción</p>
+              <p className="text-white font-bold text-sm mt-1.5 leading-none">
+                {ingresoBruto != null && ingresoBruto > 0 ? <Money ars={ingresoBruto} /> : '—'}
+              </p>
+              {pHa(ingresoBruto) != null && (
+                <p className="text-white/45 text-[10px] mt-1 leading-none">
+                  <Money ars={pHa(ingresoBruto)!} />/ha
+                </p>
+              )}
+            </div>
+
+            {/* Margen Bruto — resultado final */}
+            <div className={cn(
+              'rounded-xl px-3 py-2.5 border',
+              margenBruto != null && margenBruto >= 0
+                ? 'bg-emerald-400/10 border-emerald-300/25'
+                : margenBruto != null
+                  ? 'bg-red-400/10 border-red-300/25'
+                  : 'bg-white/[0.08] border-white/[0.08]',
+            )}>
+              <p className="text-white/55 text-[9px] uppercase tracking-wider font-semibold leading-tight">Margen Bruto</p>
+              <p className={cn(
+                'font-bold text-sm mt-1.5 leading-none',
+                margenBruto != null && margenBruto >= 0 ? 'text-emerald-300' : margenBruto != null ? 'text-red-300' : 'text-white',
+              )}>
+                {margenBruto != null ? <Money ars={margenBruto} /> : '—'}
+              </p>
+              {pHa(margenBruto) != null && (
+                <p className={cn(
+                  'text-[10px] mt-1 leading-none',
+                  margenBruto != null && margenBruto >= 0 ? 'text-emerald-300/60' : 'text-red-300/60',
+                )}>
+                  <Money ars={pHa(margenBruto)!} />/ha
+                </p>
+              )}
+            </div>
+
           </div>
         </div>
       </div>
-
-      {/* ── Resumen de costos por categoría ───────────────────────────── */}
-      {(totalTrabajosServicios > 0 || costoInsumosTotalDisplay > 0) && (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded-xl border border-indigo-100 px-4 py-3 shadow-sm text-center">
-            <p className="text-xs text-zinc-400 mb-1">Trabajos y servicios</p>
-            <p className="text-base font-bold text-indigo-600">
-              {totalTrabajosServicios > 0 ? <Money ars={totalTrabajosServicios} /> : '—'}
-            </p>
-          </div>
-          <div className="bg-white rounded-xl border border-orange-100 px-4 py-3 shadow-sm text-center">
-            <p className="text-xs text-zinc-400 mb-1">Uso de productos</p>
-            <p className="text-base font-bold text-orange-600">
-              {costoInsumosTotalDisplay > 0 ? <Money ars={costoInsumosTotalDisplay} /> : '—'}
-            </p>
-          </div>
-          <div className="bg-white rounded-xl border border-zinc-200 px-4 py-3 shadow-sm text-center">
-            <p className="text-xs text-zinc-400 mb-1">Total costos</p>
-            <p className="text-base font-bold text-zinc-700">
-              {costoTotal > 0 ? <Money ars={costoTotal} /> : '—'}
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* ── Card 1: Trabajos y Servicios ──────────────────────────────── */}
       <CollapsibleCard
