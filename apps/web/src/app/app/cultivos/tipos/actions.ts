@@ -93,6 +93,14 @@ export async function importarTiposDesdeExistentes(): Promise<{ error?: string; 
   return { creados: data?.length ?? 0 };
 }
 
+function normalizarPorComas(s: string) {
+  return s.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean).sort().join(',');
+}
+
+function normalizarPorPalabras(s: string) {
+  return s.split(/[,\s]+/).map((t: string) => t.trim().toLowerCase()).filter(Boolean).sort().join(' ');
+}
+
 // Vincula cultivos existentes al tipo correcto por coincidencia de nombre normalizado
 export async function vincularCultivosExistentes(): Promise<{ error?: string; vinculados: number }> {
   const supabase = await createClient();
@@ -107,27 +115,19 @@ export async function vincularCultivosExistentes(): Promise<{ error?: string; vi
 
   if (!tipos?.length || !cultivos?.length) return { vinculados: 0 };
 
-  // Construir mapa: clave normalizada → tipo_id
-  const tipoMap = new Map<string, string>();
+  // Dos mapas: uno por comas, otro por palabras sueltas (fallback para typos de coma)
+  const mapaComas = new Map<string, string>();
+  const mapaPalabras = new Map<string, string>();
   for (const t of tipos) {
-    const key = (t.nombre as string)
-      .split(',')
-      .map((s: string) => s.trim().toLowerCase())
-      .filter(Boolean)
-      .sort()
-      .join(',');
-    tipoMap.set(key, t.id);
+    mapaComas.set(normalizarPorComas(t.nombre), t.id);
+    mapaPalabras.set(normalizarPorPalabras(t.nombre), t.id);
   }
 
   let vinculados = 0;
   for (const c of cultivos) {
-    const key = (c.cultivo as string)
-      .split(',')
-      .map((s: string) => s.trim().toLowerCase())
-      .filter(Boolean)
-      .sort()
-      .join(',');
-    const tipoId = tipoMap.get(key);
+    const tipoId =
+      mapaComas.get(normalizarPorComas(c.cultivo)) ??
+      mapaPalabras.get(normalizarPorPalabras(c.cultivo));
     if (tipoId) {
       await supabase.from('cultivos').update({ tipo_cultivo_id: tipoId }).eq('id', c.id);
       vinculados++;
