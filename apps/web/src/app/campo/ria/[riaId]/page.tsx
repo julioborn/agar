@@ -1,5 +1,6 @@
 import { redirect, notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 import RiaForm from '@/app/app/ria/ria-form';
 
@@ -38,6 +39,7 @@ export default async function CampoRiaDetailPage({ params }: Props) {
     { data: contratistas },
     { data: tiposLabor },
     { data: cultivosActivos },
+    { data: tiposCultivo },
   ] = await Promise.all([
     supabase
       .from('remitos_insumos')
@@ -59,6 +61,7 @@ export default async function CampoRiaDetailPage({ params }: Props) {
     supabase.from('contratistas').select('id, nombre').eq('empresa_id', empresa.id).eq('activo', true).order('nombre'),
     supabase.from('tipos_labor').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
     supabase.from('cultivos').select('id, cultivo, lote_id, estado').in('estado', ['planificada', 'en_curso']).order('cultivo'),
+    createAdminClient().from('tipos_cultivo').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
   ]);
 
   const cultivoMap = new Map<string, string>();
@@ -141,6 +144,7 @@ export default async function CampoRiaDetailPage({ params }: Props) {
         contratistas={contratistas ?? []}
         tiposLabor={tiposLabor ?? []}
         cultivosActivos={cultivosActivos ?? []}
+        tiposCultivo={tiposCultivo ?? []}
         empresaId={empresa.id}
         empresaNombre={empresa.nombre}
         usuarioId={user.id}

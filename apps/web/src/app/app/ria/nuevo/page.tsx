@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 import { redirect } from 'next/navigation';
 import RiaForm from '../ria-form';
@@ -20,6 +21,7 @@ export default async function NuevoRiaPage() {
     { data: contratistas },
     { data: tiposLabor },
     { data: cultivosActivos },
+    { data: tiposCultivo },
     { data: config },
   ] = await Promise.all([
     supabase
@@ -62,6 +64,7 @@ export default async function NuevoRiaPage() {
       .select('id, cultivo, lote_id, estado')
       .in('estado', ['planificada', 'en_curso'])
       .order('cultivo'),
+    createAdminClient().from('tipos_cultivo').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
     supabase
       .from('configuracion_empresa')
       .select('precio_combustible, litros_por_uta')
@@ -94,6 +97,7 @@ export default async function NuevoRiaPage() {
         contratistas={contratistas ?? []}
         tiposLabor={(tiposLabor as any) ?? []}
         cultivosActivos={cultivosActivos ?? []}
+        tiposCultivo={tiposCultivo ?? []}
         empresaId={empresa.id}
         empresaNombre={empresa.nombre}
         usuarioId={user.id}
