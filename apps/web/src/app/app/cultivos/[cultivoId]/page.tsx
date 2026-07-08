@@ -151,7 +151,6 @@ export default async function CultivoDetallePage({ params }: Props) {
 
         {/* Decoración: círculos difusos */}
         <div className="absolute -right-10 -top-10 w-52 h-52 rounded-full bg-white/5 pointer-events-none" />
-        <div className="absolute right-20 -bottom-16 w-64 h-64 rounded-full bg-black/10 pointer-events-none" />
         <div className="absolute right-4 top-6 w-24 h-24 rounded-full bg-white/5 pointer-events-none" />
 
         {/* Ícono decorativo de fondo */}
@@ -205,7 +204,7 @@ export default async function CultivoDetallePage({ params }: Props) {
         </div>
 
         {/* ── Resumen financiero ─────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 mt-3">
 
         {/* Trabajos y Servicios */}
         <div className="bg-white rounded-xl border border-indigo-100 px-4 py-3 shadow-sm">
@@ -234,7 +233,7 @@ export default async function CultivoDetallePage({ params }: Props) {
         </div>
 
         {/* Costos Directos — subtotal */}
-        <div className="bg-white rounded-xl border border-zinc-200 px-4 py-3 shadow-sm col-span-2 sm:col-span-1">
+        <div className="bg-white rounded-xl border border-zinc-200 px-4 py-3 shadow-sm">
           <p className="text-zinc-400 text-[9px] uppercase tracking-wider font-semibold leading-tight">Costos Directos</p>
           <p className="text-zinc-800 font-bold text-sm mt-1.5 leading-none">
             {costosDirectosTotal > 0 ? <Money ars={costosDirectosTotal} /> : '—'}
