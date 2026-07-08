@@ -112,10 +112,25 @@ export default function CultivosReport({ cultivos, rias, campanias }: Props) {
 
     for (const c of cultivosFiltrados) {
       const raw = (c.cultivo ?? '').trim();
-      const key = raw.toLowerCase() || 'sin-cultivo';
-      const label = raw
-        ? raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase()
-        : 'Sin cultivo';
+      if (!raw) {
+        // sin cultivo
+        const key = 'sin-cultivo';
+        const label = 'Sin cultivo';
+        const g = map.get(key) ?? { label, lotes: 0, hectareas: 0, ingreso: 0, costo: 0, margen: 0, estados: {} };
+        const ha = c.lote?.hectareas ?? 0;
+        const loteId = c.lote?.id ?? '';
+        const ingreso = Number(c.ingreso_bruto_ars ?? 0);
+        const costo = Number(c.costo_directo_ars ?? 0) + (riasPorLote[loteId] ?? 0);
+        g.lotes += 1; g.hectareas += ha; g.ingreso += ingreso; g.costo += costo; g.margen += ingreso - costo;
+        g.estados[c.estado] = (g.estados[c.estado] ?? 0) + 1;
+        map.set(key, g);
+        continue;
+      }
+      // Normalizar: split por coma, trim, filtrar vacíos, ordenar → key estable
+      const tokens = raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean).sort();
+      const key = tokens.join(', ');
+      // Label: capitalizar primera letra de cada token
+      const label = tokens.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ');
 
       const ha = c.lote?.hectareas ?? 0;
       const loteId = c.lote?.id ?? '';
