@@ -129,8 +129,7 @@ export default function CultivosReport({ cultivos, rias, campanias }: Props) {
       // Normalizar: split por coma, trim, filtrar vacíos, ordenar → key estable
       const tokens = raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean).sort();
       const key = tokens.join(', ');
-      // Label: capitalizar primera letra de cada token
-      const label = tokens.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ');
+      const label = raw.trim().toUpperCase();
 
       const ha = c.lote?.hectareas ?? 0;
       const loteId = c.lote?.id ?? '';
