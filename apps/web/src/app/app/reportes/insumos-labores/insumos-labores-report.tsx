@@ -48,6 +48,31 @@ function fmtAxis(v: number) {
   return `$${v}`;
 }
 
+function wrapLabel(text: string, maxChars = 20): string[] {
+  if (text.length <= maxChars) return [text];
+  const lines: string[] = [];
+  let remaining = text;
+  while (remaining.length > maxChars) {
+    const cut = remaining.lastIndexOf(' ', maxChars);
+    if (cut <= 0) { lines.push(remaining.slice(0, maxChars)); remaining = remaining.slice(maxChars).trim(); }
+    else { lines.push(remaining.slice(0, cut)); remaining = remaining.slice(cut + 1); }
+  }
+  if (remaining) lines.push(remaining);
+  return lines.slice(0, 3);
+}
+function CustomYTick({ x, y, payload }: any) {
+  const lines = wrapLabel(String(payload.value));
+  const lh = 13;
+  const startY = -((lines.length - 1) * lh) / 2;
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {lines.map((line, i) => (
+        <text key={i} x={0} y={startY + i * lh} textAnchor="end" fill="#52525b" fontSize={10}>{line}</text>
+      ))}
+    </g>
+  );
+}
+
 export default function InsumosLaboresReport({ rias, insumos, labores, campanias }: Props) {
   const { formatMoney } = useCurrency();
   const [tab, setTab] = useState<'insumos' | 'labores'>('insumos');
@@ -119,13 +144,13 @@ export default function InsumosLaboresReport({ rias, insumos, labores, campanias
   const totalLabores = laboresPorTipo.reduce((acc, l) => acc + l.costoTotal, 0);
 
   const chartInsumos = insumosPorProducto.slice(0, 10).map((i) => ({
-    name: i.nombre.length > 20 ? i.nombre.slice(0, 18) + '…' : i.nombre,
+    name: i.nombre,
     fullName: i.nombre,
     Costo: i.costoTotal,
   }));
 
   const chartLabores = laboresPorTipo.slice(0, 10).map((l) => ({
-    name: l.nombre.length > 20 ? l.nombre.slice(0, 18) + '…' : l.nombre,
+    name: l.nombre,
     fullName: l.nombre,
     Costo: l.costoTotal,
   }));
@@ -204,7 +229,7 @@ export default function InsumosLaboresReport({ rias, insumos, labores, campanias
                 margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
               >
                 <XAxis type="number" tickFormatter={fmtAxis} tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 11 }} />
+                <YAxis type="category" dataKey="name" width={160} tick={<CustomYTick />} />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="Costo" radius={[0, 4, 4, 0]} maxBarSize={24}>
                   {(tab === 'insumos' ? chartInsumos : chartLabores).map((_, i) => (

@@ -46,6 +46,31 @@ interface Props {
 }
 
 
+function wrapLabel(text: string, maxChars = 20): string[] {
+  if (text.length <= maxChars) return [text];
+  const lines: string[] = [];
+  let remaining = text;
+  while (remaining.length > maxChars) {
+    const cut = remaining.lastIndexOf(' ', maxChars);
+    if (cut <= 0) { lines.push(remaining.slice(0, maxChars)); remaining = remaining.slice(maxChars).trim(); }
+    else { lines.push(remaining.slice(0, cut)); remaining = remaining.slice(cut + 1); }
+  }
+  if (remaining) lines.push(remaining);
+  return lines.slice(0, 3);
+}
+function CustomYTick({ x, y, payload }: any) {
+  const lines = wrapLabel(String(payload.value));
+  const lh = 13;
+  const startY = -((lines.length - 1) * lh) / 2;
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {lines.map((line, i) => (
+        <text key={i} x={0} y={startY + i * lh} textAnchor="end" fill="#52525b" fontSize={10}>{line}</text>
+      ))}
+    </g>
+  );
+}
+
 export default function MargenesReport({
   empresaNombre, campos, cultivos, rias, costosIndCampo, costosIndEmpresa, campanias,
 }: Props) {
@@ -169,7 +194,7 @@ export default function MargenesReport({
   const chartCampos = datosCampo
     .filter((d) => d.ingresoBruto + d.costoDirecto + Math.abs(d.margenCampo) > 0)
     .map((d) => ({
-      name: d.campo.nombre.length > 14 ? d.campo.nombre.slice(0, 12) + '…' : d.campo.nombre,
+      name: d.campo.nombre,
       fullName: d.campo.nombre,
       Ingreso: d.ingresoBruto,
       Costo: d.costoDirecto + d.costosIndirectos,
@@ -179,7 +204,7 @@ export default function MargenesReport({
   const chartCultivos = datosPorCultivo
     .filter((d) => d.ingreso + d.costo + Math.abs(d.margen) > 0)
     .map((d) => ({
-      name: d.label.length > 16 ? d.label.slice(0, 14) + '…' : d.label,
+      name: d.label,
       fullName: d.label,
       Ingreso: d.ingreso,
       Costo: d.costo,
@@ -242,7 +267,7 @@ export default function MargenesReport({
               <ResponsiveContainer width="100%" height={Math.max(200, chartCampos.length * 48)}>
                 <BarChart data={chartCampos} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
                   <XAxis type="number" tickFormatter={fmtAxis} tick={{ fontSize: 11 }} />
-                  <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" width={160} tick={<CustomYTick />} />
                   <Tooltip content={<ChartTooltip />} />
                   <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />
                   <Bar dataKey="Ingreso" fill="#3b82f6" radius={[0, 2, 2, 0]} maxBarSize={16} />
@@ -436,7 +461,7 @@ export default function MargenesReport({
                   <ResponsiveContainer width="100%" height={Math.max(200, chartCultivos.length * 52)}>
                     <BarChart data={chartCultivos} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
                       <XAxis type="number" tickFormatter={fmtAxis} tick={{ fontSize: 11 }} />
-                      <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11 }} />
+                      <YAxis type="category" dataKey="name" width={160} tick={<CustomYTick />} />
                       <Tooltip content={<ChartTooltip />} />
                       <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />
                       <Bar dataKey="Ingreso" fill="#3b82f6" radius={[0, 2, 2, 0]} maxBarSize={16} />

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { BarChart3, Package, Sprout, FileText, TrendingDown } from 'lucide-react';
+import { BarChart3, Package, Sprout, FileText, TrendingDown, Layers } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 
@@ -49,6 +49,15 @@ const REPORTS = [
     iconColor: 'text-orange-600',
     iconBg: 'bg-orange-100',
     accent: 'group-hover:border-orange-300',
+  },
+  {
+    href: '/app/reportes/cultivos',
+    title: 'Cultivos',
+    description: 'Todos los cultivos de la empresa agrupados por tipo. Margen bruto, hectáreas, ingreso y costo por tipo de cultivo.',
+    icon: Layers,
+    iconColor: 'text-emerald-600',
+    iconBg: 'bg-emerald-100',
+    accent: 'group-hover:border-emerald-300',
   },
 ];
 
