@@ -587,9 +587,11 @@ export default function RiaForm({
   }
 
   // ── Validaciones ──────────────────────────────────────────────────────────────
-  function validate() {
+  function validate(requiereLineas = false) {
     if (!loteId) return 'Debe seleccionar un lote.';
     if (!fecha) return 'La fecha es obligatoria.';
+    if (requiereLineas && insumos.length === 0 && labores.length === 0 && produccion.length === 0)
+      return 'Agregá al menos un insumo, labor o producción antes de guardar el borrador.';
     for (const i of insumos) {
       if (!i.depositoId) return 'Cada insumo debe tener un depósito seleccionado.';
       if (!i.productoId) return 'Cada insumo debe tener un producto seleccionado.';
@@ -660,7 +662,7 @@ export default function RiaForm({
   }
 
   async function handleSaveDraft() {
-    const err = validate();
+    const err = validate(true);
     if (err) { setErrorMsg(err); return; }
     setErrorMsg(''); setCultivoCreadoMsg('');
     setSaving(true);

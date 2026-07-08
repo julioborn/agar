@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 import { redirect, notFound } from 'next/navigation';
 import RiaForm from '../ria-form';
@@ -98,7 +99,7 @@ export default async function RiaDetailPage({ params }: Props) {
       .select('id, cultivo, lote_id, estado')
       .in('estado', ['planificada', 'en_curso'])
       .order('cultivo'),
-    supabase.from('tipos_cultivo').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
+    createAdminClient().from('tipos_cultivo').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
   ]);
 
   const { data: config } = await supabase

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 import RiaForm from '@/app/app/ria/ria-form';
 
@@ -33,7 +34,7 @@ export default async function CampoRiaNuevoPage() {
     supabase.from('contratistas').select('id, nombre').eq('empresa_id', empresa.id).eq('activo', true).order('nombre'),
     supabase.from('tipos_labor').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
     supabase.from('cultivos').select('id, cultivo, lote_id, estado').in('estado', ['planificada', 'en_curso']).order('cultivo'),
-    supabase.from('tipos_cultivo').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
+    createAdminClient().from('tipos_cultivo').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
   ]);
 
   // Enriquecer lotes con cultivo activo para auto-fill

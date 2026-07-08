@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 import { Sprout, ChevronLeft, Layers } from 'lucide-react';
 import CultivosManager from './cultivos-manager';
@@ -37,7 +38,7 @@ export default async function CultivosPage({ searchParams }: Props) {
     supabase.from('lotes').select('id, nombre, campo:campos(id, nombre)').order('nombre'),
     supabase.from('unidades_negocio').select('id, nombre').order('nombre'),
     supabase.from('campanias').select('id, nombre').eq('activa', true).order('nombre'),
-    supabase.from('tipos_cultivo').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
+    createAdminClient().from('tipos_cultivo').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
   ]);
 
   const cultivos = (cultivosRes.data ?? []).map((c: any) => ({
