@@ -5,10 +5,11 @@ import { revalidatePath } from 'next/cache';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 
 const TIPOS_ENTRADA = new Set([
-  'entrada_compra', 'entrada_devolucion', 'transferencia_entrada', 'ajuste', 'carga_stock',
+  'entrada_compra', 'entrada_devolucion', 'transferencia_entrada',
+  'ajuste', 'carga_stock', 'entrada_produccion_ria',
 ]);
 const TIPOS_SALIDA = new Set([
-  'salida_aplicacion', 'transferencia_salida', 'merma',
+  'salida_aplicacion', 'transferencia_salida', 'merma', 'salida_ria',
 ]);
 
 function calcStock(movs: { tipo: string; cantidad: number | string }[]): number {
@@ -293,7 +294,7 @@ export async function eliminarRia(riaId: string): Promise<{ error?: string }> {
   const { rol: rolRia, esSuperAdmin: esAdminRia } = empresaRia;
   if (!esAdminRia && rolRia !== 'admin_empresa') return { error: 'Sin permiso.' };
 
-  // Obtener el estado y cultivo_id del RIA
+  // Obtener el estado y cultivo_id del RIA antes de borrarlo
   const { data: remito } = await supabase
     .from('remitos_internos')
     .select('estado, cultivo_id')
@@ -302,18 +303,23 @@ export async function eliminarRia(riaId: string): Promise<{ error?: string }> {
 
   if (!remito) return { error: 'RIA no encontrado.' };
 
-  // Para confirmados/anulados: revertir movimientos de stock
+  // ── 1. Revertir movimientos de stock ──────────────────────────────────────────
+  // Para confirmados: hay movimientos salida_ria (insumos) + entrada_produccion_ria (producción).
+  // Para anulados: también hay los movimientos de reversión (entrada_devolucion / transferencia_salida),
+  // todos con el mismo referencia_id. Borrarlos todos y recalcular deja el stock neto correcto.
   const { data: movs } = await supabase
     .from('movimientos_stock')
     .select('id, producto_id, deposito_id')
     .eq('referencia_id', riaId);
 
   if (movs && movs.length > 0) {
-    // Borrar los movimientos
     await supabase.from('movimientos_stock').delete().eq('referencia_id', riaId);
 
-    // Recalcular stock para cada producto+depósito afectado
-    const pares = [...new Map(movs.map((m: any) => [`${m.producto_id}::${m.deposito_id}`, m])).values()];
+    // Recalcular stock para cada par producto+depósito afectado
+    const pares = [...new Map(
+      movs.map((m: any) => [`${m.producto_id}::${m.deposito_id}`, m])
+    ).values()];
+
     for (const m of pares as any[]) {
       const { data: restantes } = await supabase
         .from('movimientos_stock')
@@ -321,8 +327,8 @@ export async function eliminarRia(riaId: string): Promise<{ error?: string }> {
         .eq('producto_id', m.producto_id)
         .eq('deposito_id', m.deposito_id);
 
+      // calcStock conoce todos los tipos incluyendo salida_ria y entrada_produccion_ria
       const nueva = calcStock(restantes ?? []);
-
       await supabase.from('stock')
         .update({ cantidad_actual: nueva })
         .eq('producto_id', m.producto_id)
@@ -330,32 +336,50 @@ export async function eliminarRia(riaId: string): Promise<{ error?: string }> {
     }
   }
 
-  // Recalcular costo del cultivo si aplica
-  if ((remito as any).cultivo_id) {
-    const cultivoId = (remito as any).cultivo_id;
-    const [{ data: aplicsIds }, { data: labores }, { data: cosechas }] = await Promise.all([
-      supabase.from('aplicaciones').select('id').eq('cultivo_id', cultivoId),
-      supabase.from('labores').select('costo_total_calculado').eq('cultivo_id', cultivoId),
-      supabase.from('costos_cosecha').select('costo_total_calculado').eq('cultivo_id', cultivoId),
-    ]);
+  // ── 2. Borrar el RIA (cascade elimina insumos, labores y producción) ──────────
+  const { error } = await supabase.from('remitos_internos').delete().eq('id', riaId);
+  if (error) return { error: error.message };
+
+  // ── 3. Recalcular costo directo del cultivo DESPUÉS de borrar el RIA ──────────
+  // Ahora las líneas del RIA eliminado ya no existen, así que el cálculo es correcto.
+  const cultivoId = (remito as any).cultivo_id;
+  if (cultivoId) {
+    const [{ data: aplicsIds }, { data: labores }, { data: cosechas }, { data: riasRestantes }] =
+      await Promise.all([
+        supabase.from('aplicaciones').select('id').eq('cultivo_id', cultivoId),
+        supabase.from('labores').select('costo_total_calculado').eq('cultivo_id', cultivoId),
+        supabase.from('costos_cosecha').select('costo_total_calculado').eq('cultivo_id', cultivoId),
+        // RIAs que siguen confirmados para este cultivo (el borrado ya no aparece)
+        supabase.from('remitos_internos').select('id')
+          .eq('cultivo_id', cultivoId).eq('estado', 'confirmado'),
+      ]);
+
     let costoAplic = 0;
     if (aplicsIds && aplicsIds.length > 0) {
-      const { data: items } = await supabase.from('aplicaciones_items').select('costo_imputado_ars')
+      const { data: items } = await supabase.from('aplicaciones_items')
+        .select('costo_imputado_ars')
         .in('aplicacion_id', aplicsIds.map((a: any) => a.id));
       costoAplic = (items ?? []).reduce((s: number, i: any) => s + Number(i.costo_imputado_ars ?? 0), 0);
     }
     const costoLab = (labores ?? []).reduce((s: number, l: any) => s + Number(l.costo_total_calculado ?? 0), 0);
     const costoCos = (cosechas ?? []).reduce((s: number, c: any) => s + Number(c.costo_total_calculado ?? 0), 0);
-    // RIA ya eliminado, su costo ya no cuenta
-    await supabase.from('cultivos').update({ costo_directo_ars: costoAplic + costoLab + costoCos }).eq('id', cultivoId);
-  }
 
-  // Eliminar registros del RIA (insumos, labores, producción y cabecera)
-  await supabase.from('remitos_insumos').delete().eq('remito_id', riaId);
-  await supabase.from('remitos_labores').delete().eq('remito_id', riaId);
-  await supabase.from('remitos_produccion').delete().eq('remito_id', riaId);
-  const { error } = await supabase.from('remitos_internos').delete().eq('id', riaId);
-  if (error) return { error: error.message };
+    let costoRia = 0;
+    if (riasRestantes && riasRestantes.length > 0) {
+      const ids = riasRestantes.map((r: any) => r.id);
+      const [{ data: riaInsumos }, { data: riaLabores }] = await Promise.all([
+        supabase.from('remitos_insumos').select('subtotal').in('remito_id', ids),
+        supabase.from('remitos_labores').select('subtotal').in('remito_id', ids),
+      ]);
+      costoRia = [...(riaInsumos ?? []), ...(riaLabores ?? [])].reduce(
+        (s: number, i: any) => s + Number(i.subtotal ?? 0), 0,
+      );
+    }
+
+    await supabase.from('cultivos')
+      .update({ costo_directo_ars: costoAplic + costoLab + costoCos + costoRia })
+      .eq('id', cultivoId);
+  }
 
   revalidatePath('/app/ria');
   revalidatePath('/app/stock');

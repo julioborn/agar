@@ -3,6 +3,25 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 
+// Todos los tipos de movimiento que suman stock
+const MOV_ENTRADA = new Set([
+  'entrada_compra', 'entrada_devolucion', 'transferencia_entrada',
+  'ajuste', 'carga_stock', 'entrada_produccion_ria',
+]);
+// Todos los tipos que restan stock
+const MOV_SALIDA = new Set([
+  'salida_aplicacion', 'transferencia_salida', 'merma', 'salida_ria',
+]);
+
+function calcStockDesdeMovs(movs: { tipo: string; cantidad: number | string }[]): number {
+  return movs.reduce((acc, m) => {
+    const qty = Number(m.cantidad ?? 0);
+    if (MOV_ENTRADA.has(String(m.tipo))) return acc + qty;
+    if (MOV_SALIDA.has(String(m.tipo)))  return acc - qty;
+    return acc + qty; // desconocido: tratar como entrada
+  }, 0);
+}
+
 // ─── Helper compartido ────────────────────────────────────────────────────────
 async function recalcularCostoDirecto(supabase: Awaited<ReturnType<typeof createClient>>, cultivoId: string) {
   // Costo de aplicaciones directas
@@ -191,8 +210,7 @@ export async function eliminarAplicacion(aplicacionId: string, cultivoId: string
       .eq('producto_id', (item as any).producto_id)
       .eq('deposito_id', (item as any).deposito_origen_id);
 
-    const nuevaCantidad = (movs ?? []).reduce((acc: number, m: any) =>
-      acc + (String(m.tipo).startsWith('entrada') ? Number(m.cantidad) : -Number(m.cantidad)), 0);
+    const nuevaCantidad = calcStockDesdeMovs(movs ?? []);
 
     await supabase
       .from('stock')
@@ -579,8 +597,7 @@ export async function eliminarCultivo(cultivoId: string, restaurarStock: boolean
             .eq('producto_id', (m as any).producto_id)
             .eq('deposito_id', (m as any).deposito_id);
 
-          const nueva = (restantes ?? []).reduce((acc: number, r: any) =>
-            acc + (String(r.tipo).startsWith('entrada') ? Number(r.cantidad) : -Number(r.cantidad)), 0);
+          const nueva = calcStockDesdeMovs(restantes ?? []);
 
           await supabase.from('stock')
             .update({ cantidad_actual: nueva })
