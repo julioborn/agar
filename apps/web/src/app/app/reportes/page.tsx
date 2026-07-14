@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { BarChart3, Package, Sprout, FileText, TrendingDown, Layers } from 'lucide-react';
+import { BarChart3, Package, Sprout, FileText, TrendingDown, Layers, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 
@@ -58,6 +58,15 @@ const REPORTS = [
     iconColor: 'text-emerald-600',
     iconBg: 'bg-emerald-100',
     accent: 'group-hover:border-emerald-300',
+  },
+  {
+    href: '/app/reportes/costos-directos-lote',
+    title: 'Costos Directos por Lote',
+    description: 'Insumos y labores acumulados por lote, con o sin cultivo definido. Identifica costos de trabajos previos a la asignación de cultivo.',
+    icon: MapPin,
+    iconColor: 'text-teal-600',
+    iconBg: 'bg-teal-100',
+    accent: 'group-hover:border-teal-300',
   },
 ];
 
