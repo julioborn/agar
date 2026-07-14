@@ -11,7 +11,7 @@ export default async function RiaPage() {
 
   const supabase = await createClient();
 
-  const [{ data: rias }, { data: campanias }, { data: lotes }] = await Promise.all([
+  const [{ data: riasRaw }, { data: campanias }, { data: lotes }] = await Promise.all([
     supabase
       .from('remitos_internos')
       .select(`
@@ -20,7 +20,9 @@ export default async function RiaPage() {
         total_insumos, total_labores, total_ria, costo_por_ha,
         motivo_anulacion, created_at,
         lote:lotes(id, nombre, campo:campos(nombre)),
-        campania:campanias(id, nombre)
+        campania:campanias(id, nombre),
+        remitos_insumos(subtotal),
+        remitos_labores(subtotal)
       `)
       .eq('empresa_id', empresa.id)
       .order('fecha', { ascending: false })
@@ -38,6 +40,21 @@ export default async function RiaPage() {
       .eq('campo.empresa_id', empresa.id)
       .order('nombre'),
   ]);
+
+  // Recalcular totales desde las líneas reales (las columnas almacenadas pueden estar desactualizadas)
+  const rias = (riasRaw ?? []).map((r: any) => {
+    const totalInsumos = (r.remitos_insumos ?? []).reduce((s: number, i: any) => s + Number(i.subtotal ?? 0), 0);
+    const totalLabores = (r.remitos_labores ?? []).reduce((s: number, l: any) => s + Number(l.subtotal ?? 0), 0);
+    const totalRia = totalInsumos + totalLabores;
+    const { remitos_insumos: _i, remitos_labores: _l, ...rest } = r;
+    return {
+      ...rest,
+      total_insumos: totalInsumos,
+      total_labores: totalLabores,
+      total_ria: totalRia,
+      costo_por_ha: r.superficie_afectada > 0 ? totalRia / Number(r.superficie_afectada) : r.costo_por_ha,
+    };
+  });
 
   return (
     <div className="p-6 space-y-6">

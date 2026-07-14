@@ -28,19 +28,29 @@ export default async function CampoRiaPage() {
   if (!empresaData) redirect('/login');
   const { empresa } = empresaData;
 
-  const { data: rias } = await supabase
+  const { data: riasRaw } = await supabase
     .from('remitos_internos')
     .select(`
       id, numero_ria, fecha, estado,
       cultivo_descripcion, superficie_afectada,
       total_insumos, total_labores, total_ria,
       lote:lotes(nombre, campo:campos(nombre)),
-      campania:campanias(nombre)
+      campania:campanias(nombre),
+      remitos_insumos(subtotal),
+      remitos_labores(subtotal)
     `)
     .eq('empresa_id', empresa.id)
     .order('fecha', { ascending: false })
     .order('numero_correlativo', { ascending: false })
     .limit(50);
+
+  // Recalcular totales desde las líneas reales
+  const rias = (riasRaw ?? []).map((r: any) => {
+    const totalInsumos = (r.remitos_insumos ?? []).reduce((s: number, i: any) => s + Number(i.subtotal ?? 0), 0);
+    const totalLabores = (r.remitos_labores ?? []).reduce((s: number, l: any) => s + Number(l.subtotal ?? 0), 0);
+    const { remitos_insumos: _i, remitos_labores: _l, ...rest } = r;
+    return { ...rest, total_insumos: totalInsumos, total_labores: totalLabores, total_ria: totalInsumos + totalLabores };
+  });
 
   const pendientes = (rias ?? []).filter((r: any) => r.estado === 'borrador').length;
 

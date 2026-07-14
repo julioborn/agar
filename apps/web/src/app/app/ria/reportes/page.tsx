@@ -90,10 +90,33 @@ export default async function ReportesPage() {
     );
   }
 
-  const rias = riasBase.map((r) => ({
-    ...r,
-    operador_email: r.operador_id ? (emailPorUsuario[r.operador_id] ?? '—') : null,
-  }));
+  // Recalcular totales desde los line items reales (columnas almacenadas pueden estar stale)
+  const insumosPorRia = new Map<string, number>();
+  for (const i of (insumosRes.data ?? []) as any[]) {
+    insumosPorRia.set(i.remito_id, (insumosPorRia.get(i.remito_id) ?? 0) + Number(i.subtotal ?? 0));
+  }
+  const laboresPorRia = new Map<string, number>();
+  for (const l of (laboresRes.data ?? []) as any[]) {
+    laboresPorRia.set(l.remito_id, (laboresPorRia.get(l.remito_id) ?? 0) + Number(l.subtotal ?? 0));
+  }
+
+  const rias = riasBase.map((r) => {
+    const totalInsumos = insumosPorRia.has(r.id)
+      ? insumosPorRia.get(r.id)!
+      : Number(r.total_insumos ?? 0);
+    const totalLabores = laboresPorRia.has(r.id)
+      ? laboresPorRia.get(r.id)!
+      : Number(r.total_labores ?? 0);
+    const totalRia = totalInsumos + totalLabores;
+    return {
+      ...r,
+      operador_email: r.operador_id ? (emailPorUsuario[r.operador_id] ?? '—') : null,
+      total_insumos: totalInsumos,
+      total_labores: totalLabores,
+      total_ria: totalRia,
+      costo_por_ha: r.superficie_afectada > 0 ? totalRia / Number(r.superficie_afectada) : r.costo_por_ha,
+    };
+  });
 
   return (
     <div className="p-6 space-y-6">
