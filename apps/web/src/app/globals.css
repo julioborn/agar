@@ -7,6 +7,9 @@
    Forzar negro aquí garantiza que esa zona nunca sea blanca. */
 html {
   background-color: #09090b;
+  /* Evita pull-to-refresh accidental en PWA; el navegador mantiene el gesto
+     solo cuando el scroll está en el tope absoluto de la página */
+  overscroll-behavior-y: none;
 }
 
 /* Previene el zoom automático de iOS al enfocar inputs con font-size < 16px.
