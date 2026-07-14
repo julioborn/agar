@@ -7,6 +7,7 @@ import {
 import { Sprout, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/lib/currency-context';
+import ExportButtons, { ExportColumn } from '@/components/export-buttons';
 
 interface RiaInfo {
   id: string;
@@ -147,6 +148,38 @@ export default function ProduccionReport({ rias, produccion, campanias }: Props)
   const totalProduccion = produccionPorCultivo.reduce((acc, g) => acc + g.cantidad, 0);
   const totalValor = produccionPorCultivo.reduce((acc, g) => acc + g.valorTotal, 0);
 
+  const exportDataCultivo = useMemo(() => produccionPorCultivo.map((g) => ({
+    cultivo: g.cultivo,
+    loteCount: g.loteCount,
+    cantidad: g.cantidad,
+    valorTotal: g.valorTotal,
+  })), [produccionPorCultivo]);
+
+  const exportDataLote = useMemo(() => produccionPorLote.map((l) => ({
+    campoNombre: l.campoNombre,
+    loteNombre: l.loteNombre,
+    cultivo: l.cultivo,
+    cantidad: l.cantidad,
+    superficie: l.superficie ?? 0,
+    tnPorHa: l.tnPorHa ?? 0,
+  })), [produccionPorLote]);
+
+  const exportColumnsCultivo: ExportColumn[] = [
+    { header: 'Cultivo', key: 'cultivo', width: 22 },
+    { header: 'Lotes', key: 'loteCount', width: 8, align: 'right' },
+    { header: 'Cantidad (tn)', key: 'cantidad', width: 14, align: 'right', format: (v) => qty.format(v), total: true },
+    { header: 'Valor total', key: 'valorTotal', width: 16, align: 'right', format: (v) => formatMoney(v), total: true },
+  ];
+
+  const exportColumnsLote: ExportColumn[] = [
+    { header: 'Campo', key: 'campoNombre', width: 18 },
+    { header: 'Lote', key: 'loteNombre', width: 18 },
+    { header: 'Cultivo', key: 'cultivo', width: 18 },
+    { header: 'Cantidad (tn)', key: 'cantidad', width: 14, align: 'right', format: (v) => qty.format(v), total: true },
+    { header: 'Sup. (ha)', key: 'superficie', width: 10, align: 'right', format: (v) => qty.format(v) },
+    { header: 'tn/ha', key: 'tnPorHa', width: 10, align: 'right', format: (v) => v > 0 ? qty.format(v) : '—' },
+  ];
+
   const chartCultivo = produccionPorCultivo.slice(0, 8).map((g) => ({
     name: g.cultivo,
     fullName: g.cultivo,
@@ -178,20 +211,28 @@ export default function ProduccionReport({ rias, produccion, campanias }: Props)
             </select>
           </div>
         )}
-        <div className="flex rounded-xl border border-zinc-200 overflow-hidden bg-white ml-auto">
-          {([['cultivo', Sprout, 'Por Cultivo'], ['lote', Layers, 'Por Lote']] as const).map(([id, Icon, label]) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className={cn(
-                'flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors',
-                tab === id ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50',
-              )}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 ml-auto">
+          <ExportButtons
+            data={tab === 'cultivo' ? exportDataCultivo : exportDataLote}
+            columns={tab === 'cultivo' ? exportColumnsCultivo : exportColumnsLote}
+            filename={tab === 'cultivo' ? 'reporte-produccion-cultivo' : 'reporte-produccion-lote'}
+            title={tab === 'cultivo' ? 'Producción por Cultivo' : 'Producción por Lote'}
+          />
+          <div className="flex rounded-xl border border-zinc-200 overflow-hidden bg-white">
+            {([['cultivo', Sprout, 'Por Cultivo'], ['lote', Layers, 'Por Lote']] as const).map(([id, Icon, label]) => (
+              <button
+                key={id}
+                onClick={() => setTab(id)}
+                className={cn(
+                  'flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors',
+                  tab === id ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50',
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

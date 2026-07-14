@@ -7,6 +7,7 @@ import {
 import { Package, Wrench, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/lib/currency-context';
+import ExportButtons, { ExportColumn } from '@/components/export-buttons';
 
 interface RiaInfo {
   id: string;
@@ -159,6 +160,38 @@ export default function InsumosLaboresReport({ rias, insumos, labores, campanias
     Costo: l.costoTotal,
   }));
 
+  const exportDataInsumos = useMemo(() => insumosPorProducto.map((i) => ({
+    nombre: i.nombre,
+    categoria: i.categoria,
+    unidad: i.unidad,
+    cantidadTotal: i.cantidadTotal,
+    costoTotal: i.costoTotal,
+    usos: i.usos,
+  })), [insumosPorProducto]);
+
+  const exportDataLabores = useMemo(() => laboresPorTipo.map((l) => ({
+    nombre: l.nombre,
+    cantidadTotal: l.cantidadTotal,
+    costoTotal: l.costoTotal,
+    usos: l.usos,
+  })), [laboresPorTipo]);
+
+  const exportColumnsInsumos: ExportColumn[] = [
+    { header: 'Producto', key: 'nombre', width: 24 },
+    { header: 'Categoría', key: 'categoria', width: 16 },
+    { header: 'Unidad', key: 'unidad', width: 10 },
+    { header: 'Cantidad total', key: 'cantidadTotal', width: 14, align: 'right', format: (v) => qty.format(v) },
+    { header: 'Costo total', key: 'costoTotal', width: 16, align: 'right', format: (v) => formatMoney(v), total: true },
+    { header: 'Usos', key: 'usos', width: 8, align: 'right' },
+  ];
+
+  const exportColumnsLabores: ExportColumn[] = [
+    { header: 'Labor', key: 'nombre', width: 24 },
+    { header: 'Cantidad total', key: 'cantidadTotal', width: 14, align: 'right', format: (v) => qty.format(v) },
+    { header: 'Costo total', key: 'costoTotal', width: 16, align: 'right', format: (v) => formatMoney(v), total: true },
+    { header: 'Usos', key: 'usos', width: 8, align: 'right' },
+  ];
+
   const isEmpty = tab === 'insumos' ? insumosPorProducto.length === 0 : laboresPorTipo.length === 0;
 
   return (
@@ -178,22 +211,30 @@ export default function InsumosLaboresReport({ rias, insumos, labores, campanias
             </select>
           </div>
         )}
-        <div className="flex rounded-xl border border-zinc-200 overflow-hidden bg-white ml-auto">
-          {([['insumos', Package, 'Insumos'], ['labores', Wrench, 'Labores']] as const).map(([id, Icon, label]) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className={cn(
-                'flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors',
-                tab === id
-                  ? 'bg-zinc-900 text-white'
-                  : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50',
-              )}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 ml-auto">
+          <ExportButtons
+            data={tab === 'insumos' ? exportDataInsumos : exportDataLabores}
+            columns={tab === 'insumos' ? exportColumnsInsumos : exportColumnsLabores}
+            filename={tab === 'insumos' ? 'reporte-insumos' : 'reporte-labores'}
+            title={tab === 'insumos' ? 'Reporte de Insumos' : 'Reporte de Labores'}
+          />
+          <div className="flex rounded-xl border border-zinc-200 overflow-hidden bg-white">
+            {([['insumos', Package, 'Insumos'], ['labores', Wrench, 'Labores']] as const).map(([id, Icon, label]) => (
+              <button
+                key={id}
+                onClick={() => setTab(id)}
+                className={cn(
+                  'flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors',
+                  tab === id
+                    ? 'bg-zinc-900 text-white'
+                    : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50',
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

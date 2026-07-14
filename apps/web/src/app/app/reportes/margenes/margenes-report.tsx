@@ -7,6 +7,7 @@ import {
 import { ChevronDown, ChevronRight, MapPin, Sprout, BarChart3, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/lib/currency-context';
+import ExportButtons, { ExportColumn } from '@/components/export-buttons';
 
 interface Cultivo {
   id: string;
@@ -190,6 +191,36 @@ export default function MargenesReport({
   const totalCostosIndEmpresa = costosEmpresaFiltrados.reduce((acc, c) => acc + Number(c.monto_ars), 0);
   const margenLiquidoEmpresa = totalMargenCampos - totalCostosIndEmpresa;
 
+  const exportDataJerarquia = useMemo(() => datosCampo.map((d) => ({
+    campo: d.campo.nombre,
+    ingresoBruto: d.ingresoBruto,
+    costoDirecto: d.costoDirecto,
+    costosIndirectos: d.costosIndirectos,
+    margenCampo: d.margenCampo,
+  })), [datosCampo]);
+
+  const exportDataCultivo = useMemo(() => datosPorCultivo.map((d) => ({
+    label: d.label,
+    ingreso: d.ingreso,
+    costo: d.costo,
+    margen: d.margen,
+  })), [datosPorCultivo]);
+
+  const exportColumnsJerarquia: ExportColumn[] = [
+    { header: 'Campo', key: 'campo', width: 20 },
+    { header: 'Ingreso bruto', key: 'ingresoBruto', width: 16, align: 'right', format: (v) => formatMoney(v), total: true },
+    { header: 'Costo directo', key: 'costoDirecto', width: 16, align: 'right', format: (v) => formatMoney(v), total: true },
+    { header: 'Costos campo', key: 'costosIndirectos', width: 14, align: 'right', format: (v) => formatMoney(v), total: true },
+    { header: 'Margen campo', key: 'margenCampo', width: 14, align: 'right', format: (v) => formatMoney(v), total: true },
+  ];
+
+  const exportColumnsCultivo: ExportColumn[] = [
+    { header: 'Cultivo', key: 'label', width: 22 },
+    { header: 'Ingreso', key: 'ingreso', width: 16, align: 'right', format: (v) => formatMoney(v), total: true },
+    { header: 'Costo', key: 'costo', width: 16, align: 'right', format: (v) => formatMoney(v), total: true },
+    { header: 'Margen', key: 'margen', width: 16, align: 'right', format: (v) => formatMoney(v), total: true },
+  ];
+
   // ── Chart data ─────────────────────────────────────────────────────────────────
   const chartCampos = datosCampo
     .filter((d) => d.ingresoBruto + d.costoDirecto + Math.abs(d.margenCampo) > 0)
@@ -233,27 +264,35 @@ export default function MargenesReport({
             )}
           </div>
         )}
-        <div className="flex rounded-xl border border-zinc-200 overflow-hidden bg-white ml-auto">
-          <button
-            onClick={() => setVista('jerarquia')}
-            className={cn(
-              'flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors',
-              vista === 'jerarquia' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50',
-            )}
-          >
-            <Layers className="w-4 h-4" />
-            Jerarquía
-          </button>
-          <button
-            onClick={() => setVista('cultivo')}
-            className={cn(
-              'flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors',
-              vista === 'cultivo' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50',
-            )}
-          >
-            <Sprout className="w-4 h-4" />
-            Por Cultivo
-          </button>
+        <div className="flex items-center gap-2 ml-auto">
+          <ExportButtons
+            data={vista === 'jerarquia' ? exportDataJerarquia : exportDataCultivo}
+            columns={vista === 'jerarquia' ? exportColumnsJerarquia : exportColumnsCultivo}
+            filename={vista === 'jerarquia' ? 'reporte-margenes-campos' : 'reporte-margenes-cultivos'}
+            title={vista === 'jerarquia' ? 'Márgenes por Campo' : 'Márgenes por Cultivo'}
+          />
+          <div className="flex rounded-xl border border-zinc-200 overflow-hidden bg-white">
+            <button
+              onClick={() => setVista('jerarquia')}
+              className={cn(
+                'flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors',
+                vista === 'jerarquia' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50',
+              )}
+            >
+              <Layers className="w-4 h-4" />
+              Jerarquía
+            </button>
+            <button
+              onClick={() => setVista('cultivo')}
+              className={cn(
+                'flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors',
+                vista === 'cultivo' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50',
+              )}
+            >
+              <Sprout className="w-4 h-4" />
+              Por Cultivo
+            </button>
+          </div>
         </div>
       </div>
 

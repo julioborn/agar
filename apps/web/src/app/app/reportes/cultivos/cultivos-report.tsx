@@ -7,6 +7,7 @@ import {
 import { Sprout } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/lib/currency-context';
+import ExportButtons, { ExportColumn } from '@/components/export-buttons';
 
 interface CultivoRow {
   id: string;
@@ -181,6 +182,26 @@ export default function CultivosReport({ cultivos, rias, campanias }: Props) {
     Ha: g.hectareas,
   }));
 
+  const exportData = useMemo(() => grupos.map((g) => ({
+    label: g.label,
+    lotes: g.lotes,
+    hectareas: g.hectareas,
+    ingreso: g.ingreso,
+    costo: g.costo,
+    margen: g.margen,
+    margenPorHa: g.hectareas > 0 ? g.margen / g.hectareas : 0,
+  })), [grupos]);
+
+  const exportColumns: ExportColumn[] = [
+    { header: 'Cultivo', key: 'label', width: 22 },
+    { header: 'Lotes', key: 'lotes', width: 8, align: 'right' },
+    { header: 'Ha', key: 'hectareas', width: 10, align: 'right', format: (v) => fmt.format(v) },
+    { header: 'Ingreso bruto', key: 'ingreso', width: 16, align: 'right', format: (v) => formatMoney(v), total: true },
+    { header: 'Costo directo', key: 'costo', width: 16, align: 'right', format: (v) => formatMoney(v), total: true },
+    { header: 'Margen bruto', key: 'margen', width: 16, align: 'right', format: (v) => formatMoney(v), total: true },
+    { header: 'Margen/ha', key: 'margenPorHa', width: 14, align: 'right', format: (v) => formatMoney(v) },
+  ];
+
   if (grupos.length === 0) {
     return (
       <div className="bg-white rounded-2xl border border-zinc-100 p-16 text-center">
@@ -192,25 +213,34 @@ export default function CultivosReport({ cultivos, rias, campanias }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Filtro campaña */}
-      {campanias.length > 0 && (
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-zinc-600">Campaña:</label>
-          <select
-            value={campaniaFiltro}
-            onChange={(e) => setCampaniaFiltro(e.target.value)}
-            className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 bg-white"
-          >
-            <option value="">Todas las campañas</option>
-            {campanias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
-          {campaniaFiltro && (
-            <button onClick={() => setCampaniaFiltro('')} className="text-xs text-zinc-400 hover:text-zinc-700 underline">
-              Limpiar
-            </button>
-          )}
-        </div>
-      )}
+      {/* Filtro campaña + Exportar */}
+      <div className="flex flex-wrap items-center gap-3">
+        {campanias.length > 0 && (
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-zinc-600">Campaña:</label>
+            <select
+              value={campaniaFiltro}
+              onChange={(e) => setCampaniaFiltro(e.target.value)}
+              className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 bg-white"
+            >
+              <option value="">Todas las campañas</option>
+              {campanias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
+            {campaniaFiltro && (
+              <button onClick={() => setCampaniaFiltro('')} className="text-xs text-zinc-400 hover:text-zinc-700 underline">
+                Limpiar
+              </button>
+            )}
+          </div>
+        )}
+        <ExportButtons
+          data={exportData}
+          columns={exportColumns}
+          filename="reporte-cultivos"
+          title="Reporte de Cultivos"
+          className="ml-auto"
+        />
+      </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
