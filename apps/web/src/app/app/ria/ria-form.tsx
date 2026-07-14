@@ -189,7 +189,9 @@ export default function RiaForm({
   // Header state
   const [fecha, setFecha] = useState(riaExistente?.fecha ?? today());
   const [loteId, setLoteId] = useState(riaExistente?.lote_id ?? '');
-  const [campaniaId, setCampaniaId] = useState(riaExistente?.campania_id ?? '');
+  const [campaniaId, setCampaniaId] = useState(
+    riaExistente?.campania_id ?? (campanias[campanias.length - 1]?.id ?? ''),
+  );
   const [superficieAfectada, setSuperficieAfectada] = useState(
     riaExistente?.superficie_afectada?.toString() ?? '',
   );
@@ -596,6 +598,7 @@ export default function RiaForm({
   function validate(requiereLineas = false) {
     if (!loteId) return 'Debe seleccionar un lote.';
     if (!fecha) return 'La fecha es obligatoria.';
+    if (!campaniaId) return 'La campaña es obligatoria.';
     if (requiereLineas && insumos.length === 0 && labores.length === 0 && produccion.length === 0)
       return 'Agregá al menos un insumo, labor o producción antes de guardar el borrador.';
     for (const i of insumos) {
@@ -859,14 +862,14 @@ export default function RiaForm({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-zinc-600 mb-1">Campaña</label>
+            <label className="block text-xs font-medium text-zinc-600 mb-1">Campaña *</label>
             <select
               value={campaniaId}
               onChange={(e) => setCampaniaId(e.target.value)}
               disabled={esReadOnly}
-              className={inputCls()}
+              className={inputCls(!campaniaId && !esReadOnly)}
             >
-              <option value="">Sin campaña asignada</option>
+              <option value="">Seleccioná una campaña…</option>
               {campanias.map((c) => (
                 <option key={c.id} value={c.id}>{c.nombre}</option>
               ))}

@@ -137,7 +137,7 @@ export default function CultivoForm({
     } else {
       setLoteId(defaultLoteId ?? (lotes[0]?.id ?? ''));
       setUnidadNegocioId(unidadesNegocio[0]?.id ?? '');
-      setCampaniaId(campanias.find(() => true)?.id ?? '');
+      setCampaniaId(campanias[campanias.length - 1]?.id ?? '');
       setCultivo('');
       setCultivoPersonalizado(false);
       setProductoFinal('');
@@ -154,8 +154,8 @@ export default function CultivoForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    if (!loteId || !unidadNegocioId || !cultivo.trim() || !fechaSiembra) {
-      setError('Completá lote, unidad de negocio, especie y fecha de siembra.');
+    if (!loteId || !unidadNegocioId || !cultivo.trim() || !fechaSiembra || !campaniaId) {
+      setError('Completá lote, unidad de negocio, especie, campaña y fecha de siembra.');
       return;
     }
 
@@ -217,10 +217,10 @@ export default function CultivoForm({
 
       {campanias.length > 0 && (
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Campaña (temporada)</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Campaña * (temporada)</label>
           <select value={campaniaId} onChange={(e) => setCampaniaId(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500">
-            <option value="">Sin asignar</option>
+            className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500 ${!campaniaId ? 'border-red-300' : 'border-slate-300'}`}>
+            <option value="">Seleccioná una campaña…</option>
             {campanias.map((c) => (
               <option key={c.id} value={c.id}>{c.nombre}</option>
             ))}
