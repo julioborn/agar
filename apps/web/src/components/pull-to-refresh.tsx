@@ -5,6 +5,8 @@ import { RefreshCw } from 'lucide-react';
 
 // Cuántos px de movimiento táctil real disparan la recarga
 const THRESHOLD = 100;
+// Solo la zona superior de la pantalla puede disparar PTR
+const TOP_ZONE_RATIO = 0.22; // top 22% de la altura de la pantalla
 
 export function PullToRefresh() {
   const startYRef  = useRef(0);
@@ -18,7 +20,10 @@ export function PullToRefresh() {
     const onTouchStart = (e: TouchEvent) => {
       // Solo activar desde el tope absoluto del scroll
       if (window.scrollY > 2) return;
-      startYRef.current  = e.touches[0].clientY;
+      // Solo activar si el toque empieza en la zona superior de la pantalla
+      const touchY = e.touches[0].clientY;
+      if (touchY > window.innerHeight * TOP_ZONE_RATIO) return;
+      startYRef.current  = touchY;
       activeRef.current  = true;
       rawPullRef.current = 0;
     };
