@@ -28,15 +28,19 @@ async function recalcularCostoDirecto(supabase: Awaited<ReturnType<typeof create
     .from('costos_cosecha').select('costo_total_calculado').eq('cultivo_id', cultivoId);
   const costoCosecha = (cosechas ?? []).reduce((acc: number, c: any) => acc + Number(c.costo_total_calculado ?? 0), 0);
 
-  // Costo de insumos vía RIA confirmados
+  // Costo total (insumos + labores) de RIAs confirmados
   const { data: remitosIds } = await supabase
     .from('remitos_internos').select('id').eq('cultivo_id', cultivoId).eq('estado', 'confirmado');
   let costoRia = 0;
   if (remitosIds && remitosIds.length > 0) {
-    const { data: riaItems } = await supabase
-      .from('remitos_insumos').select('subtotal')
-      .in('remito_id', remitosIds.map((r: any) => r.id));
-    costoRia = (riaItems ?? []).reduce((acc: number, i: any) => acc + Number(i.subtotal ?? 0), 0);
+    const ids = remitosIds.map((r: any) => r.id);
+    const [{ data: riaInsumos }, { data: riaLabores }] = await Promise.all([
+      supabase.from('remitos_insumos').select('subtotal').in('remito_id', ids),
+      supabase.from('remitos_labores').select('subtotal').in('remito_id', ids),
+    ]);
+    costoRia = [...(riaInsumos ?? []), ...(riaLabores ?? [])].reduce(
+      (acc: number, i: any) => acc + Number(i.subtotal ?? 0), 0,
+    );
   }
 
   const total = costoAplicaciones + costoLabores + costoCosecha + costoRia;
@@ -587,8 +591,16 @@ export async function eliminarCultivo(cultivoId: string, restaurarStock: boolean
     }
   }
 
-  // Desvincular RIAs (borrador y confirmados) antes de borrar para evitar FK violation
-  await supabase.from('remitos_internos').update({ cultivo_id: null }).eq('cultivo_id', cultivoId);
+  // Eliminar RIAs del cultivo — el stock de confirmados ya fue restaurado arriba
+  const { data: riasDelCultivo } = await supabase
+    .from('remitos_internos').select('id').eq('cultivo_id', cultivoId);
+  if (riasDelCultivo && riasDelCultivo.length > 0) {
+    const riaIds = riasDelCultivo.map((r: any) => r.id);
+    await supabase.from('remitos_insumos').delete().in('remito_id', riaIds);
+    await supabase.from('remitos_labores').delete().in('remito_id', riaIds);
+    await supabase.from('remitos_produccion').delete().in('remito_id', riaIds);
+    await supabase.from('remitos_internos').delete().in('id', riaIds);
+  }
 
   const { error } = await supabase.from('cultivos').delete().eq('id', cultivoId);
   if (error) return { error: error.message };

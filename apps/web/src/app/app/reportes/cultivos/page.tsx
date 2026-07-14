@@ -31,7 +31,7 @@ export default async function ReporteCultivosPage() {
 
     supabase
       .from('remitos_internos')
-      .select('lote_id, total_insumos, total_labores, total_ria')
+      .select('cultivo_id, lote_id, total_insumos, total_labores, total_ria')
       .eq('empresa_id', empresa.id)
       .eq('estado', 'confirmado'),
   ]);

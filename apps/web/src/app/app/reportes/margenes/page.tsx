@@ -45,10 +45,10 @@ export default async function MargenesPage() {
       .eq('empresa_id', empresa.id)
       .order('nombre'),
 
-    // Costos de RIAs confirmados — se matchea por lote_id en el componente
+    // Costos de RIAs confirmados — se matchea por cultivo_id en el componente
     supabase
       .from('remitos_internos')
-      .select('lote_id, total_insumos, total_labores, total_ria')
+      .select('cultivo_id, lote_id, total_insumos, total_labores, total_ria')
       .eq('empresa_id', empresa.id)
       .eq('estado', 'confirmado'),
   ]);

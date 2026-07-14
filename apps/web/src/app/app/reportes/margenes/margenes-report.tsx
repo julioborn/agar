@@ -21,6 +21,7 @@ interface Cultivo {
   lote: { id: string; nombre: string; campo_id: string } | null;
 }
 interface RiaData {
+  cultivo_id: string | null;
   lote_id: string;
   total_insumos: number;
   total_labores: number;
@@ -111,15 +112,12 @@ export default function MargenesReport({
     });
   }
 
-  // Costos RIA agrupados por lote_id
-  const riasPorLote = useMemo(() => {
-    const map: Record<string, { insumos: number; labores: number; total: number }> = {};
+  // Labores de RIA por cultivo_id (insumos ya están en costo_directo_ars)
+  const riasPorCultivo = useMemo(() => {
+    const map: Record<string, number> = {};
     for (const r of rias) {
-      if (!r.lote_id) continue;
-      if (!map[r.lote_id]) map[r.lote_id] = { insumos: 0, labores: 0, total: 0 };
-      map[r.lote_id].insumos += Number(r.total_insumos);
-      map[r.lote_id].labores += Number(r.total_labores);
-      map[r.lote_id].total += Number(r.total_ria);
+      if (!r.cultivo_id) continue;
+      map[r.cultivo_id] = (map[r.cultivo_id] ?? 0) + Number(r.total_labores);
     }
     return map;
   }, [rias]);
@@ -142,7 +140,7 @@ export default function MargenesReport({
     const ingresoBruto = cultivosDelCampo.reduce((acc, c) => acc + Number(c.ingreso_bruto_ars ?? 0), 0);
     const costoDirecto = cultivosDelCampo.reduce((acc, c) => {
       const costoBase = Number(c.costo_directo_ars ?? 0);
-      const costoRia = riasPorLote[c.lote?.id ?? '']?.total ?? 0;
+      const costoRia = riasPorCultivo[c.id] ?? 0;
       return acc + costoBase + costoRia;
     }, 0);
     const margenBrutoLotes = ingresoBruto - costoDirecto;
@@ -160,7 +158,7 @@ export default function MargenesReport({
       costosIndirectos,
       margenCampo,
     };
-  }), [campos, cultivosFiltrados, costosCampoFiltrados, riasPorLote]);
+  }), [campos, cultivosFiltrados, costosCampoFiltrados, riasPorCultivo]);
 
   // ── Datos por tipo de cultivo ──────────────────────────────────────────────────
   const datosPorCultivo = useMemo(() => {
@@ -171,16 +169,15 @@ export default function MargenesReport({
       const label = raw
         ? raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase()
         : 'Sin cultivo';
-      const riaData = riasPorLote[c.lote?.id ?? ''];
       const ingreso = Number(c.ingreso_bruto_ars ?? 0);
-      const costo = Number(c.costo_directo_ars ?? 0) + (riaData?.total ?? 0);
+      const costo = Number(c.costo_directo_ars ?? 0) + (riasPorCultivo[c.id] ?? 0);
       const g = map.get(key) ?? { label, ingreso: 0, costo: 0, lotes: 0 };
       map.set(key, { label, ingreso: g.ingreso + ingreso, costo: g.costo + costo, lotes: g.lotes + 1 });
     }
     return Array.from(map.values())
       .map((v) => ({ ...v, margen: v.ingreso - v.costo }))
       .sort((a, b) => b.margen - a.margen);
-  }, [cultivosFiltrados, riasPorLote]);
+  }, [cultivosFiltrados, riasPorCultivo]);
 
   // ── Totales empresa ────────────────────────────────────────────────────────────
   const totalIngresoBruto = datosCampo.reduce((acc, d) => acc + d.ingresoBruto, 0);
@@ -426,10 +423,8 @@ export default function MargenesReport({
                     <div className="px-5 py-4 text-sm text-zinc-400 italic">Sin cultivos registrados para este campo</div>
                   ) : (
                     cultivosDelCampo.map((cultivo) => {
-                      const loteId = cultivo.lote?.id ?? '';
                       const costoBase = Number(cultivo.costo_directo_ars ?? 0);
-                      const riaData = riasPorLote[loteId];
-                      const costoRia = riaData?.total ?? 0;
+                      const costoRia = riasPorCultivo[cultivo.id] ?? 0;
                       const costoDirectoTotal = costoBase + costoRia;
                       const ingresoBrutoC = Number(cultivo.ingreso_bruto_ars ?? 0);
                       const margenBruto = ingresoBrutoC - costoDirectoTotal;
@@ -452,9 +447,9 @@ export default function MargenesReport({
                                 {ingresoBrutoC > 0 ? ` · Ingreso: ${formatMoney(ingresoBrutoC)}` : ''}
                                 {costoDirectoTotal > 0 ? ` · Costo: ${formatMoney(costoDirectoTotal)}` : ''}
                               </p>
-                              {costoRia > 0 && riaData && (
+                              {costoRia > 0 && (
                                 <p className="text-xs text-zinc-400 mt-0.5">
-                                  RIA — Insumos: ${formatMoney(riaData.insumos)} · Labores: ${formatMoney(riaData.labores)}
+                                  RIA — Labores: {formatMoney(costoRia)}
                                 </p>
                               )}
                             </div>
