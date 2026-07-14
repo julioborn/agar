@@ -8,7 +8,7 @@ import {
   ShoppingCart, Truck, Sprout, Briefcase, Building2,
   Users, Menu, Wheat,
   Tractor, Wrench, Settings, Building, Landmark, BarChart3,
-  FileText, TrendingUp, Scale, CalendarRange, Layers,
+  FileText, TrendingUp, Scale, CalendarRange, Layers, Pin,
 } from 'lucide-react';
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -85,7 +85,8 @@ const navSections: NavSection[] = [
       { href: '/app/reportes/insumos-labores',label: 'Insumos y Labores',icon: Package },
       { href: '/app/reportes/produccion',     label: 'Producción',       icon: Sprout },
       { href: '/app/ria/reportes',            label: 'Reportes RIA',     icon: FileText },
-      { href: '/app/reportes/cultivos',       label: 'Cultivos',         icon: Layers },
+      { href: '/app/reportes/cultivos',              label: 'Cultivos',             icon: Layers },
+      { href: '/app/reportes/costos-directos-lote', label: 'Costos por Lote',      icon: Pin },
     ],
   },
   {
