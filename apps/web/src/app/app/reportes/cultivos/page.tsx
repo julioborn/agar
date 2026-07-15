@@ -13,7 +13,8 @@ export default async function ReporteCultivosPage() {
   if (!empresaData) redirect('/login');
   const { empresa } = empresaData;
 
-  const [cultivosRes, campaniaRes] = await Promise.all([
+  // Paso 1: datos base en paralelo
+  const [cultivosRaw, campaniaRes] = await Promise.all([
     supabase
       .from('cultivos')
       .select(`
@@ -30,6 +31,65 @@ export default async function ReporteCultivosPage() {
       .order('nombre'),
   ]);
 
+  const cultivoIds = (cultivosRaw.data ?? []).map((c: any) => c.id);
+
+  // Paso 2: componentes de costo desde líneas reales
+  const [aplicacionesRes, laboresRes, cosechasRes, riasRes] = await Promise.all([
+    cultivoIds.length
+      ? supabase
+          .from('aplicaciones')
+          .select('cultivo_id, aplicaciones_items(costo_imputado_ars)')
+          .in('cultivo_id', cultivoIds)
+      : Promise.resolve({ data: [] as any[] }),
+
+    cultivoIds.length
+      ? supabase
+          .from('labores')
+          .select('cultivo_id, costo_total_calculado')
+          .in('cultivo_id', cultivoIds)
+      : Promise.resolve({ data: [] as any[] }),
+
+    cultivoIds.length
+      ? supabase
+          .from('costos_cosecha')
+          .select('cultivo_id, costo_total_calculado')
+          .in('cultivo_id', cultivoIds)
+      : Promise.resolve({ data: [] as any[] }),
+
+    supabase
+      .from('remitos_internos')
+      .select('cultivo_id, remitos_insumos(subtotal), remitos_labores(subtotal)')
+      .eq('empresa_id', empresa.id)
+      .eq('estado', 'confirmado'),
+  ]);
+
+  // Construir mapa de costo real por cultivo_id
+  const costoPorCultivo: Record<string, number> = {};
+
+  for (const a of (aplicacionesRes.data ?? []) as any[]) {
+    const sum = ((a.aplicaciones_items ?? []) as any[])
+      .reduce((s: number, i: any) => s + Number(i.costo_imputado_ars ?? 0), 0);
+    costoPorCultivo[a.cultivo_id] = (costoPorCultivo[a.cultivo_id] ?? 0) + sum;
+  }
+  for (const l of (laboresRes.data ?? []) as any[]) {
+    costoPorCultivo[l.cultivo_id] = (costoPorCultivo[l.cultivo_id] ?? 0) + Number(l.costo_total_calculado ?? 0);
+  }
+  for (const c of (cosechasRes.data ?? []) as any[]) {
+    costoPorCultivo[c.cultivo_id] = (costoPorCultivo[c.cultivo_id] ?? 0) + Number(c.costo_total_calculado ?? 0);
+  }
+  for (const r of (riasRes.data ?? []) as any[]) {
+    if (!r.cultivo_id) continue;
+    const ins = ((r.remitos_insumos ?? []) as any[]).reduce((s: number, i: any) => s + Number(i.subtotal ?? 0), 0);
+    const lab = ((r.remitos_labores ?? []) as any[]).reduce((s: number, l: any) => s + Number(l.subtotal ?? 0), 0);
+    costoPorCultivo[r.cultivo_id] = (costoPorCultivo[r.cultivo_id] ?? 0) + ins + lab;
+  }
+
+  // Sobrescribir costo_directo_ars con el valor calculado desde líneas reales
+  const cultivos = (cultivosRaw.data ?? []).map((c: any) => ({
+    ...c,
+    costo_directo_ars: costoPorCultivo[c.id] ?? 0,
+  }));
+
   return (
     <div className="max-w-6xl mx-auto space-y-5">
       <div className="flex items-center gap-3">
@@ -43,7 +103,7 @@ export default async function ReporteCultivosPage() {
       </div>
 
       <CultivosReport
-        cultivos={(cultivosRes.data ?? []) as any}
+        cultivos={cultivos as any}
         campanias={campaniaRes.data ?? []}
       />
     </div>
