@@ -13,7 +13,7 @@ export default async function ReporteCultivosPage() {
   if (!empresaData) redirect('/login');
   const { empresa } = empresaData;
 
-  const [cultivosRes, campaniaRes, riasRes] = await Promise.all([
+  const [cultivosRes, campaniaRes] = await Promise.all([
     supabase
       .from('cultivos')
       .select(`
@@ -28,12 +28,6 @@ export default async function ReporteCultivosPage() {
       .select('id, nombre')
       .eq('empresa_id', empresa.id)
       .order('nombre'),
-
-    supabase
-      .from('remitos_internos')
-      .select('cultivo_id, lote_id, total_insumos, total_labores, total_ria')
-      .eq('empresa_id', empresa.id)
-      .eq('estado', 'confirmado'),
   ]);
 
   return (
@@ -51,7 +45,6 @@ export default async function ReporteCultivosPage() {
       <CultivosReport
         cultivos={(cultivosRes.data ?? []) as any}
         campanias={campaniaRes.data ?? []}
-        rias={(riasRes.data ?? []) as any}
       />
     </div>
   );

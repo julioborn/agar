@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
+import { recalcularCostoDirecto } from '@/app/app/cultivos/actions';
 
 const TIPOS_ENTRADA = new Set([
   'entrada_compra', 'entrada_devolucion', 'transferencia_entrada',
@@ -280,6 +281,18 @@ export async function confirmarRia(riaId: string) {
     }
   } catch { /* no es crítico, no bloquea la confirmación */ }
 
+  // Recalcular costo_directo_ars del cultivo para que los reportes reflejen los costos del RIA
+  try {
+    const { data: riaRow } = await supabase
+      .from('remitos_internos')
+      .select('cultivo_id')
+      .eq('id', riaId)
+      .single();
+    if (riaRow?.cultivo_id) {
+      await recalcularCostoDirecto(riaRow.cultivo_id);
+    }
+  } catch { /* no bloquea la confirmación */ }
+
   revalidatePath('/app/ria');
   revalidatePath('/app/valuacion');
   return { ok: true };
@@ -400,6 +413,18 @@ export async function anularRia(riaId: string, motivo: string) {
 
   if (error) return { error: error.message };
   if (!data?.ok) return { error: data?.error ?? 'Error al anular.' };
+
+  // Recalcular costo_directo_ars del cultivo tras anulación
+  try {
+    const { data: riaRow } = await supabase
+      .from('remitos_internos')
+      .select('cultivo_id')
+      .eq('id', riaId)
+      .single();
+    if (riaRow?.cultivo_id) {
+      await recalcularCostoDirecto(riaRow.cultivo_id);
+    }
+  } catch { /* no bloquea la anulación */ }
 
   revalidatePath('/app/ria');
   return { ok: true };

@@ -20,16 +20,8 @@ interface CultivoRow {
   campania_id: string | null;
   lote: { id: string; nombre: string; hectareas: number | null; campo_id: string; campo: { nombre: string } | null } | null;
 }
-interface RiaData {
-  cultivo_id: string | null;
-  lote_id: string;
-  total_insumos: number;
-  total_labores: number;
-  total_ria: number;
-}
 interface Props {
   cultivos: CultivoRow[];
-  rias: RiaData[];
   campanias: { id: string; nombre: string }[];
 }
 
@@ -61,7 +53,7 @@ function CustomYTick({ x, y, payload }: any) {
   );
 }
 
-export default function CultivosReport({ cultivos, rias, campanias }: Props) {
+export default function CultivosReport({ cultivos, campanias }: Props) {
   const { formatMoney, currency, usdRate } = useCurrency();
 
   function fmtAxis(v: number) {
@@ -88,16 +80,6 @@ export default function CultivosReport({ cultivos, rias, campanias }: Props) {
     );
   }
 
-  // Labores de RIA por cultivo_id (insumos ya están en costo_directo_ars)
-  const riasPorCultivo = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const r of rias) {
-      if (!r.cultivo_id) continue;
-      map[r.cultivo_id] = (map[r.cultivo_id] ?? 0) + Number(r.total_labores);
-    }
-    return map;
-  }, [rias]);
-
   const cultivosFiltrados = useMemo(() =>
     campaniaFiltro ? cultivos.filter((c) => c.campania_id === campaniaFiltro) : cultivos,
     [cultivos, campaniaFiltro]);
@@ -123,7 +105,7 @@ export default function CultivosReport({ cultivos, rias, campanias }: Props) {
         const g = map.get(key) ?? { label, lotes: 0, hectareas: 0, ingreso: 0, costo: 0, margen: 0, estados: {} };
         const ha = c.lote?.hectareas ?? 0;
         const ingreso = Number(c.ingreso_bruto_ars ?? 0);
-        const costo = Number(c.costo_directo_ars ?? 0) + (riasPorCultivo[c.id] ?? 0);
+        const costo = Number(c.costo_directo_ars ?? 0);
         g.lotes += 1; g.hectareas += ha; g.ingreso += ingreso; g.costo += costo; g.margen += ingreso - costo;
         g.estados[c.estado] = (g.estados[c.estado] ?? 0) + 1;
         map.set(key, g);
@@ -136,9 +118,7 @@ export default function CultivosReport({ cultivos, rias, campanias }: Props) {
 
       const ha = c.lote?.hectareas ?? 0;
       const ingreso = Number(c.ingreso_bruto_ars ?? 0);
-      const costoBase = Number(c.costo_directo_ars ?? 0);
-      const costoRia = riasPorCultivo[c.id] ?? 0;
-      const costo = costoBase + costoRia;
+      const costo = Number(c.costo_directo_ars ?? 0);
       const margen = ingreso - costo;
 
       const g = map.get(key) ?? {
@@ -162,7 +142,7 @@ export default function CultivosReport({ cultivos, rias, campanias }: Props) {
     }
 
     return Array.from(map.values()).sort((a, b) => b.margen - a.margen);
-  }, [cultivosFiltrados, riasPorCultivo]);
+  }, [cultivosFiltrados]);
 
   const totalHa = grupos.reduce((acc, g) => acc + g.hectareas, 0);
   const totalIngreso = grupos.reduce((acc, g) => acc + g.ingreso, 0);

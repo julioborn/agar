@@ -13,7 +13,7 @@ export default async function MargenesPage() {
   if (!empresaData) redirect('/login');
   const { empresa } = empresaData;
 
-  const [camposRes, cultivosRes, costosIndCampoRes, costosIndEmpresaRes, campaniaRes, riasRes] = await Promise.all([
+  const [camposRes, cultivosRes, costosIndCampoRes, costosIndEmpresaRes, campaniaRes] = await Promise.all([
     supabase
       .from('campos')
       .select('id, nombre, hectareas_totales')
@@ -44,13 +44,6 @@ export default async function MargenesPage() {
       .select('id, nombre')
       .eq('empresa_id', empresa.id)
       .order('nombre'),
-
-    // Costos de RIAs confirmados — se matchea por cultivo_id en el componente
-    supabase
-      .from('remitos_internos')
-      .select('cultivo_id, lote_id, total_insumos, total_labores, total_ria')
-      .eq('empresa_id', empresa.id)
-      .eq('estado', 'confirmado'),
   ]);
 
   return (
@@ -72,7 +65,6 @@ export default async function MargenesPage() {
         costosIndCampo={(costosIndCampoRes.data ?? []) as any}
         costosIndEmpresa={(costosIndEmpresaRes.data ?? []) as any}
         campanias={campaniaRes.data ?? []}
-        rias={(riasRes.data ?? []) as any}
       />
     </div>
   );

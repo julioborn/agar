@@ -20,13 +20,6 @@ interface Cultivo {
   campania_id: string | null;
   lote: { id: string; nombre: string; campo_id: string } | null;
 }
-interface RiaData {
-  cultivo_id: string | null;
-  lote_id: string;
-  total_insumos: number;
-  total_labores: number;
-  total_ria: number;
-}
 interface CostoIndCampo {
   id: string; campo_id: string; campania_id: string | null;
   fecha: string; categoria: string; descripcion: string; monto_ars: number;
@@ -41,7 +34,6 @@ interface Props {
   empresaNombre: string;
   campos: { id: string; nombre: string; hectareas_totales?: number | null }[];
   cultivos: Cultivo[];
-  rias: RiaData[];
   costosIndCampo: CostoIndCampo[];
   costosIndEmpresa: CostoIndEmpresa[];
   campanias: { id: string; nombre: string }[];
@@ -74,7 +66,7 @@ function CustomYTick({ x, y, payload }: any) {
 }
 
 export default function MargenesReport({
-  empresaNombre, campos, cultivos, rias, costosIndCampo, costosIndEmpresa, campanias,
+  empresaNombre, campos, cultivos, costosIndCampo, costosIndEmpresa, campanias,
 }: Props) {
   const { formatMoney, currency, usdRate } = useCurrency();
   const [vista, setVista] = useState<'jerarquia' | 'cultivo'>('jerarquia');
@@ -112,16 +104,6 @@ export default function MargenesReport({
     });
   }
 
-  // Labores de RIA por cultivo_id (insumos ya están en costo_directo_ars)
-  const riasPorCultivo = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const r of rias) {
-      if (!r.cultivo_id) continue;
-      map[r.cultivo_id] = (map[r.cultivo_id] ?? 0) + Number(r.total_labores);
-    }
-    return map;
-  }, [rias]);
-
   const cultivosFiltrados = useMemo(() =>
     campaniaFiltro ? cultivos.filter((c) => c.campania_id === campaniaFiltro) : cultivos,
     [cultivos, campaniaFiltro]);
@@ -138,11 +120,7 @@ export default function MargenesReport({
   const datosCampo = useMemo(() => campos.map((campo) => {
     const cultivosDelCampo = cultivosFiltrados.filter((c) => c.lote?.campo_id === campo.id);
     const ingresoBruto = cultivosDelCampo.reduce((acc, c) => acc + Number(c.ingreso_bruto_ars ?? 0), 0);
-    const costoDirecto = cultivosDelCampo.reduce((acc, c) => {
-      const costoBase = Number(c.costo_directo_ars ?? 0);
-      const costoRia = riasPorCultivo[c.id] ?? 0;
-      return acc + costoBase + costoRia;
-    }, 0);
+    const costoDirecto = cultivosDelCampo.reduce((acc, c) => acc + Number(c.costo_directo_ars ?? 0), 0);
     const margenBrutoLotes = ingresoBruto - costoDirecto;
     const costosIndirectos = costosCampoFiltrados
       .filter((c) => c.campo_id === campo.id)
@@ -158,7 +136,7 @@ export default function MargenesReport({
       costosIndirectos,
       margenCampo,
     };
-  }), [campos, cultivosFiltrados, costosCampoFiltrados, riasPorCultivo]);
+  }), [campos, cultivosFiltrados, costosCampoFiltrados]);
 
   // ── Datos por tipo de cultivo ──────────────────────────────────────────────────
   const datosPorCultivo = useMemo(() => {
@@ -170,14 +148,14 @@ export default function MargenesReport({
         ? raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase()
         : 'Sin cultivo';
       const ingreso = Number(c.ingreso_bruto_ars ?? 0);
-      const costo = Number(c.costo_directo_ars ?? 0) + (riasPorCultivo[c.id] ?? 0);
+      const costo = Number(c.costo_directo_ars ?? 0);
       const g = map.get(key) ?? { label, ingreso: 0, costo: 0, lotes: 0 };
       map.set(key, { label, ingreso: g.ingreso + ingreso, costo: g.costo + costo, lotes: g.lotes + 1 });
     }
     return Array.from(map.values())
       .map((v) => ({ ...v, margen: v.ingreso - v.costo }))
       .sort((a, b) => b.margen - a.margen);
-  }, [cultivosFiltrados, riasPorCultivo]);
+  }, [cultivosFiltrados]);
 
   // ── Totales empresa ────────────────────────────────────────────────────────────
   const totalIngresoBruto = datosCampo.reduce((acc, d) => acc + d.ingresoBruto, 0);
@@ -423,9 +401,7 @@ export default function MargenesReport({
                     <div className="px-5 py-4 text-sm text-zinc-400 italic">Sin cultivos registrados para este campo</div>
                   ) : (
                     cultivosDelCampo.map((cultivo) => {
-                      const costoBase = Number(cultivo.costo_directo_ars ?? 0);
-                      const costoRia = riasPorCultivo[cultivo.id] ?? 0;
-                      const costoDirectoTotal = costoBase + costoRia;
+                      const costoDirectoTotal = Number(cultivo.costo_directo_ars ?? 0);
                       const ingresoBrutoC = Number(cultivo.ingreso_bruto_ars ?? 0);
                       const margenBruto = ingresoBrutoC - costoDirectoTotal;
                       return (
@@ -447,11 +423,6 @@ export default function MargenesReport({
                                 {ingresoBrutoC > 0 ? ` · Ingreso: ${formatMoney(ingresoBrutoC)}` : ''}
                                 {costoDirectoTotal > 0 ? ` · Costo: ${formatMoney(costoDirectoTotal)}` : ''}
                               </p>
-                              {costoRia > 0 && (
-                                <p className="text-xs text-zinc-400 mt-0.5">
-                                  RIA — Labores: {formatMoney(costoRia)}
-                                </p>
-                              )}
                             </div>
                             <div className="text-right shrink-0">
                               <p className="text-xs text-zinc-400">Margen bruto</p>

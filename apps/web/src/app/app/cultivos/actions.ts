@@ -23,7 +23,8 @@ function calcStockDesdeMovs(movs: { tipo: string; cantidad: number | string }[])
 }
 
 // ─── Helper compartido ────────────────────────────────────────────────────────
-async function recalcularCostoDirecto(supabase: Awaited<ReturnType<typeof createClient>>, cultivoId: string) {
+export async function recalcularCostoDirecto(cultivoId: string) {
+  const supabase = await createClient();
   // Costo de aplicaciones directas
   const { data: aplicsIds } = await supabase
     .from('aplicaciones').select('id').eq('cultivo_id', cultivoId);
@@ -175,7 +176,7 @@ export async function crearAplicacion(data: AplicacionData): Promise<{ error?: s
     }
   }
 
-  await recalcularCostoDirecto(supabase, data.cultivo_id);
+  await recalcularCostoDirecto(data.cultivo_id);
 
   revalidatePath('/app/cultivos');
   revalidatePath(`/app/cultivos/${data.cultivo_id}`);
@@ -223,7 +224,7 @@ export async function eliminarAplicacion(aplicacionId: string, cultivoId: string
   const { error } = await supabase.from('aplicaciones').delete().eq('id', aplicacionId);
   if (error) return { error: error.message };
 
-  await recalcularCostoDirecto(supabase, cultivoId);
+  await recalcularCostoDirecto(cultivoId);
   revalidatePath(`/app/cultivos/${cultivoId}`);
   revalidatePath('/app/stock');
   return {};
@@ -301,7 +302,7 @@ export async function crearLabor(data: LaborData): Promise<{ error?: string }> {
 
   if (err) return { error: err.message };
 
-  await recalcularCostoDirecto(supabase, data.cultivo_id);
+  await recalcularCostoDirecto(data.cultivo_id);
 
   revalidatePath('/app/cultivos');
   revalidatePath(`/app/cultivos/${data.cultivo_id}`);
@@ -436,7 +437,7 @@ export async function crearLaborCosteo(data: LaborCosteoData): Promise<{ error?:
 
   if (err) return { error: err.message };
 
-  await recalcularCostoDirecto(supabase, data.cultivo_id);
+  await recalcularCostoDirecto(data.cultivo_id);
   revalidatePath('/app/cultivos');
   revalidatePath(`/app/cultivos/${data.cultivo_id}`);
   return {};
@@ -447,7 +448,7 @@ export async function eliminarLabor(laborId: string, cultivoId: string): Promise
   const { error: err } = await supabase.from('labores').delete().eq('id', laborId);
   if (err) return { error: err.message };
 
-  await recalcularCostoDirecto(supabase, cultivoId);
+  await recalcularCostoDirecto(cultivoId);
   revalidatePath(`/app/cultivos/${cultivoId}`);
   return {};
 }
@@ -524,7 +525,7 @@ export async function crearCostoCosecha(data: CosechaData): Promise<{ error?: st
 
   if (err) return { error: err.message };
 
-  await recalcularCostoDirecto(supabase, data.cultivo_id);
+  await recalcularCostoDirecto(data.cultivo_id);
   revalidatePath('/app/cultivos');
   revalidatePath(`/app/cultivos/${data.cultivo_id}`);
   return {};
@@ -535,7 +536,7 @@ export async function eliminarCostoCosecha(id: string, cultivoId: string): Promi
   const { error: err } = await supabase.from('costos_cosecha').delete().eq('id', id);
   if (err) return { error: err.message };
 
-  await recalcularCostoDirecto(supabase, cultivoId);
+  await recalcularCostoDirecto(cultivoId);
   revalidatePath(`/app/cultivos/${cultivoId}`);
   return {};
 }
