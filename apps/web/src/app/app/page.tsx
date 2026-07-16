@@ -5,7 +5,7 @@ import { getEmpresaActiva } from '@/lib/empresa-actual';
 import { cn } from '@/lib/utils';
 import {
   Sprout, Package, ShoppingCart, AlertTriangle,
-  MapPin, Warehouse, ArrowRight, TrendingUp, CircleDollarSign, FileUp, Building2, FileText,
+  MapPin, Warehouse, ArrowRight, TrendingUp, CircleDollarSign, FileUp, Building2, FileText, BarChart3,
 } from 'lucide-react';
 import { Money } from '@/lib/currency-context';
 
@@ -14,6 +14,7 @@ const ROL_LABEL: Record<string, string> = {
   admin_empresa:   'Administrador',
   contador:        'Contador',
   encargado_campo: 'Encargado de Campo',
+  lector:          'Solo lectura',
 };
 
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -45,6 +46,7 @@ export default async function DashboardPage() {
   if (!empresaData) redirect('/login');
 
   const { empresa, rol } = empresaData;
+  const esLector = rol === 'lector';
 
   const hoy = new Date();
   const primerDiaMes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-01`;
@@ -114,7 +116,7 @@ export default async function DashboardPage() {
       {/* ── KPI Cards ────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
 
-        {/* Cultivos en curso */}
+        {/* Cultivos en curso — visible para todos */}
         <Link href="/app/cultivos?estado=en_curso" className="group block">
           <div className="bg-white rounded-2xl border border-zinc-100 hover:border-[#006836]/25 p-5 shadow-sm hover:shadow-md transition-all duration-200">
             <div className="flex items-start justify-between mb-4">
@@ -128,59 +130,56 @@ export default async function DashboardPage() {
           </div>
         </Link>
 
-        {/* Stock bajo mínimo */}
-        <Link href="/app/stock" className="group block">
-          <div className={cn(
-            'bg-white rounded-2xl border p-5 shadow-sm hover:shadow-md transition-all duration-200',
-            stockBajo > 0 ? 'border-red-200 hover:border-red-300' : 'border-zinc-100 hover:border-[#006836]/25',
-          )}>
-            <div className="flex items-start justify-between mb-4">
-              <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center', stockBajo > 0 ? 'bg-red-50' : 'bg-[#006836]/10')}>
-                <AlertTriangle className={cn('w-4 h-4', stockBajo > 0 ? 'text-red-500' : 'text-[#006836]')} />
+        {/* Stock bajo mínimo — oculto para lector */}
+        {!esLector && (
+          <Link href="/app/stock" className="group block">
+            <div className={cn(
+              'bg-white rounded-2xl border p-5 shadow-sm hover:shadow-md transition-all duration-200',
+              stockBajo > 0 ? 'border-red-200 hover:border-red-300' : 'border-zinc-100 hover:border-[#006836]/25',
+            )}>
+              <div className="flex items-start justify-between mb-4">
+                <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center', stockBajo > 0 ? 'bg-red-50' : 'bg-[#006836]/10')}>
+                  <AlertTriangle className={cn('w-4 h-4', stockBajo > 0 ? 'text-red-500' : 'text-[#006836]')} />
+                </div>
+                <ArrowRight className="w-4 h-4 text-zinc-200 group-hover:text-[#006836] group-hover:translate-x-0.5 transition-all" />
               </div>
-              <ArrowRight className="w-4 h-4 text-zinc-200 group-hover:text-[#006836] group-hover:translate-x-0.5 transition-all" />
+              <p className={cn('text-3xl font-bold tracking-tight', stockBajo > 0 ? 'text-red-600' : 'text-zinc-900')}>{stockBajo}</p>
+              <p className="text-xs text-zinc-400 mt-1 font-medium">{stockBajo > 0 ? 'Bajo mínimo' : 'Stock OK'}</p>
             </div>
-            <p className={cn('text-3xl font-bold tracking-tight', stockBajo > 0 ? 'text-red-600' : 'text-zinc-900')}>{stockBajo}</p>
-            <p className="text-xs text-zinc-400 mt-1 font-medium">{stockBajo > 0 ? 'Bajo mínimo' : 'Stock OK'}</p>
-          </div>
-        </Link>
+          </Link>
+        )}
 
-        {/* Compras del mes */}
-        <Link href="/app/compras" className="group block">
-          <div className="bg-white rounded-2xl border border-zinc-100 hover:border-[#006836]/25 p-5 shadow-sm hover:shadow-md transition-all duration-200">
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-9 h-9 rounded-xl bg-[#006836]/10 flex items-center justify-center">
-                <ShoppingCart className="w-4 h-4 text-[#006836]" />
+        {/* Compras del mes — oculto para lector */}
+        {!esLector && (
+          <Link href="/app/compras" className="group block">
+            <div className="bg-white rounded-2xl border border-zinc-100 hover:border-[#006836]/25 p-5 shadow-sm hover:shadow-md transition-all duration-200">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-9 h-9 rounded-xl bg-[#006836]/10 flex items-center justify-center">
+                  <ShoppingCart className="w-4 h-4 text-[#006836]" />
+                </div>
+                <ArrowRight className="w-4 h-4 text-zinc-200 group-hover:text-[#006836] group-hover:translate-x-0.5 transition-all" />
               </div>
-              <ArrowRight className="w-4 h-4 text-zinc-200 group-hover:text-[#006836] group-hover:translate-x-0.5 transition-all" />
+              <p className="text-3xl font-bold tracking-tight text-zinc-900">{cantidadCompras}</p>
+              <p className="text-xs text-zinc-400 mt-1 font-medium truncate">
+                {cantidadCompras > 0 ? <Money ars={comprasMes} /> : 'Sin compras este mes'}
+              </p>
             </div>
-            <p className="text-3xl font-bold tracking-tight text-zinc-900">{cantidadCompras}</p>
-            <p className="text-xs text-zinc-400 mt-1 font-medium truncate">
-              {cantidadCompras > 0 ? <Money ars={comprasMes} /> : 'Sin compras este mes'}
-            </p>
-          </div>
-        </Link>
+          </Link>
+        )}
 
-        {/* Cotización USD — BNA oficial */}
-        <Link href="/app/configuracion" className="group block">
-          <div className="bg-white rounded-2xl border border-zinc-100 hover:border-[#006836]/25 p-5 shadow-sm hover:shadow-md transition-all duration-200">
+        {/* Cotización USD — sin link a configuracion para lector */}
+        {esLector ? (
+          <div className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
             <div className="flex items-start justify-between mb-4">
               <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center">
                 <CircleDollarSign className="w-5 h-5 text-amber-500" />
               </div>
-              <ArrowRight className="w-4 h-4 text-zinc-200 group-hover:text-[#006836] group-hover:translate-x-0.5 transition-all" />
             </div>
             {cotizVenta != null ? (
               <>
-                <p className="text-3xl font-bold tracking-tight text-zinc-900">
-                  ${num.format(cotizVenta)}
-                </p>
+                <p className="text-3xl font-bold tracking-tight text-zinc-900">${num.format(cotizVenta)}</p>
                 <p className="text-xs text-zinc-400 mt-1 font-medium">
-                  {cotizEsManual
-                    ? 'USD · cotización manual'
-                    : cotizCompra != null
-                      ? `USD · compra $${num.format(cotizCompra)}`
-                      : 'USD oficial BNA'}
+                  {cotizEsManual ? 'USD · cotización manual' : cotizCompra != null ? `USD · compra $${num.format(cotizCompra)}` : 'USD oficial BNA'}
                 </p>
               </>
             ) : (
@@ -190,7 +189,31 @@ export default async function DashboardPage() {
               </>
             )}
           </div>
-        </Link>
+        ) : (
+          <Link href="/app/configuracion" className="group block">
+            <div className="bg-white rounded-2xl border border-zinc-100 hover:border-[#006836]/25 p-5 shadow-sm hover:shadow-md transition-all duration-200">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center">
+                  <CircleDollarSign className="w-5 h-5 text-amber-500" />
+                </div>
+                <ArrowRight className="w-4 h-4 text-zinc-200 group-hover:text-[#006836] group-hover:translate-x-0.5 transition-all" />
+              </div>
+              {cotizVenta != null ? (
+                <>
+                  <p className="text-3xl font-bold tracking-tight text-zinc-900">${num.format(cotizVenta)}</p>
+                  <p className="text-xs text-zinc-400 mt-1 font-medium">
+                    {cotizEsManual ? 'USD · cotización manual' : cotizCompra != null ? `USD · compra $${num.format(cotizCompra)}` : 'USD oficial BNA'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold tracking-tight text-zinc-400">—</p>
+                  <p className="text-xs text-zinc-400 mt-1 font-medium">USD · sin cotización</p>
+                </>
+              )}
+            </div>
+          </Link>
+        )}
 
       </div>
 
@@ -203,35 +226,41 @@ export default async function DashboardPage() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
 
-          <Link href="/app/ria/nuevo" className="group col-span-2 sm:col-span-1">
-            <div className="bg-[#006836] rounded-2xl border border-[#006836] p-5 flex flex-col justify-between hover:bg-[#005228] transition-all duration-200 shadow-sm">
-              <FileText className="w-5 h-5 text-white" />
-              <div className="mt-6">
-                <p className="text-white font-semibold text-sm">Nuevo RIA</p>
-                <p className="text-white/60 text-xs mt-0.5">Remito interno agrícola</p>
+          {!esLector && (
+            <Link href="/app/ria/nuevo" className="group col-span-2 sm:col-span-1">
+              <div className="bg-[#006836] rounded-2xl border border-[#006836] p-5 flex flex-col justify-between hover:bg-[#005228] transition-all duration-200 shadow-sm">
+                <FileText className="w-5 h-5 text-white" />
+                <div className="mt-6">
+                  <p className="text-white font-semibold text-sm">Nuevo RIA</p>
+                  <p className="text-white/60 text-xs mt-0.5">Remito interno agrícola</p>
+                </div>
               </div>
-            </div>
-          </Link>
+            </Link>
+          )}
 
-          <Link href="/app/compras/importar" className="group col-span-2 sm:col-span-1">
-            <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
-              <FileUp className="w-5 h-5 text-[#006836]" />
-              <div className="mt-6">
-                <p className="text-zinc-800 font-semibold text-sm">Importar factura</p>
-                <p className="text-zinc-400 text-xs mt-0.5">PDF o Excel con IA</p>
+          {!esLector && (
+            <Link href="/app/compras/importar" className="group col-span-2 sm:col-span-1">
+              <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
+                <FileUp className="w-5 h-5 text-[#006836]" />
+                <div className="mt-6">
+                  <p className="text-zinc-800 font-semibold text-sm">Importar factura</p>
+                  <p className="text-zinc-400 text-xs mt-0.5">PDF o Excel con IA</p>
+                </div>
               </div>
-            </div>
-          </Link>
+            </Link>
+          )}
 
-          <Link href="/app/compras/nueva" className="group">
-            <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
-              <ShoppingCart className="w-5 h-5 text-[#006836]" />
-              <div className="mt-6">
-                <p className="text-zinc-800 font-semibold text-sm">Registrar compra</p>
-                <p className="text-zinc-400 text-xs mt-0.5">Carga manual</p>
+          {!esLector && (
+            <Link href="/app/compras/nueva" className="group">
+              <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
+                <ShoppingCart className="w-5 h-5 text-[#006836]" />
+                <div className="mt-6">
+                  <p className="text-zinc-800 font-semibold text-sm">Registrar compra</p>
+                  <p className="text-zinc-400 text-xs mt-0.5">Carga manual</p>
+                </div>
               </div>
-            </div>
-          </Link>
+            </Link>
+          )}
 
           <Link href="/app/cultivos" className="group">
             <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
@@ -253,25 +282,41 @@ export default async function DashboardPage() {
             </div>
           </Link>
 
-          <Link href="/app/stock" className="group">
-            <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
-              <Warehouse className="w-5 h-5 text-[#006836]" />
-              <div className="mt-6">
-                <p className="text-zinc-800 font-semibold text-sm">Stock</p>
-                <p className="text-zinc-400 text-xs mt-0.5">Inventario actual</p>
+          {!esLector && (
+            <Link href="/app/stock" className="group">
+              <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
+                <Warehouse className="w-5 h-5 text-[#006836]" />
+                <div className="mt-6">
+                  <p className="text-zinc-800 font-semibold text-sm">Stock</p>
+                  <p className="text-zinc-400 text-xs mt-0.5">Inventario actual</p>
+                </div>
               </div>
-            </div>
-          </Link>
+            </Link>
+          )}
 
-          <Link href="/app/productos" className="group">
-            <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
-              <Package className="w-5 h-5 text-[#006836]" />
-              <div className="mt-6">
-                <p className="text-zinc-800 font-semibold text-sm">Productos</p>
-                <p className="text-zinc-400 text-xs mt-0.5">Catálogo e insumos</p>
+          {!esLector && (
+            <Link href="/app/productos" className="group">
+              <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
+                <Package className="w-5 h-5 text-[#006836]" />
+                <div className="mt-6">
+                  <p className="text-zinc-800 font-semibold text-sm">Productos</p>
+                  <p className="text-zinc-400 text-xs mt-0.5">Catálogo e insumos</p>
+                </div>
               </div>
-            </div>
-          </Link>
+            </Link>
+          )}
+
+          {esLector && (
+            <Link href="/app/reportes" className="group">
+              <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
+                <BarChart3 className="w-5 h-5 text-[#006836]" />
+                <div className="mt-6">
+                  <p className="text-zinc-800 font-semibold text-sm">Reportes</p>
+                  <p className="text-zinc-400 text-xs mt-0.5">Márgenes y análisis</p>
+                </div>
+              </div>
+            </Link>
+          )}
 
         </div>
       </div>
