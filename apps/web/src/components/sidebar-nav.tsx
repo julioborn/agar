@@ -33,6 +33,7 @@ const LECTOR_OCULTAR = new Set([
   '/app/depositos', '/app/proveedores', '/app/productos',
   '/app/compras', '/app/stock', '/app/referencias-precio',
   '/app/ria', '/app/unidades-negocio', '/app/configuracion',
+  '/app/valuacion',
 ]);
 
 // ── Estructura de navegación ───────────────────────────────────────────────────
@@ -181,7 +182,7 @@ export default function SidebarNav({
 
         {/* Secciones agrupadas */}
         {navSections
-          .filter((s) => !s.requiereAdmin || esAdmin || esSuperAdmin)
+          .filter((s) => !s.requiereAdmin || esAdmin || esSuperAdmin || esLector)
           .map((section) => ({
             ...section,
             items: esLector
