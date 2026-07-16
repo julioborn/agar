@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 import AppShell from '@/components/app-shell';
@@ -59,6 +60,27 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   // Dueño → dashboard visual dedicado (sin acceso a operaciones)
   if (rol === 'dueno') redirect('/dueno');
+
+  // Lector → bloquear rutas de escritura/gestión por URL directa
+  if (rol === 'lector') {
+    const heads = await headers();
+    const pathname = heads.get('x-pathname') ?? '';
+    const LECTOR_BLOQUEADAS = [
+      '/app/campanias', '/app/maquinarias', '/app/depositos',
+      '/app/proveedores', '/app/productos', '/app/compras',
+      '/app/stock', '/app/referencias-precio', '/app/valuacion',
+      '/app/unidades-negocio', '/app/configuracion',
+      '/app/usuarios', '/app/empresas',
+    ];
+    const bloqueada = LECTOR_BLOQUEADAS.some(
+      (p) => pathname === p || pathname.startsWith(p + '/'),
+    );
+    // RIA: bloquear lista y detalle individual, pero NO /app/ria/reportes
+    const riaBlockeada =
+      pathname === '/app/ria' ||
+      (pathname.startsWith('/app/ria/') && !pathname.startsWith('/app/ria/reportes'));
+    if (bloqueada || riaBlockeada) redirect('/app');
+  }
 
   // Solo redirigir al campo si el usuario NO tiene ningún rol administrativo en ninguna empresa
   const tieneRolAdmin = todasLasEmpresas.some(

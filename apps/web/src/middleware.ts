@@ -7,7 +7,11 @@ import { createServerClient } from '@supabase/ssr';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  // Exponer el pathname como header para que los Server Components puedan leerlo
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-pathname', request.nextUrl.pathname);
+
+  let response = NextResponse.next({ request: { headers: requestHeaders } });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,7 +25,7 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value),
           );
-          response = NextResponse.next({ request });
+          response = NextResponse.next({ request: { headers: requestHeaders } });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, {
               ...options,
