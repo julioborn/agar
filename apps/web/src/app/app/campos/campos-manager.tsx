@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { MapPin, Plus, ChevronDown, ChevronUp, Layers, ExternalLink } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
+import { useReadOnly } from '@/lib/readonly-context';
 import CampoForm, { type CampoRow } from './campo-form';
 import DeleteButton from '@/components/ui/delete-button';
 
@@ -23,6 +24,7 @@ const numHA = (n: number | null) =>
 
 export default function CamposManager({ campos, empresaId }: Props) {
   const router = useRouter();
+  const esLector = useReadOnly();
   const [editando, setEditando] = useState<CampoRow | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
@@ -61,8 +63,8 @@ export default function CamposManager({ campos, empresaId }: Props) {
         ))}
       </div>
 
-      {/* Nuevo campo (colapsable) */}
-      <div className={cn(
+      {/* Nuevo campo (colapsable) — oculto para lector */}
+      {!esLector && <div className={cn(
         'bg-white rounded-2xl border overflow-hidden transition-all',
         formOpen ? 'border-[#006836]/30 shadow-sm' : 'border-zinc-100',
       )}>
@@ -100,7 +102,7 @@ export default function CamposManager({ campos, empresaId }: Props) {
             />
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Lista */}
       {campos.length === 0 ? (
@@ -147,18 +149,20 @@ export default function CamposManager({ campos, empresaId }: Props) {
                   >
                     Ver lotes <ExternalLink className="w-3 h-3" />
                   </Link>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => { setEditando(c); setFormOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                      className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
-                      title="Editar"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
-                    <DeleteButton onDelete={() => handleDelete(c.id)} confirmLabel="Eliminar campo" />
-                  </div>
+                  {!esLector && (
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => { setEditando(c); setFormOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
+                        title="Editar"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
+                      <DeleteButton onDelete={() => handleDelete(c.id)} confirmLabel="Eliminar campo" />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

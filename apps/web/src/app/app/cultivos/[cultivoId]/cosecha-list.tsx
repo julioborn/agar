@@ -5,6 +5,7 @@ import { Tractor, Truck, Trash2, ChevronDown, ChevronUp, Wheat } from 'lucide-re
 import { cn } from '@/lib/utils';
 import { eliminarCostoCosecha } from '../actions';
 import { useCurrency } from '@/lib/currency-context';
+import { useReadOnly } from '@/lib/readonly-context';
 
 interface CostoCosecha {
   id: string;
@@ -32,6 +33,7 @@ const MODALIDAD_LABEL: Record<string, string> = {
 
 export default function CosechaList({ costosCosecha, cultivoId }: Props) {
   const { formatMoney } = useCurrency();
+  const esLector = useReadOnly();
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -133,11 +135,13 @@ export default function CosechaList({ costosCosecha, cultivoId }: Props) {
                 </div>
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-sm font-bold text-[#006836]">{formatMoney(c.costo_total_calculado)}</span>
-                  <button type="button" onClick={() => handleDelete(c.id)}
-                    disabled={pending || deleting === c.id}
-                    className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-red-500 transition-colors disabled:opacity-40">
-                    <Trash2 className="w-3.5 h-3.5" /> Eliminar
-                  </button>
+                  {!esLector && (
+                    <button type="button" onClick={() => handleDelete(c.id)}
+                      disabled={pending || deleting === c.id}
+                      className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-red-500 transition-colors disabled:opacity-40">
+                      <Trash2 className="w-3.5 h-3.5" /> Eliminar
+                    </button>
+                  )}
                 </div>
               </div>
             )}

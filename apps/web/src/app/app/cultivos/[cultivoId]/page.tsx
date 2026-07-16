@@ -140,8 +140,9 @@ export default async function CultivoDetallePage({ params }: Props) {
   const margenBruto  = (cultivo as any).margen_bruto_ars  as number | null;
   const pHa = (v: number | null) => (ha && v != null && v > 0) ? v / ha : null;
 
+  const esLector = (empresaData as any).rol === 'lector';
   const activo   = cultivo.estado !== 'cancelada';
-  const editable = cultivo.estado === 'en_curso' || cultivo.estado === 'planificada';
+  const editable = (cultivo.estado === 'en_curso' || cultivo.estado === 'planificada') && !esLector;
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
@@ -329,7 +330,7 @@ export default async function CultivoDetallePage({ params }: Props) {
           {cantCosechas > 0 && <span className="text-xs text-zinc-400">({cantCosechas})</span>}
         </div>
         <div className="p-4 space-y-3">
-          {activo && (
+          {activo && !esLector && (
             <Link href="/app/ria/nuevo"
               className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors">
               <span className="text-base leading-none">+</span> Crear Remito Interno (RIA)
@@ -408,7 +409,7 @@ export default async function CultivoDetallePage({ params }: Props) {
         }
       >
         {/* Configuración de producción y registro */}
-        {activo && (
+        {activo && !esLector && (
           <div className="p-4 space-y-3">
             {editable && (
               <Link href="/app/ria/nuevo"

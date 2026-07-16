@@ -80,6 +80,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       todasLasEmpresas={todasLasEmpresas}
       esSuperAdmin={esSuperAdmin}
       esAdmin={rol === 'admin_empresa'}
+      esLector={rol === 'lector'}
       usdRate={usdRate}
       tickerData={tickerData}
     >

@@ -8,6 +8,7 @@ import {
   crearTipoCultivo, actualizarTipoCultivo, eliminarTipoCultivo,
   importarTiposDesdeExistentes, vincularCultivosExistentes,
 } from './actions';
+import { useReadOnly } from '@/lib/readonly-context';
 
 interface TipoCultivo {
   id: string;
@@ -20,6 +21,7 @@ interface Props {
 
 export default function TiposManager({ tipos }: Props) {
   const router = useRouter();
+  const esLector = useReadOnly();
   const [nuevo, setNuevo] = useState('');
   const [creando, setCreando] = useState(false);
   const [errorNuevo, setErrorNuevo] = useState('');
@@ -87,8 +89,8 @@ export default function TiposManager({ tipos }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Herramientas de migración */}
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
+      {/* Herramientas de migración — ocultas para lector */}
+      {!esLector && <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
         <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Migración de datos existentes</p>
         <div className="flex flex-wrap gap-2">
           <button
@@ -113,10 +115,10 @@ export default function TiposManager({ tipos }: Props) {
         <p className="text-xs text-amber-600 leading-relaxed">
           "Importar" lee todos los cultivos activos y crea tipos con sus nombres normalizados. "Vincular" asocia cultivos existentes al tipo que les corresponde por nombre.
         </p>
-      </div>
+      </div>}
 
-      {/* Formulario nuevo tipo */}
-      <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-4 space-y-3">
+      {/* Formulario nuevo tipo — oculto para lector */}
+      {!esLector && <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-4 space-y-3">
         <p className="text-sm font-semibold text-zinc-800">Agregar tipo de cultivo</p>
         <div className="flex gap-2">
           <input
@@ -137,7 +139,7 @@ export default function TiposManager({ tipos }: Props) {
           </button>
         </div>
         {errorNuevo && <p className="text-xs text-red-600">{errorNuevo}</p>}
-      </div>
+      </div>}
 
       {/* Lista */}
       {tipos.length === 0 ? (
@@ -176,18 +178,22 @@ export default function TiposManager({ tipos }: Props) {
               ) : (
                 <>
                   <p className="flex-1 text-sm font-medium text-zinc-800">{t.nombre}</p>
-                  <button
-                    onClick={() => { setEditandoId(t.id); setEditNombre(t.nombre); setErrorNuevo(''); }}
-                    className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => setDeleteId(t.id)}
-                    className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {!esLector && (
+                    <>
+                      <button
+                        onClick={() => { setEditandoId(t.id); setEditNombre(t.nombre); setErrorNuevo(''); }}
+                        className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteId(t.id)}
+                        className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
                 </>
               )}
             </div>

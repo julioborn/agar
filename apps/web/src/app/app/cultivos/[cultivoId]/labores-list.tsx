@@ -5,6 +5,7 @@ import { Tractor, Truck, Trash2, ChevronDown, ChevronUp, Wrench } from 'lucide-r
 import { cn } from '@/lib/utils';
 import { eliminarLabor } from '../actions';
 import { useCurrency } from '@/lib/currency-context';
+import { useReadOnly } from '@/lib/readonly-context';
 
 interface Labor {
   id: string;
@@ -32,6 +33,7 @@ const fmtFecha = (d: string) =>
 
 export default function LaborsList({ labores, cultivoId, hideEmptyMessage = false }: Props) {
   const { formatMoney } = useCurrency();
+  const esLector = useReadOnly();
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -145,15 +147,17 @@ export default function LaborsList({ labores, cultivoId, hideEmptyMessage = fals
                   <span className="text-sm font-bold text-[#006836]">
                     Costo: {formatMoney(labor.costo_total_calculado)}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(labor.id)}
-                    disabled={pending || deleting === labor.id}
-                    className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-red-500 transition-colors disabled:opacity-40"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Eliminar
-                  </button>
+                  {!esLector && (
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(labor.id)}
+                      disabled={pending || deleting === labor.id}
+                      className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-red-500 transition-colors disabled:opacity-40"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Eliminar
+                    </button>
+                  )}
                 </div>
               </div>
             )}

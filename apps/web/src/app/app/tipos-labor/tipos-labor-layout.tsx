@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useCurrency } from '@/lib/currency-context';
 import { createClient } from '@/lib/supabase/client';
+import { useReadOnly } from '@/lib/readonly-context';
 
 interface TipoLabor { id: string; nombre: string; descripcion: string | null; uta_equivalencia: number | null; }
 interface Props { tiposLabor: TipoLabor[]; empresaId: string; precioGasoil?: number; litrosPorUta?: number; }
@@ -47,6 +48,7 @@ const field = 'w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:
 export default function TiposLaborLayout({ tiposLabor, empresaId, precioGasoil = 0, litrosPorUta = 35 }: Props) {
   const router = useRouter();
   const supabase = createClient();
+  const esLector = useReadOnly();
   const { formatMoney } = useCurrency();
 
   // New form
@@ -183,8 +185,8 @@ export default function TiposLaborLayout({ tiposLabor, empresaId, precioGasoil =
         })}
       </div>
 
-      {/* Nuevo (colapsable) */}
-      <div className={cn('bg-white rounded-2xl border overflow-hidden transition-all',
+      {/* Nuevo (colapsable) — oculto para lector */}
+      {!esLector && <div className={cn('bg-white rounded-2xl border overflow-hidden transition-all',
         formOpen ? 'border-[#006836]/30 shadow-sm' : 'border-zinc-100')}>
         <button type="button" onClick={() => setFormOpen((v) => !v)}
           className="w-full flex items-center justify-between px-5 py-4 hover:bg-zinc-50 transition-colors text-left">
@@ -249,7 +251,7 @@ export default function TiposLaborLayout({ tiposLabor, empresaId, precioGasoil =
             </form>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Busqueda */}
       <div className="relative">
@@ -402,16 +404,18 @@ export default function TiposLaborLayout({ tiposLabor, empresaId, precioGasoil =
                                 )}
                               </div>
                             )}
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                              <button onClick={() => startEdit(t)}
-                                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors">
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                              <button onClick={() => setConfirmId(t.id)}
-                                className="p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+                            {!esLector && (
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                <button onClick={() => startEdit(t)}
+                                  className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors">
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => setConfirmId(t.id)}
+                                  className="p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </li>

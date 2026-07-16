@@ -5,6 +5,7 @@ import { Plus, Trash2, FileText, Filter, X, ChevronDown, ChevronUp, Building } f
 import { cn } from '@/lib/utils';
 import { crearCostoIndirectoCampo, eliminarCostoIndirectoCampo } from '../costos-indirectos/actions';
 import ExportButtons from '@/components/export-buttons';
+import { useReadOnly } from '@/lib/readonly-context';
 
 const CATEGORIAS = {
   impuesto:         'Impuesto',
@@ -44,6 +45,7 @@ const num = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
 const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 export default function CostosCampoManager({ costos, campos, campanias, proveedores, empresaNombre }: Props) {
+  const esLector = useReadOnly();
   // Filters
   const [campoFiltro, setCampoFiltro] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState('');
@@ -172,12 +174,14 @@ export default function CostosCampoManager({ costos, campos, campanias, proveedo
             filename={`costos-campo-${empresaNombre.replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}`}
             title={`Costos Indirectos de Campo · ${empresaNombre}`}
           />
-          <button
-            onClick={() => { setShowForm((v) => !v); setUltimoComprobante(null); }}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 text-white text-sm font-semibold rounded-xl hover:bg-amber-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" /> Nuevo costo
-          </button>
+          {!esLector && (
+            <button
+              onClick={() => { setShowForm((v) => !v); setUltimoComprobante(null); }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 text-white text-sm font-semibold rounded-xl hover:bg-amber-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Nuevo costo
+            </button>
+          )}
         </div>
       </div>
 
@@ -229,8 +233,8 @@ export default function CostosCampoManager({ costos, campos, campanias, proveedo
         </div>
       )}
 
-      {/* Formulario nuevo costo */}
-      {showForm && (
+      {/* Formulario nuevo costo — oculto para lector */}
+      {!esLector && showForm && (
         <div className="border border-amber-200 bg-amber-50/30 rounded-xl p-5 space-y-4">
           <h2 className="text-base font-semibold text-zinc-800">Nuevo costo indirecto de campo</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -335,14 +339,16 @@ export default function CostosCampoManager({ costos, campos, campanias, proveedo
               </div>
               <div className="text-right shrink-0">
                 <p className="text-base font-bold text-zinc-800">$ {num.format(Number(c.monto_ars))}</p>
-                <button
-                  onClick={() => handleEliminar(c.id, c.comprobante?.id ?? '')}
-                  disabled={isPending}
-                  className="mt-1 text-zinc-300 hover:text-red-500 transition-colors disabled:opacity-40"
-                  title="Eliminar"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {!esLector && (
+                  <button
+                    onClick={() => handleEliminar(c.id, c.comprobante?.id ?? '')}
+                    disabled={isPending}
+                    className="mt-1 text-zinc-300 hover:text-red-500 transition-colors disabled:opacity-40"
+                    title="Eliminar"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           ))}

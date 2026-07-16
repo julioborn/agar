@@ -7,6 +7,7 @@ import { Sprout, ChevronDown, ChevronUp, Plus, ExternalLink, Filter, X, Search, 
 import { cn } from '@/lib/utils';
 import CultivoForm, { type CultivoRow, type LoteConCampo, type UnidadNegocio, type CampaniaTemporada, type TipoCultivo } from './cultivo-form';
 import { eliminarCultivo } from './actions';
+import { useReadOnly } from '@/lib/readonly-context';
 
 const ESTADO_BADGE: Record<string, string> = {
   planificada: 'bg-blue-100 text-blue-700',
@@ -48,6 +49,7 @@ const fmt = (d: string | null) =>
 
 export default function CultivosManager({ cultivos, lotes, unidadesNegocio, campanias, tiposCultivo = [], defaultLoteId }: Props) {
   const router = useRouter();
+  const esLector = useReadOnly();
   const [editando, setEditando] = useState<CultivoRow | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
@@ -117,8 +119,8 @@ export default function CultivosManager({ cultivos, lotes, unidadesNegocio, camp
         ))}
       </div>
 
-      {/* ── Nuevo cultivo (colapsable) ────────────────────────────────── */}
-      <div className={cn(
+      {/* ── Nuevo cultivo (colapsable) — oculto para lector ─────────── */}
+      {!esLector && <div className={cn(
         'rounded-2xl border overflow-hidden transition-all',
         formOpen ? 'bg-white border-[#006836]/30 shadow-sm' : 'bg-[#006836] border-[#006836]',
       )}>
@@ -162,10 +164,11 @@ export default function CultivosManager({ cultivos, lotes, unidadesNegocio, camp
               defaultLoteId={defaultLoteId}
               onSuccess={handleSuccess}
               onCancel={() => { setEditando(null); setFormOpen(false); }}
+
             />
           </div>
         )}
-      </div>
+      </div>}
 
       {/* ── Filtros ───────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 flex-wrap">
@@ -296,24 +299,26 @@ export default function CultivosManager({ cultivos, lotes, unidadesNegocio, camp
                   >
                     Ver detalle <ExternalLink className="w-3 h-3" />
                   </Link>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => { setEditando(c); setFormOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                      className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
-                      title="Editar"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => { setDeleteDialog({ id: c.id, nombre: c.cultivo }); setDeleteError(''); }}
-                      className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                      title="Eliminar"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {!esLector && (
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => { setEditando(c); setFormOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
+                        title="Editar"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => { setDeleteDialog({ id: c.id, nombre: c.cultivo }); setDeleteError(''); }}
+                        className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

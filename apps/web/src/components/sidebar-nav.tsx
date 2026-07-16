@@ -23,8 +23,17 @@ interface NavItem {
 interface NavSection {
   label: string;
   items: NavItem[];
-  requiereAdmin?: boolean;  // si true, solo visible para admin_empresa y super_admin
+  requiereAdmin?: boolean;   // si true, solo visible para admin_empresa y super_admin
+  ocultarLector?: boolean;   // si true, oculta la sección completa para rol lector
 }
+
+// hrefs bloqueados para lector (ocultos del menú)
+const LECTOR_OCULTAR = new Set([
+  '/app/campanias', '/app/maquinarias',
+  '/app/depositos', '/app/proveedores', '/app/productos',
+  '/app/compras', '/app/stock', '/app/referencias-precio',
+  '/app/ria', '/app/unidades-negocio', '/app/configuracion',
+]);
 
 // ── Estructura de navegación ───────────────────────────────────────────────────
 
@@ -103,6 +112,7 @@ const navSections: NavSection[] = [
 interface Props {
   esSuperAdmin: boolean;
   esAdmin?: boolean;
+  esLector?: boolean;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
 }
@@ -112,6 +122,7 @@ interface Props {
 export default function SidebarNav({
   esSuperAdmin,
   esAdmin = false,
+  esLector = false,
   collapsed = false,
   onToggleCollapse,
 }: Props) {
@@ -169,7 +180,16 @@ export default function SidebarNav({
         </Link>
 
         {/* Secciones agrupadas */}
-        {navSections.filter((s) => !s.requiereAdmin || esAdmin || esSuperAdmin).map((section, sIdx) => (
+        {navSections
+          .filter((s) => !s.requiereAdmin || esAdmin || esSuperAdmin)
+          .map((section) => ({
+            ...section,
+            items: esLector
+              ? section.items.filter((item) => !LECTOR_OCULTAR.has(item.href))
+              : section.items,
+          }))
+          .filter((section) => section.items.length > 0)
+          .map((section, sIdx) => (
           <div key={section.label} className={cn('mt-4', sIdx === 0 && 'mt-3')}>
             {/* Encabezado de sección */}
             {!collapsed ? (
