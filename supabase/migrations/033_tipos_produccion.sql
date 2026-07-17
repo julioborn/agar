@@ -69,20 +69,20 @@ BEGIN
 
   FOR v_item IN
     SELECT * FROM (VALUES
-      ('Grano Soja',              'grano',   'TONELADA',                'tn',     325.00),
-      ('Grano Sorgo',             'grano',   'TONELADA',                'tn',     190.00),
-      ('Grano Maiz',              'grano',   'TONELADA',                'tn',     178.00),
-      ('Semilla Vicia',           'semilla', 'KG',                      'kg',       2.75),
-      ('Semilla Avena',           'semilla', 'KG',                      'kg',       0.65),
-      ('Semilla Soja',            'semilla', 'KG',                      'kg',       1.20),
-      ('Semilla Alfalfa',         'semilla', 'KG',                      'kg',       8.50),
-      ('Silo Sorgo',              'silo',    'Tonelada Materia Verde',  'tn',      22.00),
-      ('Silo Alfalfa',            'silo',    'Tonelada Materia Verde',  'tn',      25.00),
-      ('Silo Maiz',               'silo',    'Tonelada Materia Verde',  'tn',      35.00),
-      ('Rollo Alfalfa',           'rollo',   'Unidad (550 Kg)',         'unidad',  30.00),
-      ('Rollo Megatermica',       'rollo',   'Unidad (550 Kg)',         'unidad',  25.00),
-      ('Rollo Pastura templada',  'rollo',   'Unidad (550 Kg)',         'unidad',  28.00),
-      ('Rollo Moha',              'rollo',   'Unidad (550 Kg)',         'unidad',  25.00)
+      ('GRANO SOJA',              'grano',   'TONELADA',                'tn',     325.00),
+      ('GRANO SORGO',             'grano',   'TONELADA',                'tn',     190.00),
+      ('GRANO MAIZ',              'grano',   'TONELADA',                'tn',     178.00),
+      ('SEMILLA VICIA',           'semilla', 'KG',                      'kg',       2.75),
+      ('SEMILLA AVENA',           'semilla', 'KG',                      'kg',       0.65),
+      ('SEMILLA SOJA',            'semilla', 'KG',                      'kg',       1.20),
+      ('SEMILLA ALFALFA',         'semilla', 'KG',                      'kg',       8.50),
+      ('SILO SORGO',              'silo',    'TONELADA MATERIA VERDE',  'tn',      22.00),
+      ('SILO ALFALFA',            'silo',    'TONELADA MATERIA VERDE',  'tn',      25.00),
+      ('SILO MAIZ',               'silo',    'TONELADA MATERIA VERDE',  'tn',      35.00),
+      ('ROLLO ALFALFA',           'rollo',   'UNIDAD (550 KG)',         'unidad',  30.00),
+      ('ROLLO MEGATERMICA',       'rollo',   'UNIDAD (550 KG)',         'unidad',  25.00),
+      ('ROLLO PASTURA TEMPLADA',  'rollo',   'UNIDAD (550 KG)',         'unidad',  28.00),
+      ('ROLLO MOHA',              'rollo',   'UNIDAD (550 KG)',         'unidad',  25.00)
     ) AS t(nombre, grupo, unidad_medida, unidad_base, valor_mercado)
   LOOP
     v_orden := v_orden + 1;

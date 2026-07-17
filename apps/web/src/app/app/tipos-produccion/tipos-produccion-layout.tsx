@@ -41,10 +41,10 @@ const UNIDADES_BASE: { value: TipoProduccion['unidad_base']; label: string }[] =
 ];
 
 const DEFAULTS_POR_GRUPO: Record<GrupoProduccion, { unidadMedida: string; unidadBase: TipoProduccion['unidad_base'] }> = {
-  grano:   { unidadMedida: 'TONELADA',               unidadBase: 'tn' },
+  grano:   { unidadMedida: 'TONELADA',                unidadBase: 'tn' },
   semilla: { unidadMedida: 'KG',                      unidadBase: 'kg' },
-  silo:    { unidadMedida: 'Tonelada Materia Verde',  unidadBase: 'tn' },
-  rollo:   { unidadMedida: 'Unidad (550 Kg)',         unidadBase: 'unidad' },
+  silo:    { unidadMedida: 'TONELADA MATERIA VERDE',  unidadBase: 'tn' },
+  rollo:   { unidadMedida: 'UNIDAD (550 KG)',         unidadBase: 'unidad' },
 };
 
 const field = 'w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#006836]/40 disabled:opacity-50';
@@ -186,8 +186,9 @@ export default function TiposProduccionLayout({ tiposProduccion }: Props) {
             <form onSubmit={handleCreate} className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-zinc-500 mb-1.5">Nombre *</label>
-                <input type="text" placeholder="Ej: Grano Trigo" value={newNombre}
-                  onChange={(e) => setNewNombre(e.target.value)} required disabled={saving} className={field} />
+                <input type="text" placeholder="Ej: GRANO TRIGO" value={newNombre}
+                  onChange={(e) => setNewNombre(e.target.value.toUpperCase())} required disabled={saving}
+                  className={`${field} uppercase`} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -207,10 +208,11 @@ export default function TiposProduccionLayout({ tiposProduccion }: Props) {
               </div>
               <div>
                 <label className="block text-xs font-medium text-zinc-500 mb-1.5">
-                  Etiqueta de unidad <span className="text-zinc-400 font-normal">(cómo se muestra, ej: "Tonelada Materia Verde")</span>
+                  Etiqueta de unidad <span className="text-zinc-400 font-normal">(cómo se muestra, ej: "TONELADA MATERIA VERDE")</span>
                 </label>
                 <input type="text" value={newUnidadMedida}
-                  onChange={(e) => setNewUnidadMedida(e.target.value)} disabled={saving} className={field} />
+                  onChange={(e) => setNewUnidadMedida(e.target.value.toUpperCase())} disabled={saving}
+                  className={`${field} uppercase`} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-zinc-500 mb-1.5">Valor de mercado (U$S) *</label>
@@ -272,9 +274,9 @@ export default function TiposProduccionLayout({ tiposProduccion }: Props) {
                         {isEditing ? (
                           <form onSubmit={handleEdit} className="space-y-2">
                             <input type="text" value={editNombre}
-                              onChange={(e) => setEditNombre(e.target.value)}
+                              onChange={(e) => setEditNombre(e.target.value.toUpperCase())}
                               disabled={editLoading}
-                              className={cn(field, 'text-sm font-medium')}
+                              className={cn(field, 'text-sm font-medium uppercase')}
                               autoFocus />
                             <div className="grid grid-cols-2 gap-2">
                               <select value={editGrupo} onChange={(e) => setEditGrupo(e.target.value as GrupoProduccion)}
@@ -282,8 +284,8 @@ export default function TiposProduccionLayout({ tiposProduccion }: Props) {
                                 {GRUPOS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
                               </select>
                               <input type="text" value={editUnidadMedida} placeholder="Etiqueta de unidad"
-                                onChange={(e) => setEditUnidadMedida(e.target.value)}
-                                disabled={editLoading} className={field} />
+                                onChange={(e) => setEditUnidadMedida(e.target.value.toUpperCase())}
+                                disabled={editLoading} className={`${field} uppercase`} />
                             </div>
                             <div className="flex items-center gap-2">
                               <input type="number" inputMode="decimal" min="0" step="0.01"

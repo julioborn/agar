@@ -187,10 +187,10 @@ const GRUPOS_PRODUCCION: { value: GrupoProduccion; label: string }[] = [
 ];
 
 const DEFAULTS_GRUPO_PRODUCCION: Record<GrupoProduccion, { unidadMedida: string; unidadBase: string }> = {
-  grano:   { unidadMedida: 'TONELADA',              unidadBase: 'tn' },
-  semilla: { unidadMedida: 'KG',                     unidadBase: 'kg' },
-  silo:    { unidadMedida: 'Tonelada Materia Verde', unidadBase: 'tn' },
-  rollo:   { unidadMedida: 'Unidad (550 Kg)',        unidadBase: 'unidad' },
+  grano:   { unidadMedida: 'TONELADA',               unidadBase: 'tn' },
+  semilla: { unidadMedida: 'KG',                      unidadBase: 'kg' },
+  silo:    { unidadMedida: 'TONELADA MATERIA VERDE',  unidadBase: 'tn' },
+  rollo:   { unidadMedida: 'UNIDAD (550 KG)',         unidadBase: 'unidad' },
 };
 
 const num = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
@@ -1482,11 +1482,11 @@ export default function RiaForm({
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <input
                             type="text"
-                            placeholder="Nombre (ej: Grano Trigo)"
+                            placeholder="Nombre (ej: GRANO TRIGO)"
                             value={nuevoTipoForm.nombre}
-                            onChange={(e) => setNuevoTipoForm((f) => ({ ...f, nombre: e.target.value }))}
+                            onChange={(e) => setNuevoTipoForm((f) => ({ ...f, nombre: e.target.value.toUpperCase() }))}
                             disabled={nuevoTipoSaving}
-                            className={inputCls()}
+                            className={`${inputCls()} uppercase`}
                           />
                           <select
                             value={nuevoTipoForm.grupo}
@@ -1502,9 +1502,9 @@ export default function RiaForm({
                             type="text"
                             placeholder="Etiqueta de unidad"
                             value={nuevoTipoForm.unidadMedida}
-                            onChange={(e) => setNuevoTipoForm((f) => ({ ...f, unidadMedida: e.target.value }))}
+                            onChange={(e) => setNuevoTipoForm((f) => ({ ...f, unidadMedida: e.target.value.toUpperCase() }))}
                             disabled={nuevoTipoSaving}
-                            className={inputCls()}
+                            className={`${inputCls()} uppercase`}
                           />
                           <input
                             type="number"
