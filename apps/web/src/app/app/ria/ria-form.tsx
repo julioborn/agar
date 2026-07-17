@@ -11,6 +11,7 @@ import {
 import Link from 'next/link';
 import { saveRiaBorrador, confirmarRia } from './actions';
 import RiaPdfButton from './ria-pdf-button';
+import { crearTipoProduccion, type GrupoProduccion } from '../tipos-produccion/actions';
 
 // ── Tipos locales ──────────────────────────────────────────────────────────────
 
@@ -54,6 +55,15 @@ export interface CultivoOpcion {
   cultivo: string;
   lote_id: string;
   estado: string;
+}
+export interface TipoProduccionOpcion {
+  id: string;
+  productoId: string;
+  nombre: string;
+  grupo: GrupoProduccion;
+  unidadMedida: string;
+  unidadBase: string;
+  valorMercado: number;
 }
 
 export interface InsumoLine {
@@ -152,6 +162,7 @@ interface Props {
   basePath?: string;
   cultivosActivos?: CultivoOpcion[];
   tiposCultivo?: { id: string; nombre: string }[];
+  tiposProduccion?: TipoProduccionOpcion[];
   precioGasoil?: number;
   litrosPorUta?: number;
 }
@@ -167,6 +178,20 @@ const UNIDADES_LABOR = [
   { value: 'km', label: 'Kilómetros (km)' },
 ];
 
+const GRUPOS_PRODUCCION: { value: GrupoProduccion; label: string }[] = [
+  { value: 'grano',   label: 'Granos' },
+  { value: 'semilla', label: 'Semillas' },
+  { value: 'silo',    label: 'Silos' },
+  { value: 'rollo',   label: 'Rollos' },
+];
+
+const DEFAULTS_GRUPO_PRODUCCION: Record<GrupoProduccion, { unidadMedida: string; unidadBase: string }> = {
+  grano:   { unidadMedida: 'TONELADA',              unidadBase: 'tn' },
+  semilla: { unidadMedida: 'KG',                     unidadBase: 'kg' },
+  silo:    { unidadMedida: 'Tonelada Materia Verde', unidadBase: 'tn' },
+  rollo:   { unidadMedida: 'Unidad (550 Kg)',        unidadBase: 'unidad' },
+};
+
 const num = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 let _lineCounter = 0;
@@ -180,7 +205,7 @@ const calc = (cant: string, costo: string) =>
 export default function RiaForm({
   mode, lotes, depositos, productos, campanias, proveedores, contratistas,
   tiposLabor, empresaId, empresaNombre, usuarioId, riaExistente,
-  basePath = '/app/ria', cultivosActivos = [], tiposCultivo = [],
+  basePath = '/app/ria', cultivosActivos = [], tiposCultivo = [], tiposProduccion = [],
   precioGasoil = 0, litrosPorUta = 35,
 }: Props) {
   const router = useRouter();
@@ -260,6 +285,18 @@ export default function RiaForm({
       obs: p.obs ?? '',
     })),
   );
+
+  // Tipos de producción (con posibilidad de agregar uno nuevo inline)
+  const [tiposProduccionState, setTiposProduccionState] = useState<TipoProduccionOpcion[]>(tiposProduccion);
+  const [nuevoTipoLineaId, setNuevoTipoLineaId] = useState<string | null>(null);
+  const [nuevoTipoForm, setNuevoTipoForm] = useState({
+    nombre: '', grupo: 'grano' as GrupoProduccion,
+    unidadMedida: DEFAULTS_GRUPO_PRODUCCION.grano.unidadMedida,
+    unidadBase: DEFAULTS_GRUPO_PRODUCCION.grano.unidadBase,
+    valor: '',
+  });
+  const [nuevoTipoSaving, setNuevoTipoSaving] = useState(false);
+  const [nuevoTipoError, setNuevoTipoError] = useState('');
 
   // UI state
   const [saving, setSaving] = useState(false);
@@ -585,13 +622,65 @@ export default function RiaForm({
     setProduccion((prev) => prev.map((p) => p._id === id ? { ...p, [key]: val } : p));
   }
 
-  function handleProduccionProducto(id: string, productoId: string) {
-    const prod = productos.find((p) => p.id === productoId);
-    setProduccion((prev) => prev.map((p) =>
-      p._id === id
-        ? { ...p, productoId, productoNombre: prod?.nombre ?? '', unidadBase: prod?.unidad_base ?? '' }
-        : p,
-    ));
+  function handleProduccionTipo(id: string, value: string) {
+    if (value === '_nuevo_') {
+      setNuevoTipoLineaId(id);
+      setNuevoTipoForm({
+        nombre: '', grupo: 'grano',
+        unidadMedida: DEFAULTS_GRUPO_PRODUCCION.grano.unidadMedida,
+        unidadBase: DEFAULTS_GRUPO_PRODUCCION.grano.unidadBase,
+        valor: '',
+      });
+      setNuevoTipoError('');
+      return;
+    }
+    const tipo = tiposProduccionState.find((t) => t.productoId === value);
+    setProduccion((prev) => prev.map((p) => {
+      if (p._id !== id) return p;
+      return {
+        ...p,
+        productoId: value,
+        productoNombre: tipo?.nombre ?? '',
+        unidadBase: tipo?.unidadBase ?? '',
+        precioReferencia: p.precioReferencia || (tipo ? String(tipo.valorMercado) : p.precioReferencia),
+      };
+    }));
+  }
+
+  function handleNuevoTipoGrupo(grupo: GrupoProduccion) {
+    setNuevoTipoForm((f) => ({
+      ...f, grupo,
+      unidadMedida: DEFAULTS_GRUPO_PRODUCCION[grupo].unidadMedida,
+      unidadBase: DEFAULTS_GRUPO_PRODUCCION[grupo].unidadBase,
+    }));
+  }
+
+  async function handleCrearTipoInline(lineId: string) {
+    if (!nuevoTipoForm.nombre.trim()) { setNuevoTipoError('Ingresá un nombre.'); return; }
+    const valor = parseFloat(nuevoTipoForm.valor || '0');
+    setNuevoTipoSaving(true); setNuevoTipoError('');
+    const res = await crearTipoProduccion({
+      nombre: nuevoTipoForm.nombre.trim(),
+      grupo: nuevoTipoForm.grupo,
+      unidadMedida: nuevoTipoForm.unidadMedida.trim(),
+      unidadBase: nuevoTipoForm.unidadBase as any,
+      valorMercado: valor,
+    });
+    setNuevoTipoSaving(false);
+    if (res.error || !res.data) { setNuevoTipoError(res.error ?? 'No se pudo crear el tipo.'); return; }
+    const nuevo = res.data;
+    setTiposProduccionState((prev) => [...prev, {
+      id: nuevo.id, productoId: nuevo.producto_id, nombre: nuevo.nombre, grupo: nuevo.grupo,
+      unidadMedida: nuevo.unidad_medida, unidadBase: nuevo.unidad_base, valorMercado: nuevo.valor_mercado,
+    }]);
+    setProduccion((prev) => prev.map((p) => p._id === lineId ? {
+      ...p,
+      productoId: nuevo.producto_id,
+      productoNombre: nuevo.nombre,
+      unidadBase: nuevo.unidad_base,
+      precioReferencia: p.precioReferencia || String(nuevo.valor_mercado),
+    } : p));
+    setNuevoTipoLineaId(null);
   }
 
   // ── Validaciones ──────────────────────────────────────────────────────────────
@@ -1345,14 +1434,26 @@ export default function RiaForm({
                         <label className="block text-xs text-zinc-500 mb-1">Producto cosechado *</label>
                         <select
                           value={prod.productoId}
-                          onChange={(e) => handleProduccionProducto(prod._id, e.target.value)}
+                          onChange={(e) => handleProduccionTipo(prod._id, e.target.value)}
                           disabled={esReadOnly}
                           className={inputCls(!prod.productoId && !esReadOnly)}
                         >
                           <option value="">Seleccioná…</option>
-                          {productos.map((p) => (
-                            <option key={p.id} value={p.id}>{p.nombre}</option>
-                          ))}
+                          {prod.productoId && !tiposProduccionState.some((t) => t.productoId === prod.productoId) && (
+                            <option value={prod.productoId}>{prod.productoNombre || 'Producto sin catalogar'}</option>
+                          )}
+                          {GRUPOS_PRODUCCION.map((g) => {
+                            const items = tiposProduccionState.filter((t) => t.grupo === g.value);
+                            if (items.length === 0) return null;
+                            return (
+                              <optgroup key={g.value} label={g.label}>
+                                {items.map((t) => (
+                                  <option key={t.id} value={t.productoId}>{t.nombre}</option>
+                                ))}
+                              </optgroup>
+                            );
+                          })}
+                          {!esReadOnly && <option value="_nuevo_">+ Crear nuevo tipo de producción…</option>}
                         </select>
                       </div>
                       <div>
@@ -1370,6 +1471,68 @@ export default function RiaForm({
                         </select>
                       </div>
                     </div>
+
+                    {nuevoTipoLineaId === prod._id && (
+                      <div className="border border-[#006836]/20 bg-[#006836]/5 rounded-xl p-3 space-y-2">
+                        <p className="text-xs font-semibold text-[#006836]">Nuevo tipo de producción</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            placeholder="Nombre (ej: Grano Trigo)"
+                            value={nuevoTipoForm.nombre}
+                            onChange={(e) => setNuevoTipoForm((f) => ({ ...f, nombre: e.target.value }))}
+                            disabled={nuevoTipoSaving}
+                            className={inputCls()}
+                          />
+                          <select
+                            value={nuevoTipoForm.grupo}
+                            onChange={(e) => handleNuevoTipoGrupo(e.target.value as GrupoProduccion)}
+                            disabled={nuevoTipoSaving}
+                            className={inputCls()}
+                          >
+                            {GRUPOS_PRODUCCION.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            placeholder="Etiqueta de unidad"
+                            value={nuevoTipoForm.unidadMedida}
+                            onChange={(e) => setNuevoTipoForm((f) => ({ ...f, unidadMedida: e.target.value }))}
+                            disabled={nuevoTipoSaving}
+                            className={inputCls()}
+                          />
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="Valor de mercado (U$S)"
+                            value={nuevoTipoForm.valor}
+                            onChange={(e) => setNuevoTipoForm((f) => ({ ...f, valor: e.target.value }))}
+                            disabled={nuevoTipoSaving}
+                            className={inputCls()}
+                          />
+                        </div>
+                        {nuevoTipoError && <p className="text-xs text-red-500">{nuevoTipoError}</p>}
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleCrearTipoInline(prod._id)}
+                            disabled={nuevoTipoSaving || !nuevoTipoForm.nombre.trim()}
+                            className="px-3 py-1.5 bg-[#006836] text-white text-xs font-semibold rounded-lg hover:bg-[#005228] disabled:opacity-50 transition-colors"
+                          >
+                            {nuevoTipoSaving ? 'Creando…' : 'Crear y usar'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNuevoTipoLineaId(null)}
+                            className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div>

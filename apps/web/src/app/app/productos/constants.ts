@@ -5,6 +5,7 @@ export const CATEGORIAS = [
   { value: 'combustible',    label: 'Combustible' },
   { value: 'insumo_cosecha', label: 'Insumo cosecha' },
   { value: 'inoculante',     label: 'Inoculante' },
+  { value: 'produccion',     label: 'Producción' },
   { value: 'otro',           label: 'Otro' },
 ] as const;
 

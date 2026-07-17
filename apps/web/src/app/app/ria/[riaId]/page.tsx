@@ -41,6 +41,7 @@ export default async function RiaDetailPage({ params }: Props) {
     { data: tiposLabor },
     { data: cultivosActivos },
     { data: tiposCultivo },
+    { data: tiposProduccionRaw },
   ] = await Promise.all([
     supabase
       .from('remitos_insumos')
@@ -100,6 +101,11 @@ export default async function RiaDetailPage({ params }: Props) {
       .in('estado', ['planificada', 'en_curso'])
       .order('cultivo'),
     createAdminClient().from('tipos_cultivo').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
+    supabase
+      .from('tipos_produccion')
+      .select('id, producto_id, nombre, grupo, unidad_medida, unidad_base, valor_mercado')
+      .eq('empresa_id', empresa.id)
+      .order('orden'),
   ]);
 
   const { data: config } = await supabase
@@ -195,6 +201,16 @@ export default async function RiaDetailPage({ params }: Props) {
     })),
   };
 
+  const tiposProduccion = (tiposProduccionRaw ?? []).map((t: any) => ({
+    id: t.id,
+    productoId: t.producto_id,
+    nombre: t.nombre,
+    grupo: t.grupo,
+    unidadMedida: t.unidad_medida,
+    unidadBase: t.unidad_base,
+    valorMercado: t.valor_mercado,
+  }));
+
   // Modo: editar si está en borrador, ver si está confirmado/anulado
   const mode = ria.estado === 'borrador' ? 'editar' : 'ver';
 
@@ -211,6 +227,7 @@ export default async function RiaDetailPage({ params }: Props) {
         tiposLabor={(tiposLabor as any) ?? []}
         cultivosActivos={cultivosActivos ?? []}
         tiposCultivo={tiposCultivo ?? []}
+        tiposProduccion={tiposProduccion}
         empresaId={empresa.id}
         empresaNombre={empresa.nombre}
         usuarioId={user.id}

@@ -22,6 +22,7 @@ export default async function NuevoRiaPage() {
     { data: tiposLabor },
     { data: cultivosActivos },
     { data: tiposCultivo },
+    { data: tiposProduccionRaw },
     { data: config },
   ] = await Promise.all([
     supabase
@@ -66,6 +67,11 @@ export default async function NuevoRiaPage() {
       .order('cultivo'),
     createAdminClient().from('tipos_cultivo').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),
     supabase
+      .from('tipos_produccion')
+      .select('id, producto_id, nombre, grupo, unidad_medida, unidad_base, valor_mercado')
+      .eq('empresa_id', empresa.id)
+      .order('orden'),
+    supabase
       .from('configuracion_empresa')
       .select('precio_combustible, litros_por_uta')
       .eq('empresa_id', empresa.id)
@@ -85,6 +91,16 @@ export default async function NuevoRiaPage() {
     cultivo_activo: cultivoMap.get(l.id),
   }));
 
+  const tiposProduccion = (tiposProduccionRaw ?? []).map((t: any) => ({
+    id: t.id,
+    productoId: t.producto_id,
+    nombre: t.nombre,
+    grupo: t.grupo,
+    unidadMedida: t.unidad_medida,
+    unidadBase: t.unidad_base,
+    valorMercado: t.valor_mercado,
+  }));
+
   return (
     <div className="p-6">
       <RiaForm
@@ -98,6 +114,7 @@ export default async function NuevoRiaPage() {
         tiposLabor={(tiposLabor as any) ?? []}
         cultivosActivos={cultivosActivos ?? []}
         tiposCultivo={tiposCultivo ?? []}
+        tiposProduccion={tiposProduccion}
         empresaId={empresa.id}
         empresaNombre={empresa.nombre}
         usuarioId={user.id}
