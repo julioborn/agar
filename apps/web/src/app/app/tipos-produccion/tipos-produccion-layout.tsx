@@ -5,6 +5,7 @@ import { Plus, ChevronDown, ChevronUp, Wheat, Trash2, Check, Pencil } from 'luci
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useReadOnly } from '@/lib/readonly-context';
+import { useCurrency } from '@/lib/currency-context';
 import { crearTipoProduccion, actualizarTipoProduccion, eliminarTipoProduccion, type GrupoProduccion } from './actions';
 
 interface TipoProduccion {
@@ -48,10 +49,12 @@ const DEFAULTS_POR_GRUPO: Record<GrupoProduccion, { unidadMedida: string; unidad
 
 const field = 'w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#006836]/40 disabled:opacity-50';
 const fmtUSD = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+const fmtARS = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
 
 export default function TiposProduccionLayout({ tiposProduccion }: Props) {
   const router = useRouter();
   const esLector = useReadOnly();
+  const { currency, usdRate } = useCurrency();
 
   // Nuevo
   const [formOpen, setFormOpen] = useState(false);
@@ -217,6 +220,11 @@ export default function TiposProduccionLayout({ tiposProduccion }: Props) {
                     onChange={(e) => setNewValor(e.target.value)} required disabled={saving}
                     className={`${field} w-32`} />
                   <span className="text-sm text-zinc-500">U$S / {newUnidadMedida || 'unidad'}</span>
+                  {usdRate && usdRate > 0 && parseFloat(newValor || '0') > 0 && (
+                    <span className="text-xs text-[#006836] font-medium">
+                      = {fmtARS.format(parseFloat(newValor) * usdRate)}
+                    </span>
+                  )}
                 </div>
               </div>
               {saveError && <p className="text-xs text-red-500">{saveError}</p>}
@@ -283,6 +291,11 @@ export default function TiposProduccionLayout({ tiposProduccion }: Props) {
                                 onChange={(e) => setEditValor(e.target.value)}
                                 disabled={editLoading} className={`${field} w-32`} />
                               <span className="text-xs text-zinc-500">U$S / {editUnidadMedida || 'unidad'}</span>
+                              {usdRate && usdRate > 0 && parseFloat(editValor || '0') > 0 && (
+                                <span className="text-xs text-[#006836] font-medium">
+                                  = {fmtARS.format(parseFloat(editValor) * usdRate)}
+                                </span>
+                              )}
                             </div>
                             <div className="flex items-center gap-2">
                               <button type="submit" disabled={editLoading || !editNombre.trim()}
@@ -317,9 +330,20 @@ export default function TiposProduccionLayout({ tiposProduccion }: Props) {
                               <p className="text-xs text-zinc-400 mt-0.5">{t.unidad_medida}</p>
                             </div>
                             <div className="shrink-0 text-right hidden sm:block">
-                              <span className={cn('inline-block px-2 py-0.5 rounded-full text-xs font-semibold', s.badge)}>
-                                {fmtUSD.format(t.valor_mercado)}
-                              </span>
+                              {usdRate && usdRate > 0 ? (
+                                <>
+                                  <span className={cn('inline-block px-2 py-0.5 rounded-full text-xs font-semibold', s.badge)}>
+                                    {currency === 'USD' ? fmtUSD.format(t.valor_mercado) : fmtARS.format(t.valor_mercado * usdRate)}
+                                  </span>
+                                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                                    {currency === 'USD' ? fmtARS.format(t.valor_mercado * usdRate) : fmtUSD.format(t.valor_mercado)}
+                                  </p>
+                                </>
+                              ) : (
+                                <span className={cn('inline-block px-2 py-0.5 rounded-full text-xs font-semibold', s.badge)}>
+                                  {fmtUSD.format(t.valor_mercado)}
+                                </span>
+                              )}
                             </div>
                             {!esLector && (
                               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">

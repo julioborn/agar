@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { saveRiaBorrador, confirmarRia } from './actions';
 import RiaPdfButton from './ria-pdf-button';
 import { crearTipoProduccion, type GrupoProduccion } from '../tipos-produccion/actions';
+import { useCurrency } from '@/lib/currency-context';
 
 // ── Tipos locales ──────────────────────────────────────────────────────────────
 
@@ -210,6 +211,7 @@ export default function RiaForm({
 }: Props) {
   const router = useRouter();
   const esReadOnly = mode === 'ver';
+  const { usdRate } = useCurrency();
 
   // Header state
   const [fecha, setFecha] = useState(riaExistente?.fecha ?? today());
@@ -637,12 +639,13 @@ export default function RiaForm({
     const tipo = tiposProduccionState.find((t) => t.productoId === value);
     setProduccion((prev) => prev.map((p) => {
       if (p._id !== id) return p;
+      const precioArs = tipo && usdRate ? Math.round(tipo.valorMercado * usdRate * 100) / 100 : tipo?.valorMercado;
       return {
         ...p,
         productoId: value,
         productoNombre: tipo?.nombre ?? '',
         unidadBase: tipo?.unidadBase ?? '',
-        precioReferencia: p.precioReferencia || (tipo ? String(tipo.valorMercado) : p.precioReferencia),
+        precioReferencia: p.precioReferencia || (precioArs != null ? String(precioArs) : p.precioReferencia),
       };
     }));
   }
@@ -673,12 +676,13 @@ export default function RiaForm({
       id: nuevo.id, productoId: nuevo.producto_id, nombre: nuevo.nombre, grupo: nuevo.grupo,
       unidadMedida: nuevo.unidad_medida, unidadBase: nuevo.unidad_base, valorMercado: nuevo.valor_mercado,
     }]);
+    const precioArs = usdRate ? Math.round(nuevo.valor_mercado * usdRate * 100) / 100 : nuevo.valor_mercado;
     setProduccion((prev) => prev.map((p) => p._id === lineId ? {
       ...p,
       productoId: nuevo.producto_id,
       productoNombre: nuevo.nombre,
       unidadBase: nuevo.unidad_base,
-      precioReferencia: p.precioReferencia || String(nuevo.valor_mercado),
+      precioReferencia: p.precioReferencia || String(precioArs),
     } : p));
     setNuevoTipoLineaId(null);
   }
@@ -1580,7 +1584,7 @@ export default function RiaForm({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-zinc-500 mb-1">Precio referencia $</label>
+                        <label className="block text-xs text-zinc-500 mb-1">Precio referencia $ (ARS)</label>
                         <input
                           type="number"
                           step="0.01"
@@ -1591,9 +1595,15 @@ export default function RiaForm({
                           placeholder="Precio de mercado"
                           className={inputCls()}
                         />
+                        {!!prod.precioReferencia && usdRate != null && usdRate > 0 && (
+                          <p className="text-xs text-zinc-400 mt-1">
+                            ≈ US$ {num.format(parseFloat(prod.precioReferencia) / usdRate)} · Dólar BNA: ${num.format(usdRate)}
+                          </p>
+                        )}
                         {valorBruto != null && valorBruto > 0 && (
                           <p className="text-xs text-zinc-400 mt-1">
                             Valor bruto: ${num.format(valorBruto)}
+                            {usdRate != null && usdRate > 0 && ` (≈ US$ ${num.format(valorBruto / usdRate)})`}
                           </p>
                         )}
                       </div>
