@@ -85,7 +85,7 @@ body:has(.land) { background: #221609; }
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.93);
+  background: #ffffff;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -155,26 +155,6 @@ body:has(.land) { background: #221609; }
   width: 1px;
   height: 36px;
   background: linear-gradient(to bottom, rgba(255,255,255,0.3), transparent);
-}
-
-/* ── Footer ──────────────────────────────────────────── */
-.l-footer {
-  padding: 1.25rem 2rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-.l-footer-copy { font-size: 0.72rem; color: #5c4830; }
-.l-footer-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.72rem;
-  color: #8a6a40;
-  font-weight: 500;
 }
 
 /* ── Responsive ──────────────────────────────────────── */
@@ -250,15 +230,6 @@ export default async function RootPage() {
             <div className="l-scroll-line" />
           </div>
         </section>
-
-        {/* ── Footer ── */}
-        <footer className="l-footer">
-          <span className="l-footer-copy">© {new Date().getFullYear()} AgroSistema</span>
-          <div className="l-footer-brand">
-            <Image src="/agar-final.png" alt="" width={14} height={14} />
-            AGAR
-          </div>
-        </footer>
 
       </div>
     </>
