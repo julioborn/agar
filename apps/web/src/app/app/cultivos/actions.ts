@@ -23,6 +23,7 @@ function calcStockDesdeMovs(movs: { tipo: string; cantidad: number | string }[])
 }
 
 // ─── Helper compartido ────────────────────────────────────────────────────────
+// Recalcula costo directo Y (desde RIA confirmados) produccion/ingreso bruto/rendimiento del cultivo.
 export async function recalcularCostoDirecto(cultivoId: string) {
   const supabase = await createClient();
   // Costo de aplicaciones directas
@@ -48,23 +49,50 @@ export async function recalcularCostoDirecto(cultivoId: string) {
     .from('costos_cosecha').select('costo_total_calculado').eq('cultivo_id', cultivoId);
   const costoCosecha = (cosechas ?? []).reduce((acc: number, c: any) => acc + Number(c.costo_total_calculado ?? 0), 0);
 
-  // Costo total (insumos + labores) de RIAs confirmados
+  // Costo total (insumos + labores) y produccion/ingreso bruto (producción) de RIAs confirmados
   const { data: remitosIds } = await supabase
     .from('remitos_internos').select('id').eq('cultivo_id', cultivoId).eq('estado', 'confirmado');
   let costoRia = 0;
+  let produccionTotal = 0;
+  let ingresoBruto = 0;
   if (remitosIds && remitosIds.length > 0) {
     const ids = remitosIds.map((r: any) => r.id);
-    const [{ data: riaInsumos }, { data: riaLabores }] = await Promise.all([
+    const [{ data: riaInsumos }, { data: riaLabores }, { data: riaProduccion }] = await Promise.all([
       supabase.from('remitos_insumos').select('subtotal').in('remito_id', ids),
       supabase.from('remitos_labores').select('subtotal').in('remito_id', ids),
+      supabase.from('remitos_produccion').select('cantidad, subtotal_valor, precio_referencia').in('remito_id', ids),
     ]);
     costoRia = [...(riaInsumos ?? []), ...(riaLabores ?? [])].reduce(
       (acc: number, i: any) => acc + Number(i.subtotal ?? 0), 0,
     );
+    for (const p of riaProduccion ?? []) {
+      const cantidad = Number((p as any).cantidad ?? 0);
+      produccionTotal += cantidad;
+      ingresoBruto += Number(
+        (p as any).subtotal_valor ?? (cantidad * Number((p as any).precio_referencia ?? 0)),
+      );
+    }
+  }
+
+  // Rendimiento por ha, usando las hectareas del lote del cultivo
+  let rendimiento: number | null = null;
+  if (produccionTotal > 0) {
+    const { data: cultivoRow } = await supabase
+      .from('cultivos').select('lote_id').eq('id', cultivoId).single();
+    if (cultivoRow?.lote_id) {
+      const { data: lote } = await supabase
+        .from('lotes').select('hectareas').eq('id', cultivoRow.lote_id).single();
+      if (lote?.hectareas) rendimiento = produccionTotal / Number(lote.hectareas);
+    }
   }
 
   const total = costoAplicaciones + costoLabores + costoCosecha + costoRia;
-  await supabase.from('cultivos').update({ costo_directo_ars: total }).eq('id', cultivoId);
+  await supabase.from('cultivos').update({
+    costo_directo_ars: total,
+    produccion_total_kg: produccionTotal > 0 ? produccionTotal : null,
+    ingreso_bruto_ars: ingresoBruto > 0 ? ingresoBruto : null,
+    rendimiento_kg_ha: rendimiento,
+  }).eq('id', cultivoId);
   return total;
 }
 

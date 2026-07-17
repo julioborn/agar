@@ -425,20 +425,19 @@ export default async function CultivoDetallePage({ params }: Props) {
             {editable && (
               <RegistrarCosechaForm
                 cultivoId={cultivoId}
-                hectareas={lote?.hectareas ?? null}
                 unidadProduccion={(cultivo as any).unidad_produccion ?? 'kg'}
                 productoFinal={(cultivo as any).producto_final ?? null}
                 produccionActual={cultivo.produccion_total_kg ?? null}
-                precioVentaActual={(cultivo as any).precio_venta_ars ?? null}
+                ingresoBrutoActual={ingresoBruto}
+                margenBrutoActual={margenBruto}
                 fechaCosechaActual={cultivo.fecha_cosecha_real}
-                costoDirecto={cultivo.costo_directo_ars ?? null}
               />
             )}
           </div>
         )}
 
-        {/* Panel de resultados — solo cuando está cosechada */}
-        {cultivo.estado === 'cosechada' && (
+        {/* Panel de resultados — cuando está cosechada, o ya hay ingreso acumulado por RIA aunque siga en curso */}
+        {(cultivo.estado === 'cosechada' || ingresoBruto != null) && (
           <div className="p-5 space-y-4">
             <div className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-[#006836]" />
@@ -465,9 +464,11 @@ export default async function CultivoDetallePage({ params }: Props) {
                 <p className="text-xs text-zinc-400">{unidadLabel}/ha</p>
               </div>
               <div className="text-center p-3 bg-zinc-50 rounded-xl">
-                <p className="text-xs text-zinc-400 mb-1">Precio venta</p>
+                <p className="text-xs text-zinc-400 mb-1">Precio promedio</p>
                 <p className="text-xl font-bold text-zinc-800">
-                  {(cultivo as any).precio_venta_ars != null ? <Money ars={(cultivo as any).precio_venta_ars} /> : '—'}
+                  {ingresoBruto != null && cultivo.produccion_total_kg
+                    ? <Money ars={ingresoBruto / cultivo.produccion_total_kg} />
+                    : '—'}
                 </p>
                 <p className="text-xs text-zinc-400">por {unidadLabel}</p>
               </div>

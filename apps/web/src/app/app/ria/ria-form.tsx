@@ -707,6 +707,15 @@ export default function RiaForm({
       if (!p.depositoIngresoId) return 'Cada producción debe tener un depósito de ingreso.';
       if (!p.cantidad || parseFloat(p.cantidad) <= 0) return 'La cantidad producida debe ser mayor a cero.';
     }
+    if (produccion.length > 0) {
+      const tieneCultivoReal = !!cultivoId && cultivoId !== '_nuevo_';
+      const creandoCultivo =
+        (cultivoId === '_nuevo_' && !!nuevoCultivoDesc.trim()) ||
+        (crearCultivo && !cultivoId && !!cultivoDesc.trim());
+      if (!tieneCultivoReal && !creandoCultivo) {
+        return 'Para registrar producción, el RIA debe tener un cultivo asignado (seleccioná uno existente o creá uno nuevo).';
+      }
+    }
     return null;
   }
 
