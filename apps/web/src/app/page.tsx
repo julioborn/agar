@@ -6,22 +6,22 @@ import Image from 'next/image';
 
 // 8 × 6 = 48 parcelas — valores deterministas pseudo-aleatorios
 const PARCELS = Array.from({ length: 48 }, (_, i) => {
-  const isRoad   = i % 7 === 0 || i % 13 === 0;
+  const isAmber = i % 7 === 0 || i % 13 === 0;
   const delay    = ((i * 7919 + 31) % 97) / 10;
   const duration = 3.5 + ((i * 6271 + 17) % 45) / 10;
-  const sat      = isRoad ? 38 + (i % 3) * 6  : 22 + ((i * 3301) % 20);
-  const lit1     = isRoad ? 12 + (i % 4) * 2  :  7 + ((i * 5003) % 9);
-  const lit2     = isRoad ? 24 + (i % 5) * 3  : 14 + ((i * 2017) % 13);
-  const hue      = isRoad ? 34 + (i % 3) * 4  : 22 + (i % 7) * 2;
+  const sat      = isAmber ? 60 + (i % 3) * 8  : 28 + ((i * 3301) % 34);
+  const lit1     = isAmber ? 10 + (i % 4) * 2  :  6 + ((i * 5003) % 10);
+  const lit2     = isAmber ? 22 + (i % 5) * 3  : 13 + ((i * 2017) % 16);
+  const hue      = isAmber ? 42 + (i % 3) * 4  : 124 + (i % 7) * 3;
   return { delay, duration, sat, lit1, lit2, hue };
 });
 
 const CSS = `
-body:has(.land) { background: #150e08; }
+body:has(.land) { background: #221609; }
 
 .land {
   min-height: 100svh;
-  background: #150e08;
+  background: #221609;
   color: #f2ece1;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -34,7 +34,7 @@ body:has(.land) { background: #150e08; }
   display: flex;
   align-items: center;
   overflow: hidden;
-  background: #150e08;
+  background: #221609;
 }
 
 .l-field {
@@ -61,12 +61,12 @@ body:has(.land) { background: #150e08; }
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 75% 80% at 18% 55%, transparent 25%, rgba(21,14,8,0.88) 75%),
+    radial-gradient(ellipse 75% 80% at 18% 55%, transparent 25%, rgba(34,22,9,0.88) 75%),
     linear-gradient(to bottom,
-      rgba(21,14,8,0.55) 0%,
-      rgba(21,14,8,0.1) 18%,
-      rgba(21,14,8,0.1) 72%,
-      rgba(21,14,8,0.96) 100%
+      rgba(34,22,9,0.55) 0%,
+      rgba(34,22,9,0.1) 18%,
+      rgba(34,22,9,0.1) 72%,
+      rgba(34,22,9,0.96) 100%
     );
   pointer-events: none;
 }
