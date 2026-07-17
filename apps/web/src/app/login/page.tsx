@@ -47,6 +47,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error,    setError]    = useState<string | null>(null);
   const [loading,  setLoading]  = useState(false);
   const [recovering, setRecovering] = useState(true);
@@ -152,7 +153,7 @@ function LoginForm() {
             </label>
             <div className="relative">
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 autoComplete="current-password"
                 value={password}
@@ -173,6 +174,15 @@ function LoginForm() {
                 }}
               />
             </div>
+            <label className="flex items-center gap-2 mt-2 select-none cursor-pointer w-fit">
+              <input
+                type="checkbox"
+                checked={showPassword}
+                onChange={(e) => setShowPassword(e.target.checked)}
+                className="w-3.5 h-3.5 rounded accent-[#4ade80] cursor-pointer"
+              />
+              <span className="text-xs text-white/50">Mostrar contraseña</span>
+            </label>
           </div>
 
           {/* Error */}
@@ -267,11 +277,7 @@ export default function LoginPage() {
       <Suspense fallback={<AppLoader size="lg" className="py-0" />}>
         <LoginForm />
       </Suspense>
-
-      {/* Tagline al pie */}
-      <p className="absolute bottom-6 text-white/15 text-xs tracking-widest uppercase">
-        Agar
-      </p>
+      
     </main>
   );
 }
