@@ -29,7 +29,7 @@ function Logo({ size = 88 }: { size?: number }) {
       {/* Imagen */}
       <Image
         src="/agar-final.png"
-        alt="AGAR"
+        alt="agar"
         width={size}
         height={size}
         className="absolute inset-0 rounded-full object-cover"

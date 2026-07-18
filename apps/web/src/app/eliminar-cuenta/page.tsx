@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { Mail } from 'lucide-react';
 
 export const metadata = {
-  title: 'Eliminar cuenta — AGAR',
-  description: 'Cómo solicitar la eliminación de tu cuenta y datos asociados en AGAR.',
+  title: 'Eliminar cuenta — agar',
+  description: 'Cómo solicitar la eliminación de tu cuenta y datos asociados en agar.',
 };
 
 const CONTACTO = 'juliobornes10@gmail.com';
@@ -28,7 +28,7 @@ export default function EliminarCuentaPage() {
       <div className="w-full max-w-2xl mx-auto">
         <div className="flex justify-center mb-8">
           <Link href="/">
-            <Image src="/agar-final.png" alt="AGAR" width={120} height={48} className="h-12 w-auto" priority />
+            <Image src="/agar-final.png" alt="agar" width={120} height={48} className="h-12 w-auto" priority />
           </Link>
         </div>
 
@@ -52,13 +52,13 @@ export default function EliminarCuentaPage() {
           <Seccion titulo="Qué se elimina">
             <p>
               Tu cuenta de acceso (email y credenciales) y tu vínculo con la empresa a la que pertenecías
-              en AGAR. Una vez eliminada, no vas a poder volver a iniciar sesión con esa cuenta.
+              en agar. Una vez eliminada, no vas a poder volver a iniciar sesión con esa cuenta.
             </p>
           </Seccion>
 
           <Seccion titulo="Qué se conserva">
             <p>
-              AGAR es un sistema usado por empresas, no por usuarios individuales de forma aislada: los
+              agar es un sistema usado por empresas, no por usuarios individuales de forma aislada: los
               datos operativos que ingresaste (campos, lotes, costos, producción, compras, etc.) pertenecen
               a la empresa y suelen ser compartidos con otros usuarios de la misma cuenta empresarial, por
               lo que no se eliminan junto con tu cuenta personal.

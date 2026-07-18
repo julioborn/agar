@@ -1,6 +1,6 @@
 {
-  "name": "AGAR",
-  "short_name": "AGAR",
+  "name": "agar",
+  "short_name": "agar",
   "description": "Gestión agropecuaria integral",
   "start_url": "/login",
   "display": "standalone",

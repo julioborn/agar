@@ -4,7 +4,7 @@ import { AppSplash } from '@/components/app-splash';
 import { PullToRefresh } from '@/components/pull-to-refresh';
 
 export const metadata: Metadata = {
-  title: 'AGAR',
+  title: 'agar',
   description: 'Gestión agropecuaria integral',
   manifest: '/manifest.json',
   icons: {
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: 'AGAR',
+    title: 'agar',
     // black-translucent: el contenido se extiende bajo el status bar (Dynamic Island).
     // El header negro se ve a través del área transparente → looks seamless en iOS.
     // Sin esto el área sobre la isla queda blanca.

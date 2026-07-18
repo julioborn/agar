@@ -20,7 +20,7 @@ export default async function CampoLayout({ children }: { children: React.ReactN
         <div className="flex items-center gap-2.5">
           <Image
             src="/agar-final.png"
-            alt="AGAR"
+            alt="agar"
             width={32}
             height={32}
             className="w-8 h-8 rounded-full object-cover"

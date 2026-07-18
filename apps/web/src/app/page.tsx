@@ -209,7 +209,7 @@ export default async function RootPage() {
 
           <div className="l-hero-inner">
             <div className="l-logo-circle">
-              <Image src="/agar-final.png" alt="AGAR" width={44} height={44} />
+              <Image src="/agar-final.png" alt="agar" width={44} height={44} />
             </div>
 
             <h1 className="l-headline">

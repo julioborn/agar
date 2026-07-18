@@ -21,7 +21,7 @@ export default async function DuenoLayout({ children }: { children: React.ReactN
         <div className="h-14 flex items-center px-4 gap-3">
           <Image
             src="/agar-final.png"
-            alt="AGAR"
+            alt="agar"
             width={36}
             height={36}
             className="h-9 w-9 rounded-full object-cover"

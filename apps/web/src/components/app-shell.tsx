@@ -141,14 +141,14 @@ export default function AppShell({
                     <Menu className="w-5 h-5" />
                   </button>
                   <Link href="/app" className="lg:hidden">
-                    <Image src="/agar-final.png" alt="AGAR" width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
+                    <Image src="/agar-final.png" alt="agar" width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
                   </Link>
                 </div>
 
                 {/* Centro: logo desktop */}
                 <div className="flex-1 hidden lg:flex justify-center">
                   <Link href="/app">
-                    <Image src="/agar-final.png" alt="AGAR" width={44} height={44} className="h-10 w-10 rounded-full object-cover" />
+                    <Image src="/agar-final.png" alt="agar" width={44} height={44} className="h-10 w-10 rounded-full object-cover" />
                   </Link>
                 </div>
 

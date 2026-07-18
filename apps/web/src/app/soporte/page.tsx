@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { Mail, MessageCircle, Trash2 } from 'lucide-react';
 
 export const metadata = {
-  title: 'Soporte — AGAR',
-  description: 'Contacto y soporte para usuarios de AGAR, sistema de gestión agropecuaria.',
+  title: 'Soporte — agar',
+  description: 'Contacto y soporte para usuarios de agar, sistema de gestión agropecuaria.',
 };
 
 const CONTACTO = 'juliobornes10@gmail.com';
@@ -27,13 +27,13 @@ export default function SoportePage() {
       <div className="w-full max-w-2xl mx-auto">
         <div className="flex justify-center mb-8">
           <Link href="/">
-            <Image src="/agar-final.png" alt="AGAR" width={120} height={48} className="h-12 w-auto" priority />
+            <Image src="/agar-final.png" alt="agar" width={120} height={48} className="h-12 w-auto" priority />
           </Link>
         </div>
 
         <h1 className="text-2xl font-bold text-white text-center">Soporte</h1>
         <p className="text-sm text-zinc-400 text-center mt-2 mb-8">
-          ¿Tenés alguna pregunta o problema con AGAR? Estamos para ayudarte.
+          ¿Tenés alguna pregunta o problema con agar? Estamos para ayudarte.
         </p>
 
         <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 space-y-6">
@@ -53,7 +53,7 @@ export default function SoportePage() {
             <div className="space-y-4">
               <div>
                 <p className="font-medium text-white">¿Cómo obtengo una cuenta?</p>
-                <p>Las cuentas son gestionadas directamente por el administrador de AGAR. Contactanos por email para solicitar acceso.</p>
+                <p>Las cuentas son gestionadas directamente por el administrador de agar. Contactanos por email para solicitar acceso.</p>
               </div>
               <div>
                 <p className="font-medium text-white">¿Olvidé mi contraseña, qué hago?</p>
@@ -61,7 +61,7 @@ export default function SoportePage() {
               </div>
               <div>
                 <p className="font-medium text-white">¿La app funciona sin conexión a internet?</p>
-                <p>AGAR requiere conexión a internet para funcionar, ya que los datos se sincronizan en la nube en tiempo real.</p>
+                <p>agar requiere conexión a internet para funcionar, ya que los datos se sincronizan en la nube en tiempo real.</p>
               </div>
               <div>
                 <p className="font-medium text-white">¿Cómo escaneo un código QR o de barras?</p>

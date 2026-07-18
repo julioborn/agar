@@ -33,7 +33,7 @@ export function AppSplash() {
     >
       <Image
         src="/agar-final.png"
-        alt="AGAR"
+        alt="agar"
         width={88}
         height={88}
         priority
