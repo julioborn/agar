@@ -66,11 +66,21 @@ export default async function RiaPage() {
 
   function inferirCultivo(loteId: string, riaFecha: string): string | null {
     const lista = cultivosPorLote[loteId] ?? [];
-    // El cultivo cuya siembra ya ocurrió y cuya cosecha aún no (o no tiene fecha de cosecha)
+    if (lista.length === 0) return null;
+    // Primero: cultivo cuya siembra ya ocurrió y cuya cosecha aún no
     const match = lista.find(
       (c) => c.fecha_siembra <= riaFecha && (c.fecha_cosecha_real == null || c.fecha_cosecha_real >= riaFecha),
     );
-    return match?.cultivo ?? null;
+    if (match) return match.cultivo;
+    // Fallback: cultivo con fecha_siembra más cercana al RIA (cubre casos donde
+    // el cultivo se registró con fecha_siembra ligeramente posterior al RIA)
+    const riaMs = new Date(riaFecha).getTime();
+    const closest = lista.reduce((best, c) => {
+      const diffBest = Math.abs(new Date(best.fecha_siembra).getTime() - riaMs);
+      const diffC = Math.abs(new Date(c.fecha_siembra).getTime() - riaMs);
+      return diffC < diffBest ? c : best;
+    });
+    return closest.cultivo;
   }
 
   // Recalcular totales desde las líneas reales (las columnas almacenadas pueden estar desactualizadas)

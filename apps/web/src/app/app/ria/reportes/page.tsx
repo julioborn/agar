@@ -114,10 +114,18 @@ export default async function ReportesPage() {
 
   function inferirCultivo(loteId: string, riaFecha: string): string | null {
     const lista = cultivosPorLote[loteId] ?? [];
+    if (lista.length === 0) return null;
     const match = lista.find(
       (c) => c.fecha_siembra <= riaFecha && (c.fecha_cosecha_real == null || c.fecha_cosecha_real >= riaFecha),
     );
-    return match?.cultivo ?? null;
+    if (match) return match.cultivo;
+    const riaMs = new Date(riaFecha).getTime();
+    const closest = lista.reduce((best, c) => {
+      const diffBest = Math.abs(new Date(best.fecha_siembra).getTime() - riaMs);
+      const diffC = Math.abs(new Date(c.fecha_siembra).getTime() - riaMs);
+      return diffC < diffBest ? c : best;
+    });
+    return closest.cultivo;
   }
 
   // Recalcular totales desde los line items reales (columnas almacenadas pueden estar stale)
