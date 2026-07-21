@@ -38,6 +38,7 @@ interface RiaRow {
   estado: string;
   superficie_afectada: number | null;
   cultivo_descripcion: string | null;
+  cultivo_inferido: string | null;
   total_insumos: number;
   total_labores: number;
   total_ria: number;
@@ -121,6 +122,7 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
           r.lote?.nombre ?? '',
           r.lote?.campo?.nombre ?? '',
           r.cultivo_descripcion ?? '',
+          r.cultivo_inferido ?? '',
         ].join(' ').toLowerCase();
         if (!haystack.includes(q)) return false;
       }
@@ -484,7 +486,17 @@ export default function RiaManager({ rias, campanias, lotes, empresaNombre }: Pr
                             {ria.lote?.nombre ?? '—'}
                           </p>
                           <p className="text-xs text-zinc-400 truncate">
-                            {ria.cultivo_descripcion ?? ria.campania?.nombre ?? ''}
+                            {ria.cultivo_descripcion ? (
+                              ria.cultivo_descripcion
+                            ) : ria.cultivo_inferido ? (
+                              <>
+                                <span className="text-amber-500 font-medium">sin cultivo</span>
+                                {' · '}
+                                <span className="italic">{ria.cultivo_inferido}</span>
+                              </>
+                            ) : (
+                              ria.campania?.nombre ?? ''
+                            )}
                             {ria.superficie_afectada ? ` · ${ria.superficie_afectada} ha` : ''}
                           </p>
                         </div>

@@ -42,22 +42,35 @@ export default async function RiaPage() {
       .order('nombre'),
   ]);
 
-  // Para RIAs sin cultivo_id ni cultivo_descripcion, buscar el cultivo activo del lote
-  const loteIdsSinCultivo = (riasRaw ?? [])
-    .filter((r: any) => !r.cultivo?.cultivo && !r.cultivo_descripcion && r.lote_id)
-    .map((r: any) => r.lote_id as string);
+  // Para RIAs sin cultivo_id ni cultivo_descripcion, inferir el cultivo vigente
+  // en la fecha del RIA buscando en el historial del lote (por fecha_siembra/cosecha).
+  const riasSinCultivo = (riasRaw ?? []).filter(
+    (r: any) => !r.cultivo?.cultivo && !r.cultivo_descripcion && r.lote_id,
+  );
+  const loteIdsSinCultivo = [...new Set(riasSinCultivo.map((r: any) => r.lote_id as string))];
 
-  let cultivoByLote: Record<string, string> = {};
+  // loteId -> lista de cultivos con sus fechas (para buscar por fecha del RIA)
+  let cultivosPorLote: Record<string, Array<{ cultivo: string; fecha_siembra: string; fecha_cosecha_real: string | null }>> = {};
   if (loteIdsSinCultivo.length > 0) {
-    const { data: cultivosActivos } = await supabase
+    const { data: cultivosHist } = await supabase
       .from('cultivos')
-      .select('lote_id, cultivo')
+      .select('lote_id, cultivo, fecha_siembra, fecha_cosecha_real')
       .in('lote_id', loteIdsSinCultivo)
-      .in('estado', ['planificada', 'en_curso'])
+      .not('estado', 'eq', 'cancelada')
       .order('fecha_siembra', { ascending: false });
-    for (const c of cultivosActivos ?? []) {
-      if (!cultivoByLote[c.lote_id]) cultivoByLote[c.lote_id] = c.cultivo;
+    for (const c of cultivosHist ?? []) {
+      if (!cultivosPorLote[c.lote_id]) cultivosPorLote[c.lote_id] = [];
+      cultivosPorLote[c.lote_id].push(c);
     }
+  }
+
+  function inferirCultivo(loteId: string, riaFecha: string): string | null {
+    const lista = cultivosPorLote[loteId] ?? [];
+    // El cultivo cuya siembra ya ocurrió y cuya cosecha aún no (o no tiene fecha de cosecha)
+    const match = lista.find(
+      (c) => c.fecha_siembra <= riaFecha && (c.fecha_cosecha_real == null || c.fecha_cosecha_real >= riaFecha),
+    );
+    return match?.cultivo ?? null;
   }
 
   // Recalcular totales desde las líneas reales (las columnas almacenadas pueden estar desactualizadas)
@@ -66,12 +79,12 @@ export default async function RiaPage() {
     const totalLabores = (r.remitos_labores ?? []).reduce((s: number, l: any) => s + Number(l.subtotal ?? 0), 0);
     const totalRia = totalInsumos + totalLabores;
     const { remitos_insumos: _i, remitos_labores: _l, ...rest } = r;
+    const cultivoDescripcion = r.cultivo?.cultivo ?? r.cultivo_descripcion ?? null;
     return {
       ...rest,
-      // Preferir el nombre vigente del cultivo; si el RIA no tiene cultivo_id
-      // ni cultivo_descripcion (creado antes de ese campo), usar el cultivo
-      // activo del lote como fallback.
-      cultivo_descripcion: r.cultivo?.cultivo ?? r.cultivo_descripcion ?? cultivoByLote[r.lote_id] ?? null,
+      cultivo_descripcion: cultivoDescripcion,
+      // Si no tiene cultivo vinculado, inferir por fecha para mostrarlo diferenciado
+      cultivo_inferido: cultivoDescripcion ? null : inferirCultivo(r.lote_id, r.fecha),
       total_insumos: totalInsumos,
       total_labores: totalLabores,
       total_ria: totalRia,
