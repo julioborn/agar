@@ -42,6 +42,24 @@ export default async function RiaPage() {
       .order('nombre'),
   ]);
 
+  // Para RIAs sin cultivo_id ni cultivo_descripcion, buscar el cultivo activo del lote
+  const loteIdsSinCultivo = (riasRaw ?? [])
+    .filter((r: any) => !r.cultivo?.cultivo && !r.cultivo_descripcion && r.lote_id)
+    .map((r: any) => r.lote_id as string);
+
+  let cultivoByLote: Record<string, string> = {};
+  if (loteIdsSinCultivo.length > 0) {
+    const { data: cultivosActivos } = await supabase
+      .from('cultivos')
+      .select('lote_id, cultivo')
+      .in('lote_id', loteIdsSinCultivo)
+      .in('estado', ['planificada', 'en_curso'])
+      .order('fecha_siembra', { ascending: false });
+    for (const c of cultivosActivos ?? []) {
+      if (!cultivoByLote[c.lote_id]) cultivoByLote[c.lote_id] = c.cultivo;
+    }
+  }
+
   // Recalcular totales desde las líneas reales (las columnas almacenadas pueden estar desactualizadas)
   const rias = (riasRaw ?? []).map((r: any) => {
     const totalInsumos = (r.remitos_insumos ?? []).reduce((s: number, i: any) => s + Number(i.subtotal ?? 0), 0);
@@ -50,10 +68,10 @@ export default async function RiaPage() {
     const { remitos_insumos: _i, remitos_labores: _l, ...rest } = r;
     return {
       ...rest,
-      // Preferir el nombre vigente del cultivo por sobre cultivo_descripcion,
-      // que es una foto fija tomada al crear el RIA (puede tener una
-      // capitalización vieja si el cultivo se renombró después).
-      cultivo_descripcion: r.cultivo?.cultivo ?? r.cultivo_descripcion ?? null,
+      // Preferir el nombre vigente del cultivo; si el RIA no tiene cultivo_id
+      // ni cultivo_descripcion (creado antes de ese campo), usar el cultivo
+      // activo del lote como fallback.
+      cultivo_descripcion: r.cultivo?.cultivo ?? r.cultivo_descripcion ?? cultivoByLote[r.lote_id] ?? null,
       total_insumos: totalInsumos,
       total_labores: totalLabores,
       total_ria: totalRia,
