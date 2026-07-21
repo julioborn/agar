@@ -36,6 +36,7 @@ export default async function CampoRiaPage() {
       total_insumos, total_labores, total_ria,
       lote:lotes(nombre, campo:campos(nombre)),
       campania:campanias(nombre),
+      cultivo:cultivos(cultivo),
       remitos_insumos(subtotal),
       remitos_labores(subtotal)
     `)
@@ -44,12 +45,20 @@ export default async function CampoRiaPage() {
     .order('numero_correlativo', { ascending: false })
     .limit(50);
 
-  // Recalcular totales desde las líneas reales
+  // Recalcular totales desde las líneas reales, y preferir el nombre vigente
+  // del cultivo (ya normalizado a mayúsculas) por sobre cultivo_descripcion,
+  // que es una foto fija tomada al crear el RIA.
   const rias = (riasRaw ?? []).map((r: any) => {
     const totalInsumos = (r.remitos_insumos ?? []).reduce((s: number, i: any) => s + Number(i.subtotal ?? 0), 0);
     const totalLabores = (r.remitos_labores ?? []).reduce((s: number, l: any) => s + Number(l.subtotal ?? 0), 0);
     const { remitos_insumos: _i, remitos_labores: _l, ...rest } = r;
-    return { ...rest, total_insumos: totalInsumos, total_labores: totalLabores, total_ria: totalInsumos + totalLabores };
+    return {
+      ...rest,
+      cultivo_descripcion: r.cultivo?.cultivo ?? r.cultivo_descripcion ?? null,
+      total_insumos: totalInsumos,
+      total_labores: totalLabores,
+      total_ria: totalInsumos + totalLabores,
+    };
   });
 
   const pendientes = (rias ?? []).filter((r: any) => r.estado === 'borrador').length;

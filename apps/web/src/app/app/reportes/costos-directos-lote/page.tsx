@@ -20,6 +20,7 @@ export default async function CostosDirectosLotePage() {
       .select(`
         id, lote_id, cultivo_id, cultivo_descripcion,
         superficie_afectada, campania_id,
+        cultivo:cultivos(id, cultivo),
         remitos_insumos(subtotal),
         remitos_labores(subtotal)
       `)
@@ -105,7 +106,9 @@ export default async function CostosDirectosLotePage() {
       cultivoActivo: cultivoActivoPorLote.get(ria.lote_id) ?? null,
       campaniaId: ria.campania_id ?? null,
       tieneCultivo: !!(ria.cultivo_id || ria.cultivo_descripcion),
-      cultivoDescripcion: ria.cultivo_descripcion ?? null,
+      // Preferir el nombre vigente del cultivo (ya normalizado a mayúsculas) por
+      // sobre cultivo_descripcion, que es una foto fija tomada al crear el RIA.
+      cultivoDescripcion: ria.cultivo?.cultivo ?? ria.cultivo_descripcion ?? null,
       totalInsumos,
       totalLabores,
     });

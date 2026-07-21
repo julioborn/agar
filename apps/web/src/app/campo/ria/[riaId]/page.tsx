@@ -19,14 +19,20 @@ export default async function CampoRiaDetailPage({ params }: Props) {
   if (!empresaData) redirect('/login');
   const { empresa } = empresaData;
 
-  const { data: ria } = await supabase
+  const { data: riaRaw } = await supabase
     .from('remitos_internos')
-    .select('*')
+    .select('*, cultivo:cultivos(cultivo)')
     .eq('id', riaId)
     .eq('empresa_id', empresa.id)
     .maybeSingle();
 
-  if (!ria) notFound();
+  if (!riaRaw) notFound();
+  // Preferir el nombre vigente del cultivo (ya normalizado a mayúsculas) por
+  // sobre cultivo_descripcion, que es una foto fija tomada al crear el RIA.
+  const ria = {
+    ...riaRaw,
+    cultivo_descripcion: (riaRaw as any).cultivo?.cultivo ?? riaRaw.cultivo_descripcion ?? null,
+  };
 
   const [
     { data: insumosRaw },

@@ -15,13 +15,19 @@ export default async function ProduccionPage() {
   const { data: riasRaw } = await supabase
     .from('remitos_internos')
     .select(`
-      id, lote_id, superficie_afectada, cultivo_descripcion, campania_id,
-      lote:lotes(nombre, campo:campos(nombre))
+      id, lote_id, superficie_afectada, cultivo_descripcion, cultivo_id, campania_id,
+      lote:lotes(nombre, campo:campos(nombre)),
+      cultivo:cultivos(id, cultivo)
     `)
     .eq('empresa_id', empresa.id)
     .eq('estado', 'confirmado');
 
-  const rias = (riasRaw ?? []) as any[];
+  // Preferir el nombre vigente del cultivo (ya normalizado a mayúsculas) por
+  // sobre cultivo_descripcion, que es una foto fija tomada al crear el RIA.
+  const rias = ((riasRaw ?? []) as any[]).map((r) => ({
+    ...r,
+    cultivo_descripcion: r.cultivo?.cultivo ?? r.cultivo_descripcion ?? null,
+  }));
   const confirmedIds = rias.map((r) => r.id as string);
 
   const [produccionRes, campaniasRes] = await Promise.all([

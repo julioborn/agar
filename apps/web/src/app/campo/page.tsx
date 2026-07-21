@@ -28,11 +28,18 @@ export default async function CampoHome() {
 
     supabase
       .from('remitos_internos')
-      .select('id, numero_ria, fecha, estado, cultivo_descripcion, lote:lotes(nombre)')
+      .select('id, numero_ria, fecha, estado, cultivo_descripcion, lote:lotes(nombre), cultivo:cultivos(cultivo)')
       .eq('empresa_id', empresa.id)
       .order('created_at', { ascending: false })
       .limit(3),
   ]);
+
+  // Preferir el nombre vigente del cultivo (ya normalizado a mayúsculas) por
+  // sobre cultivo_descripcion, que es una foto fija tomada al crear el RIA.
+  const riasRec = (riasRecientes ?? []).map((r: any) => ({
+    ...r,
+    cultivo_descripcion: r.cultivo?.cultivo ?? r.cultivo_descripcion ?? null,
+  }));
 
   const fmt = (d: string) =>
     new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
@@ -69,14 +76,14 @@ export default async function CampoHome() {
         </div>
         <div className="bg-white rounded-2xl border border-zinc-200 px-4 py-3.5">
           <p className="text-2xl font-bold text-zinc-900">
-            {riasRecientes?.filter((r: any) => r.estado === 'borrador').length ?? 0}
+            {riasRec.filter((r) => r.estado === 'borrador').length}
           </p>
           <p className="text-xs text-zinc-400 mt-0.5">Borradores pendientes</p>
         </div>
       </div>
 
       {/* Últimos remitos */}
-      {riasRecientes && riasRecientes.length > 0 && (
+      {riasRec.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-2.5">
             <h2 className="text-sm font-semibold text-zinc-700 flex items-center gap-1.5">
@@ -86,7 +93,7 @@ export default async function CampoHome() {
             <Link href="/campo/ria" className="text-xs text-[#006836] font-medium">Ver todos</Link>
           </div>
           <ul className="space-y-2">
-            {(riasRecientes as any[]).map((r) => (
+            {riasRec.map((r) => (
               <li key={r.id}>
                 <Link
                   href={`/campo/ria/${r.id}`}
