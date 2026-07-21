@@ -16,11 +16,12 @@ export default async function RiaPage() {
       .from('remitos_internos')
       .select(`
         id, numero_ria, fecha, estado,
-        superficie_afectada, cultivo_descripcion,
+        superficie_afectada, cultivo_descripcion, cultivo_id,
         total_insumos, total_labores, total_ria, costo_por_ha,
         motivo_anulacion, created_at,
         lote:lotes(id, nombre, campo:campos(nombre)),
         campania:campanias(id, nombre),
+        cultivo:cultivos(id, cultivo),
         remitos_insumos(subtotal),
         remitos_labores(subtotal)
       `)
@@ -49,6 +50,10 @@ export default async function RiaPage() {
     const { remitos_insumos: _i, remitos_labores: _l, ...rest } = r;
     return {
       ...rest,
+      // Preferir el nombre vigente del cultivo por sobre cultivo_descripcion,
+      // que es una foto fija tomada al crear el RIA (puede tener una
+      // capitalización vieja si el cultivo se renombró después).
+      cultivo_descripcion: r.cultivo?.cultivo ?? r.cultivo_descripcion ?? null,
       total_insumos: totalInsumos,
       total_labores: totalLabores,
       total_ria: totalRia,

@@ -19,6 +19,7 @@ interface RiaRow {
   estado: string;
   superficie_afectada: number | null;
   cultivo_descripcion: string | null;
+  cultivo_nombre: string | null;
   total_insumos: number;
   total_labores: number;
   total_ria: number;
@@ -148,7 +149,7 @@ export default function ReportesManager({
   const cultivosOptions = useMemo(() => {
     const set = new Set<string>();
     for (const r of riasEmpresa) {
-      if (r.cultivo_descripcion) set.add(r.cultivo_descripcion);
+      if (r.cultivo_nombre) set.add(r.cultivo_nombre);
     }
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [riasEmpresa]);
@@ -184,7 +185,7 @@ export default function ReportesManager({
     if (fechaHasta && r.fecha > fechaHasta) return false;
     if (campoFilter && r.lote?.campo?.id !== campoFilter) return false;
     if (loteFilter && r.lote?.id !== loteFilter) return false;
-    if (cultivoFilter && r.cultivo_descripcion !== cultivoFilter) return false;
+    if (cultivoFilter && r.cultivo_nombre !== cultivoFilter) return false;
     if (usuarioFilter && r.operador_id !== usuarioFilter) return false;
     return true;
   }
@@ -241,7 +242,7 @@ export default function ReportesManager({
           loteNombre:    r.lote?.nombre ?? '—',
           campoNombre:   r.lote?.campo?.nombre ?? '—',
           campaniaNombre: r.campania?.nombre ?? '—',
-          cultivoDesc:   r.cultivo_descripcion ?? '',
+          cultivoDesc:   r.cultivo_nombre ?? '',
           superficie:    r.superficie_afectada ?? 0,
           totalInsumos:  r.total_insumos,
           totalLabores:  r.total_labores,
@@ -283,7 +284,7 @@ export default function ReportesManager({
           lote:       ria.lote?.nombre ?? '—',
           campo:      ria.lote?.campo?.nombre ?? '—',
           campania:   ria.campania?.nombre ?? '—',
-          cultivo:    ria.cultivo_descripcion ?? '',
+          cultivo:    ria.cultivo_nombre ?? '',
           superficie: sup,
           producto:   p.producto?.nombre ?? '—',
           unidad:     p.producto?.unidad_base ?? '',

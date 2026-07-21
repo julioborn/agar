@@ -19,12 +19,13 @@ export default async function ReportesPage() {
   const { data: riasRaw } = await supabase
     .from('remitos_internos')
     .select(`
-      id, numero_ria, fecha, estado, superficie_afectada, cultivo_descripcion,
+      id, numero_ria, fecha, estado, superficie_afectada, cultivo_descripcion, cultivo_id,
       total_insumos, total_labores, total_ria, costo_por_ha, motivo_anulacion,
       operador_id, empresa_id,
       lote:lotes(id, nombre, campo:campos(id, nombre)),
       campania:campanias(id, nombre),
-      empresa:empresas(id, nombre)
+      empresa:empresas(id, nombre),
+      cultivo:cultivos(id, cultivo)
     `)
     .in('empresa_id', empresaIds)
     .order('fecha', { ascending: false })
@@ -110,6 +111,10 @@ export default async function ReportesPage() {
     const totalRia = totalInsumos + totalLabores;
     return {
       ...r,
+      // Preferir el nombre vigente del cultivo (se mantiene actualizado) por sobre
+      // cultivo_descripcion, que es una foto fija tomada al crear el RIA y puede
+      // haber quedado con una capitalización vieja si el cultivo se renombró después.
+      cultivo_nombre: r.cultivo?.cultivo ?? r.cultivo_descripcion ?? null,
       operador_email: r.operador_id ? (emailPorUsuario[r.operador_id] ?? '—') : null,
       total_insumos: totalInsumos,
       total_labores: totalLabores,
