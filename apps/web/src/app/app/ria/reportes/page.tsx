@@ -91,6 +91,24 @@ export default async function ReportesPage() {
     );
   }
 
+  // Para RIAs sin cultivo_id ni cultivo_descripcion, buscar el cultivo activo del lote
+  const loteIdsSinCultivo = riasBase
+    .filter((r) => !r.cultivo?.cultivo && !r.cultivo_descripcion && r.lote_id)
+    .map((r) => r.lote_id as string);
+
+  let cultivoByLote: Record<string, string> = {};
+  if (loteIdsSinCultivo.length > 0) {
+    const { data: cultivosActivos } = await supabase
+      .from('cultivos')
+      .select('lote_id, cultivo')
+      .in('lote_id', loteIdsSinCultivo)
+      .in('estado', ['planificada', 'en_curso'])
+      .order('fecha_siembra', { ascending: false });
+    for (const c of cultivosActivos ?? []) {
+      if (!cultivoByLote[c.lote_id]) cultivoByLote[c.lote_id] = c.cultivo;
+    }
+  }
+
   // Recalcular totales desde los line items reales (columnas almacenadas pueden estar stale)
   const insumosPorRia = new Map<string, number>();
   for (const i of (insumosRes.data ?? []) as any[]) {
@@ -114,7 +132,7 @@ export default async function ReportesPage() {
       // Preferir el nombre vigente del cultivo (se mantiene actualizado) por sobre
       // cultivo_descripcion, que es una foto fija tomada al crear el RIA y puede
       // haber quedado con una capitalización vieja si el cultivo se renombró después.
-      cultivo_nombre: r.cultivo?.cultivo ?? r.cultivo_descripcion ?? null,
+      cultivo_nombre: r.cultivo?.cultivo ?? r.cultivo_descripcion ?? cultivoByLote[r.lote_id] ?? null,
       operador_email: r.operador_id ? (emailPorUsuario[r.operador_id] ?? '—') : null,
       total_insumos: totalInsumos,
       total_labores: totalLabores,
