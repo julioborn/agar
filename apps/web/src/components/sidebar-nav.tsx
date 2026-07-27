@@ -9,6 +9,7 @@ import {
   Users, Menu, Wheat,
   Tractor, Wrench, Settings, Building, Landmark, BarChart3,
   FileText, TrendingUp, Scale, CalendarRange, Layers, Pin,
+  Beef, Fence, Rows3, Tag,
 } from 'lucide-react';
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -72,6 +73,15 @@ const navSections: NavSection[] = [
       { href: '/app/cultivos/tipos',  label: 'Tipos de Cultivo',  icon: Layers },
       { href: '/app/tipos-labor',     label: 'Labores',           icon: Wrench },
       { href: '/app/tipos-produccion', label: 'Tipos de Producción', icon: Wheat },
+    ],
+  },
+  {
+    label: 'Ganadería',
+    items: [
+      { href: '/app/ganaderia/categorias', label: 'Categorías',       icon: Tag },
+      { href: '/app/ganaderia/corrales',   label: 'Corrales',         icon: Fence },
+      { href: '/app/ganaderia/potreros',   label: 'Potreros',         icon: Rows3 },
+      { href: '/app/ganaderia/lotes',      label: 'Lotes de Hacienda', icon: Beef },
     ],
   },
   {
