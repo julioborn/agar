@@ -14,7 +14,7 @@ export default async function StockPage() {
 
   const { empresa } = empresaData;
 
-  const [{ data: rawStock }, { data: ultimasCompras }, { data: preciosRia }] = await Promise.all([
+  const [{ data: rawStock }, { data: ultimasCompras }, { data: preciosRia }, { data: tiposProduccion }] = await Promise.all([
     supabase
       .from('stock')
       .select(`
@@ -35,6 +35,11 @@ export default async function StockPage() {
       .eq('remito.estado', 'confirmado')
       .gt('costo_unitario', 0)
       .order('fecha', { referencedTable: 'remitos_internos', ascending: false }),
+    // Precio de mercado (Tipos de Producción, en USD) para el stock de producción propia
+    supabase
+      .from('tipos_produccion')
+      .select('producto_id, valor_mercado')
+      .eq('empresa_id', empresa.id),
   ]);
 
   // Precio de la última compra por producto
@@ -53,9 +58,17 @@ export default async function StockPage() {
     }
   }
 
+  // Valor de mercado (Tipos de Producción, en USD) — tiene prioridad para productos de producción propia
+  const valorMercadoUsd: Record<string, number> = {};
+  for (const t of tiposProduccion ?? []) {
+    valorMercadoUsd[(t as any).producto_id] = Number((t as any).valor_mercado ?? 0);
+  }
+
   const stockRows = (rawStock ?? []).map((r: any) => {
     const pid = r.producto?.id ?? '';
-    const precio = precioUltimo[pid] || precioRia[pid] || null;
+    const esProduccion = r.producto?.categoria === 'produccion';
+    const precioUsd = esProduccion ? (valorMercadoUsd[pid] ?? null) : null;
+    const precio = precioUsd != null ? null : (precioUltimo[pid] || precioRia[pid] || null);
     return {
       id: r.id,
       cantidad_actual: r.cantidad_actual ?? 0,
@@ -67,7 +80,8 @@ export default async function StockPage() {
       deposito_id: r.deposito?.id ?? '',
       deposito_nombre: r.deposito?.nombre ?? '—',
       precio_ultimo: precio,
-      precio_fuente: (precioUltimo[pid] ? 'compra' : precioRia[pid] ? 'ria' : null) as 'compra' | 'ria' | null,
+      precio_usd_mercado: precioUsd,
+      precio_fuente: (precioUsd != null ? 'produccion' : precioUltimo[pid] ? 'compra' : precioRia[pid] ? 'ria' : null) as 'compra' | 'ria' | 'produccion' | null,
     };
   });
 

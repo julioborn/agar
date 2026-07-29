@@ -25,7 +25,8 @@ interface StockRow {
   producto_unidad_base: string; producto_stock_minimo: number;
   deposito_id: string; deposito_nombre: string;
   precio_ultimo: number | null;
-  precio_fuente: 'compra' | 'ria' | null;
+  precio_usd_mercado: number | null;
+  precio_fuente: 'compra' | 'ria' | 'produccion' | null;
 }
 
 interface Props { stockRows: StockRow[]; empresaNombre: string }
@@ -34,7 +35,7 @@ const numFmt = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 });
 const num = (n: number, unit: string) => `${numFmt.format(n)} ${unit}`;
 
 export default function StockManager({ stockRows, empresaNombre }: Props) {
-  const { formatMoney } = useCurrency();
+  const { formatMoney, usdRate } = useCurrency();
   const [vista, setVista]               = useState<'insumos' | 'produccion'>('insumos');
   const [searchText, setSearchText]     = useState('');
   const [depositoId, setDepositoId]     = useState('');
@@ -80,14 +81,25 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
   const filtrosActivos = [searchText, depositoId, categoria, soloBajoMinimo ? 'bajo' : ''].filter(Boolean).length;
   const bajoMinimo = filtradas.filter((r) => r.cantidad_actual <= r.producto_stock_minimo && r.producto_stock_minimo > 0).length;
 
-  const exportData = filtradas.map((r) => ({ ...r, _estado: r.cantidad_actual <= r.producto_stock_minimo && r.producto_stock_minimo > 0 ? 'Bajo mínimo' : 'OK' }));
+  const precioArs = (r: StockRow): number | null => {
+    if (r.precio_fuente === 'produccion' && r.precio_usd_mercado != null && usdRate) {
+      return r.precio_usd_mercado * usdRate;
+    }
+    return r.precio_ultimo;
+  };
+
+  const exportData = filtradas.map((r) => ({
+    ...r,
+    _precio_mostrado: precioArs(r),
+    _estado: r.cantidad_actual <= r.producto_stock_minimo && r.producto_stock_minimo > 0 ? 'Bajo mínimo' : 'OK',
+  }));
   const exportColumns = [
     { header: 'Depósito', key: 'deposito_nombre', width: 20 },
     { header: 'Producto', key: 'producto_nombre', width: 28 },
     { header: 'Categoría', key: 'producto_categoria', width: 18, format: (v: string) => CATEGORIA_LABEL[v] ?? v },
     { header: 'Stock actual', key: 'cantidad_actual', width: 14, format: (v: number) => numFmt.format(v), total: true },
     { header: 'Unidad', key: 'producto_unidad_base', width: 10 },
-    { header: 'Precio unit. (última compra)', key: 'precio_ultimo', width: 22, format: (v: number | null) => v != null ? formatMoney(v) : '' },
+    { header: 'Precio unit.', key: '_precio_mostrado', width: 22, format: (v: number | null) => v != null ? formatMoney(v) : '' },
     { header: 'Stock mínimo', key: 'producto_stock_minimo', width: 14, format: (v: number) => v > 0 ? numFmt.format(v) : '' },
     { header: 'Estado', key: '_estado', width: 14 },
   ];
@@ -252,6 +264,7 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
                   <tbody className="divide-y divide-zinc-50">
                     {filas.map((row) => {
                       const bajo = row.cantidad_actual <= row.producto_stock_minimo && row.producto_stock_minimo > 0;
+                      const precioMostrado = precioArs(row);
                       return (
                         <tr key={row.id} className={cn('transition-colors cursor-pointer', bajo ? 'bg-red-50 hover:bg-red-100/60' : 'hover:bg-[#006836]/5')}>
                           <td className="px-4 py-3">
@@ -270,11 +283,18 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
                             {num(row.cantidad_actual, row.producto_unidad_base)}
                           </td>
                           <td className="px-4 py-3 text-right text-sm">
-                            {row.precio_ultimo != null ? (
-                              <span className={row.precio_fuente === 'ria' ? 'text-indigo-600' : 'text-zinc-500'}>
-                                {formatMoney(row.precio_ultimo)}
+                            {precioMostrado != null ? (
+                              <span className={cn(
+                                row.precio_fuente === 'ria' && 'text-indigo-600',
+                                row.precio_fuente === 'produccion' && 'text-amber-600',
+                                row.precio_fuente === 'compra' && 'text-zinc-500',
+                              )}>
+                                {formatMoney(precioMostrado)}
                                 {row.precio_fuente === 'ria' && (
                                   <span className="ml-1 text-xs text-indigo-400">RIA</span>
+                                )}
+                                {row.precio_fuente === 'produccion' && (
+                                  <span className="ml-1 text-xs text-amber-500">Mercado</span>
                                 )}
                               </span>
                             ) : (
