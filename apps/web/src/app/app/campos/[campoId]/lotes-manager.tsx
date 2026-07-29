@@ -118,9 +118,6 @@ export default function LotesManager({ campoId, lotes }: Props) {
 
                   {/* Footer */}
                   <div className="flex items-center justify-between pt-1 border-t border-zinc-50">
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#006836]">
-                      <Sprout className="w-3 h-3" /> Ver detalle
-                    </span>
                     {!esLector && (
                       <div
                         onClick={(e) => e.stopPropagation()}
