@@ -4,14 +4,15 @@ import { useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
-import { CATEGORIAS, UNIDADES } from './constants';
-export { CATEGORIAS, UNIDADES } from './constants';
+import { CATEGORIAS, UNIDADES, RUBROS, inferirRubro } from './constants';
+export { CATEGORIAS, UNIDADES, RUBROS } from './constants';
 
 export interface ProductoRow {
   id: string;
   nombre: string;
   nombre_factura: string | null;
   categoria: string;
+  rubro: string;
   unidad_base: string;
   codigo_barras: string | null;
   codigo_interno: string | null;
@@ -33,6 +34,7 @@ export default function ProductoForm({ empresaId, productoEditando, onSuccess, o
   const [nombre,               setNombre]               = useState('');
   const [nombreFactura,        setNombreFactura]        = useState('');
   const [categoria,            setCategoria]            = useState('fertilizante');
+  const [rubro,                setRubro]                = useState<'agricultura' | 'ganaderia'>('agricultura');
   const [unidadBase,           setUnidadBase]           = useState('kg');
   const [codigoBarras,         setCodigoBarras]         = useState('');
   const [codigoInterno,        setCodigoInterno]        = useState('');
@@ -47,6 +49,7 @@ export default function ProductoForm({ empresaId, productoEditando, onSuccess, o
       setNombre(productoEditando.nombre);
       setNombreFactura(productoEditando.nombre_factura ?? '');
       setCategoria(productoEditando.categoria);
+      setRubro((productoEditando.rubro as 'agricultura' | 'ganaderia') ?? 'agricultura');
       setUnidadBase(productoEditando.unidad_base);
       setCodigoBarras(productoEditando.codigo_barras ?? '');
       setCodigoInterno(productoEditando.codigo_interno ?? '');
@@ -54,7 +57,7 @@ export default function ProductoForm({ empresaId, productoEditando, onSuccess, o
       setStockMinimo(productoEditando.stock_minimo?.toString() ?? '0');
       setRequiereTrazabilidad(productoEditando.requiere_trazabilidad);
     } else {
-      setNombre(''); setNombreFactura(''); setCategoria('fertilizante'); setUnidadBase('kg');
+      setNombre(''); setNombreFactura(''); setCategoria('fertilizante'); setRubro('agricultura'); setUnidadBase('kg');
       setCodigoBarras(''); setCodigoInterno(''); setPrincipioActivo('');
       setStockMinimo('0'); setRequiereTrazabilidad(false);
     }
@@ -71,7 +74,7 @@ export default function ProductoForm({ empresaId, productoEditando, onSuccess, o
     const payload = {
       nombre: nombre.trim(),
       nombre_factura: nombreFactura.trim() || null,
-      categoria, unidad_base: unidadBase,
+      categoria, rubro, unidad_base: unidadBase,
       codigo_barras: codigoBarras.trim() || null,
       codigo_interno: codigoInterno.trim() || null,
       principio_activo: principioActivo.trim() || null,
@@ -90,6 +93,11 @@ export default function ProductoForm({ empresaId, productoEditando, onSuccess, o
       setPrincipioActivo(''); setStockMinimo('0'); setRequiereTrazabilidad(false);
     }
     onSuccess();
+  }
+
+  function handleCategoriaChange(nuevaCategoria: string) {
+    setCategoria(nuevaCategoria);
+    if (!productoEditando) setRubro(inferirRubro(nuevaCategoria));
   }
 
   const labelUnidad = UNIDADES.find((u) => u.value === unidadBase)?.label ?? unidadBase;
@@ -124,13 +132,20 @@ export default function ProductoForm({ empresaId, productoEditando, onSuccess, o
         </p>
       </div>
 
-      {/* Categoría + Unidad */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Categoría + Rubro + Unidad */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label className="block text-xs font-medium text-zinc-500 mb-1.5">Categoría</label>
-          <select value={categoria} onChange={(e) => setCategoria(e.target.value)}
+          <select value={categoria} onChange={(e) => handleCategoriaChange(e.target.value)}
             disabled={loading} className={field}>
             {CATEGORIAS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-zinc-500 mb-1.5">Rubro</label>
+          <select value={rubro} onChange={(e) => setRubro(e.target.value as 'agricultura' | 'ganaderia')}
+            disabled={loading} className={field}>
+            {RUBROS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
         </div>
         <div>

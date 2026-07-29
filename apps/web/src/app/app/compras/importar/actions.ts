@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
+import { inferirRubro } from '@/app/app/productos/constants';
 
 export interface CodigoProveedorData {
   producto_id: string;
@@ -36,6 +37,7 @@ export async function crearProductoNuevo(data: {
   categoria: string;
   unidad_base: string;
   principio_activo?: string;
+  rubro?: 'agricultura' | 'ganaderia';
 }): Promise<{ id?: string; error?: string }> {
   const supabase = await createClient();
   const empresaData = await getEmpresaActiva();
@@ -47,6 +49,7 @@ export async function crearProductoNuevo(data: {
       empresa_id: empresaData.empresa.id,
       nombre: data.nombre.trim(),
       categoria: data.categoria,
+      rubro: data.rubro ?? inferirRubro(data.categoria),
       unidad_base: data.unidad_base,
       principio_activo: data.principio_activo?.trim() || null,
     })

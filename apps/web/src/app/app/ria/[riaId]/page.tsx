@@ -82,7 +82,7 @@ export default async function RiaDetailPage({ params }: Props) {
       .order('nombre'),
     supabase
       .from('productos')
-      .select('id, nombre, categoria, unidad_base')
+      .select('id, nombre, categoria, unidad_base, rubro')
       .eq('empresa_id', empresa.id)
       .order('nombre'),
     supabase

@@ -29,7 +29,7 @@ export default async function CampoRiaNuevoPage() {
       .eq('campo.empresa_id', empresa.id)
       .order('nombre'),
     supabase.from('depositos').select('id, nombre, tipo').eq('empresa_id', empresa.id).order('nombre'),
-    supabase.from('productos').select('id, nombre, categoria, unidad_base').eq('empresa_id', empresa.id).order('nombre'),
+    supabase.from('productos').select('id, nombre, categoria, unidad_base, rubro').eq('empresa_id', empresa.id).order('nombre'),
     supabase.from('campanias').select('id, nombre').eq('empresa_id', empresa.id).eq('activa', true).order('nombre'),
     supabase.from('contratistas').select('id, nombre').eq('empresa_id', empresa.id).eq('activo', true).order('nombre'),
     supabase.from('tipos_labor').select('id, nombre').eq('empresa_id', empresa.id).order('nombre'),

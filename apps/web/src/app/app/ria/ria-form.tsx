@@ -33,6 +33,7 @@ export interface ProductoOpcion {
   nombre: string;
   categoria: string;
   unidad_base: string;
+  rubro?: string;
 }
 export interface CampaniaOpcion {
   id: string;
@@ -212,6 +213,12 @@ export default function RiaForm({
   const router = useRouter();
   const esReadOnly = mode === 'ver';
   const { usdRate } = useCurrency();
+
+  // El RIA agrícola no debe ofrecer insumos de rubro ganadería (veterinarios,
+  // núcleos proteicos, sales) — esos se cargan desde el Remito Ganadero. Los
+  // productos de categoría "producción" (rubro agricultura) siguen disponibles
+  // acá para el caso de reutilizar semilla/grano propio como insumo.
+  const productosAgro = productos.filter((p) => p.rubro !== 'ganaderia');
 
   // Header state
   const [fecha, setFecha] = useState(riaExistente?.fecha ?? today());
@@ -1122,7 +1129,10 @@ export default function RiaForm({
                         className={inputCls(!ins.productoId && !esReadOnly)}
                       >
                         <option value="">Seleccioná…</option>
-                        {productos.map((p) => (
+                        {ins.productoId && !productosAgro.some((p) => p.id === ins.productoId) && (
+                          <option value={ins.productoId}>{ins.productoNombre || 'Producto sin catalogar'}</option>
+                        )}
+                        {productosAgro.map((p) => (
                           <option key={p.id} value={p.id}>{p.nombre}</option>
                         ))}
                       </select>

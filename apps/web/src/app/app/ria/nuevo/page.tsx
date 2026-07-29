@@ -40,7 +40,7 @@ export default async function NuevoRiaPage() {
       .order('nombre'),
     supabase
       .from('productos')
-      .select('id, nombre, categoria, unidad_base')
+      .select('id, nombre, categoria, unidad_base, rubro')
       .eq('empresa_id', empresa.id)
       .order('nombre'),
     supabase

@@ -82,6 +82,7 @@ const navSections: NavSection[] = [
       { href: '/app/ganaderia/corrales',   label: 'Corrales',         icon: Fence },
       { href: '/app/ganaderia/potreros',   label: 'Potreros',         icon: Rows3 },
       { href: '/app/ganaderia/lotes',      label: 'Lotes de Hacienda', icon: Beef },
+      { href: '/app/ganaderia/remitos',    label: 'Remitos Ganaderos', icon: FileText },
     ],
   },
   {

@@ -35,25 +35,38 @@ const num = (n: number, unit: string) => `${numFmt.format(n)} ${unit}`;
 
 export default function StockManager({ stockRows, empresaNombre }: Props) {
   const { formatMoney } = useCurrency();
+  const [vista, setVista]               = useState<'insumos' | 'produccion'>('insumos');
   const [searchText, setSearchText]     = useState('');
   const [depositoId, setDepositoId]     = useState('');
   const [categoria, setCategoria]       = useState('');
   const [soloBajoMinimo, setSoloBajoMinimo] = useState(false);
   const [showFilters, setShowFilters]   = useState(false);
 
-  const depositos = useMemo(() =>
-    Array.from(new Map(stockRows.map((r) => [r.deposito_id, r.deposito_nombre])).entries())
-      .map(([id, nombre]) => ({ id, nombre })),
-    [stockRows]
+  const stockRowsVista = useMemo(() =>
+    stockRows.filter((r) => vista === 'produccion'
+      ? r.producto_categoria === 'produccion'
+      : r.producto_categoria !== 'produccion'),
+    [stockRows, vista]
   );
 
-  const filtradas = useMemo(() => stockRows.filter((r) => {
+  const categoriasVista = useMemo(() =>
+    CATEGORIAS.filter((c) => vista === 'produccion' ? c.value === 'produccion' : c.value !== 'produccion'),
+    [vista]
+  );
+
+  const depositos = useMemo(() =>
+    Array.from(new Map(stockRowsVista.map((r) => [r.deposito_id, r.deposito_nombre])).entries())
+      .map(([id, nombre]) => ({ id, nombre })),
+    [stockRowsVista]
+  );
+
+  const filtradas = useMemo(() => stockRowsVista.filter((r) => {
     if (searchText && !r.producto_nombre.toLowerCase().includes(searchText.toLowerCase())) return false;
     if (depositoId && r.deposito_id !== depositoId) return false;
     if (categoria && r.producto_categoria !== categoria) return false;
     if (soloBajoMinimo && !(r.cantidad_actual <= r.producto_stock_minimo && r.producto_stock_minimo > 0)) return false;
     return true;
-  }), [stockRows, searchText, depositoId, categoria, soloBajoMinimo]);
+  }), [stockRowsVista, searchText, depositoId, categoria, soloBajoMinimo]);
 
   const deposiGroups = useMemo(() => {
     const map = new Map<string, { nombre: string; filas: StockRow[] }>();
@@ -81,6 +94,18 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
 
   return (
     <div className="space-y-5">
+
+      {/* Insumos / Producción */}
+      <div className="flex rounded-2xl border border-zinc-100 bg-white p-1 shadow-sm w-fit">
+        {(['insumos', 'produccion'] as const).map((v) => (
+          <button key={v} type="button"
+            onClick={() => { setVista(v); setCategoria(''); }}
+            className={cn('px-5 py-2 text-sm font-semibold rounded-xl transition-colors',
+              vista === v ? 'bg-[#006836] text-white' : 'text-zinc-500 hover:bg-zinc-50')}>
+            {v === 'insumos' ? 'Stock de Insumos' : 'Stock de Producción'}
+          </button>
+        ))}
+      </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-3 gap-3">
@@ -170,14 +195,16 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
                 {depositos.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
               </select>
             </div>
-            <div>
-              <label className="block text-xs text-zinc-400 mb-1.5">Categoría</label>
-              <select value={categoria} onChange={(e) => setCategoria(e.target.value)}
-                className="w-full text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40">
-                <option value="">Todas</option>
-                {CATEGORIAS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-              </select>
-            </div>
+            {vista === 'insumos' && (
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Categoría</label>
+                <select value={categoria} onChange={(e) => setCategoria(e.target.value)}
+                  className="w-full text-sm border border-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40">
+                  <option value="">Todas</option>
+                  {categoriasVista.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+              </div>
+            )}
             <div className="flex items-end">
               <label className="inline-flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={soloBajoMinimo} onChange={(e) => setSoloBajoMinimo(e.target.checked)}
@@ -194,7 +221,11 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
         <div className="bg-white rounded-2xl border border-zinc-100 p-12 text-center space-y-3">
           <BarChart2 className="w-10 h-10 text-zinc-200 mx-auto" />
           <p className="text-zinc-400 text-sm">
-            {stockRows.length === 0 ? 'Registrá una compra para ver el stock.' : 'Sin resultados con los filtros aplicados.'}
+            {stockRowsVista.length === 0
+              ? (vista === 'produccion'
+                ? 'Confirmá un RIA con producción para ver stock acá.'
+                : 'Registrá una compra para ver el stock.')
+              : 'Sin resultados con los filtros aplicados.'}
           </p>
         </div>
       ) : (
