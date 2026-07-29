@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Layers, Plus, ChevronDown, ChevronUp, Sprout, ChevronLeft, ChevronRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -97,7 +96,10 @@ export default function LotesManager({ campoId, lotes }: Props) {
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {lotesEnPagina.map((lote) => (
-              <div key={lote.id} className="group bg-white rounded-2xl border border-zinc-100 hover:border-[#006836]/25 hover:shadow-md transition-all duration-200 overflow-hidden">
+              <div key={lote.id}
+                onClick={() => router.push(`/app/cultivos?lote=${lote.id}`)}
+                className="group bg-white rounded-2xl border border-zinc-100 hover:border-[#006836]/25 hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer"
+              >
                 <div className="h-1 bg-amber-400" />
                 <div className="p-4 space-y-3">
 
@@ -116,14 +118,14 @@ export default function LotesManager({ campoId, lotes }: Props) {
 
                   {/* Footer */}
                   <div className="flex items-center justify-between pt-1 border-t border-zinc-50">
-                    <Link
-                      href={`/app/cultivos?lote=${lote.id}`}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-[#006836] hover:underline"
-                    >
-                      <Sprout className="w-3 h-3" /> Ver cultivos
-                    </Link>
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#006836]">
+                      <Sprout className="w-3 h-3" /> Ver detalle
+                    </span>
                     {!esLector && (
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
                         <button
                           onClick={() => { setEditando(lote); setFormOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                           className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"

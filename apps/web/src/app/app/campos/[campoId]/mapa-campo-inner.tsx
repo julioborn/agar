@@ -286,7 +286,7 @@ export default function MapaCampoInner({ campo, lotes: initialLotes }: Props) {
         <p style="font-weight:700; font-size:13px; color:#18181b; margin:0 0 6px;">${nombre}</p>
         <a href="/app/cultivos?lote=${loteId}"
            style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:#006836;text-decoration:none;">
-          Ver cultivos →
+          Ver detalle →
         </a>
       </div>
     `, { closeButton: true, maxWidth: 200 });
