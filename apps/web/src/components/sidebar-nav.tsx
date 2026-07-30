@@ -148,7 +148,11 @@ export default function SidebarNav({
 
   const [openSections, setOpenSections] = useState<Set<string>>(() => {
     const activa = navSections.find((s) => s.items.some((item) => isActiveHref(pathname, item.href, item.exact)));
-    return new Set(activa ? [activa.label] : []);
+    if (activa) return new Set([activa.label]);
+    if (isActiveHref(pathname, '/app/usuarios') || isActiveHref(pathname, '/app/empresas')) {
+      return new Set(['Administración']);
+    }
+    return new Set();
   });
 
   function isActive(href: string, exact = false) {
@@ -260,38 +264,49 @@ export default function SidebarNav({
           })}
 
         {/* Usuarios (admin / superadmin) */}
-        {(esAdmin || esSuperAdmin) && (
+        {(esAdmin || esSuperAdmin) && (() => {
+          const abierta = collapsed || openSections.has('Administración');
+          return (
           <div className="mt-4">
-            {!collapsed && (
-              <p className="px-3 mb-1 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest select-none">
-                Administración
-              </p>
-            )}
-            {collapsed && <div className="my-2 mx-3 border-t border-white/5" />}
-
-            <div className="space-y-0.5">
-              <Link
-                href="/app/usuarios"
-                title={collapsed ? 'Usuarios' : undefined}
-                className={linkClass(isActive('/app/usuarios'))}
+            {!collapsed ? (
+              <button
+                type="button"
+                onClick={() => toggleSection('Administración')}
+                className="w-full flex items-center justify-between px-3 mb-1 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest select-none hover:text-zinc-300 transition-colors"
               >
-                <Users className="w-4 h-4 shrink-0" />
-                {!collapsed && <span className="truncate">Usuarios</span>}
-              </Link>
+                <span>Administración</span>
+                <ChevronDown className={cn('w-3 h-3 shrink-0 transition-transform', abierta && 'rotate-180')} />
+              </button>
+            ) : (
+              <div className="my-2 mx-3 border-t border-white/5" />
+            )}
 
-              {esSuperAdmin && (
+            {abierta && (
+              <div className="space-y-0.5">
                 <Link
-                  href="/app/empresas"
-                  title={collapsed ? 'Empresas' : undefined}
-                  className={linkClass(isActive('/app/empresas'))}
+                  href="/app/usuarios"
+                  title={collapsed ? 'Usuarios' : undefined}
+                  className={linkClass(isActive('/app/usuarios'))}
                 >
-                  <Building2 className="w-4 h-4 shrink-0" />
-                  {!collapsed && <span className="truncate">Empresas</span>}
+                  <Users className="w-4 h-4 shrink-0" />
+                  {!collapsed && <span className="truncate">Usuarios</span>}
                 </Link>
-              )}
-            </div>
+
+                {esSuperAdmin && (
+                  <Link
+                    href="/app/empresas"
+                    title={collapsed ? 'Empresas' : undefined}
+                    className={linkClass(isActive('/app/empresas'))}
+                  >
+                    <Building2 className="w-4 h-4 shrink-0" />
+                    {!collapsed && <span className="truncate">Empresas</span>}
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
-        )}
+          );
+        })()}
 
       </nav>
     </aside>
