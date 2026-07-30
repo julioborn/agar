@@ -41,7 +41,7 @@ export default function AccesosRapidos({ esLector }: Props) {
   ];
 
   const links = seccion === 'agricultura' ? agricultura : seccion === 'ganaderia' ? ganaderia : [];
-  const acento = seccion === 'ganaderia' ? 'amber' : 'green';
+  const acento = seccion === 'ganaderia' ? 'carne' : 'green';
 
   return (
     <div>
@@ -78,12 +78,12 @@ export default function AccesosRapidos({ esLector }: Props) {
           className={cn(
             'flex items-center gap-3 sm:gap-4 rounded-2xl border p-4 sm:p-5 transition-all duration-200 text-left',
             seccion === 'ganaderia'
-              ? 'bg-gradient-to-br from-amber-800 to-amber-600 border-amber-700 shadow-lg shadow-amber-700/20'
-              : 'bg-white border-zinc-100 hover:border-amber-400/40 hover:shadow-md',
+              ? 'bg-gradient-to-br from-[#7a2020] to-[#a83a3a] border-[#7a2020] shadow-lg shadow-[#7a2020]/25'
+              : 'bg-white border-zinc-100 hover:border-[#a83a3a]/30 hover:shadow-md',
           )}
         >
-          <div className={cn('w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0', seccion === 'ganaderia' ? 'bg-white/15' : 'bg-amber-50')}>
-            <Beef className={cn('w-5 h-5 sm:w-6 sm:h-6', seccion === 'ganaderia' ? 'text-white' : 'text-amber-600')} />
+          <div className={cn('w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0', seccion === 'ganaderia' ? 'bg-white/15' : 'bg-[#a83a3a]/10')}>
+            <Beef className={cn('w-5 h-5 sm:w-6 sm:h-6', seccion === 'ganaderia' ? 'text-white' : 'text-[#a83a3a]')} />
           </div>
           <div className="flex-1 min-w-0">
             <p className={cn('font-bold text-sm sm:text-base', seccion === 'ganaderia' ? 'text-white' : 'text-zinc-800')}>Ganadería</p>
@@ -103,13 +103,13 @@ export default function AccesosRapidos({ esLector }: Props) {
                 link.primary
                   ? acento === 'green'
                     ? 'bg-[#006836] border-[#006836] hover:bg-[#005228] shadow-sm'
-                    : 'bg-amber-600 border-amber-600 hover:bg-amber-700 shadow-sm'
+                    : 'bg-[#a83a3a] border-[#a83a3a] hover:bg-[#8f2f2f] shadow-sm'
                   : cn(
                       'bg-white border-zinc-100 hover:shadow-sm',
-                      acento === 'green' ? 'hover:border-[#006836]/30' : 'hover:border-amber-400/40',
+                      acento === 'green' ? 'hover:border-[#006836]/30' : 'hover:border-[#a83a3a]/30',
                     ),
               )}>
-                <link.icon className={cn('w-5 h-5', link.primary ? 'text-white' : acento === 'green' ? 'text-[#006836]' : 'text-amber-600')} />
+                <link.icon className={cn('w-5 h-5', link.primary ? 'text-white' : acento === 'green' ? 'text-[#006836]' : 'text-[#a83a3a]')} />
                 <div className="mt-6">
                   <p className={cn('font-semibold text-sm', link.primary ? 'text-white' : 'text-zinc-800')}>{link.title}</p>
                   <p className={cn('text-xs mt-0.5', link.primary ? 'text-white/60' : 'text-zinc-400')}>{link.subtitle}</p>

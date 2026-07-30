@@ -77,12 +77,12 @@ export default async function DashboardPage() {
     <div className="max-w-5xl mx-auto space-y-6">
 
       {/* ── Encabezado ───────────────────────────────────────────────── */}
-      <div className="rounded-2xl bg-gradient-to-br from-[#004d24] via-[#005f30] to-[#006836] p-6 sm:p-8 text-white relative overflow-hidden shadow-lg shadow-[#006836]/25 border border-white/5">
+      <div className="rounded-2xl bg-gradient-to-br from-zinc-950 via-zinc-900 to-black p-6 sm:p-8 text-white relative overflow-hidden shadow-lg shadow-black/40 border border-white/5">
 
         {/* Anillos decorativos */}
         <div className="absolute -right-14 -top-14 w-60 h-60 rounded-full border border-white/10 pointer-events-none" />
         <div className="absolute -right-7 -top-7 w-44 h-44 rounded-full border border-white/[0.06] pointer-events-none" />
-        <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-black/10 pointer-events-none" />
+        <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-black/20 pointer-events-none" />
         <div className="absolute right-20 bottom-2 w-16 h-16 rounded-full bg-white/5 pointer-events-none" />
 
         {/* Ícono decorativo de fondo */}
@@ -107,7 +107,6 @@ export default async function DashboardPage() {
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight">{empresa.nombre}</h1>
-              <p className="text-white/50 text-sm mt-0.5 font-medium">Panel de gestión agropecuaria</p>
             </div>
           </div>
         </div>
