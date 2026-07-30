@@ -7,7 +7,7 @@ import {
   Sprout, ShoppingCart, AlertTriangle, ArrowRight, CircleDollarSign, Building2,
 } from 'lucide-react';
 import { Money } from '@/lib/currency-context';
-import AccesosRapidos from './accesos-rapidos';
+import PanelInicio from './panel-inicio';
 
 const ROL_LABEL: Record<string, string> = {
   super_admin:     'Super Administrador',
@@ -74,32 +74,8 @@ export default async function DashboardPage() {
   const num = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-
-      {/* ── Encabezado ───────────────────────────────────────────────── */}
-      <div className="rounded-2xl bg-[#006836] p-6 sm:p-8 text-white relative overflow-hidden shadow-md shadow-[#006836]/20">
-
-        <div className="relative">
-          {/* Rol + fecha */}
-          <div className="flex items-center gap-2 mb-5">
-            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/15 text-white tracking-wide border border-white/10">
-              {ROL_LABEL[rol] ?? rol}
-            </span>
-            <span className="text-white/30 text-xs">·</span>
-            <span className="text-white/60 text-xs">{fechaLabel}</span>
-          </div>
-
-          {/* Empresa: avatar + nombre */}
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center flex-shrink-0 shadow-inner">
-              <Building2 className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight text-white">{empresa.nombre}</h1>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="max-w-5xl mx-auto">
+    <PanelInicio esLector={esLector} empresaNombre={empresa.nombre} rolLabel={ROL_LABEL[rol] ?? rol} fechaLabel={fechaLabel}>
 
       {/* ── KPI Cards ────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -205,9 +181,7 @@ export default async function DashboardPage() {
 
       </div>
 
-      {/* ── Accesos rápidos ───────────────────────────────────────────── */}
-      <AccesosRapidos esLector={esLector} />
-
+    </PanelInicio>
     </div>
   );
 }
