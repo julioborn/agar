@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
-import { Package, Wrench, TrendingUp } from 'lucide-react';
+import { Package, Wrench, TrendingUp, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/lib/currency-context';
 import ExportButtons, { ExportColumn } from '@/components/export-buttons';
@@ -103,16 +103,19 @@ export default function InsumosLaboresReport({ rias, insumos, labores, campanias
     return new Set(rias.filter((r) => r.campania_id === campaniaFiltro).map((r) => r.id));
   }, [rias, campaniaFiltro]);
 
+  const riaInfoMap = useMemo(() => new Map(rias.map((r) => [r.id, r])), [rias]);
+
   // ── Insumos agrupados por producto ───────────────────────────────────────────
   const insumosPorProducto = useMemo(() => {
     const map = new Map<string, {
-      nombre: string; unidad: string; categoria: string;
+      id: string; nombre: string; unidad: string; categoria: string;
       cantidadTotal: number; costoTotal: number; usos: number;
     }>();
     for (const i of insumos) {
       if (!riaIdsFiltrados.has(i.remito_id)) continue;
       const id = i.producto?.id ?? 'sin-producto';
       const g = map.get(id) ?? {
+        id,
         nombre: i.producto?.nombre ?? '—',
         unidad: i.producto?.unidad_base ?? '',
         categoria: i.producto?.categoria ?? '',
@@ -128,22 +131,79 @@ export default function InsumosLaboresReport({ rias, insumos, labores, campanias
     return Array.from(map.values()).sort((a, b) => b.costoTotal - a.costoTotal);
   }, [insumos, riaIdsFiltrados]);
 
-  // ── Labores agrupadas por tipo ────────────────────────────────────────────────
+  // ── Labores agrupadas por tipo (la "cantidad" mostrada son las hectáreas
+  // trabajadas, tomadas de la superficie afectada del RIA de cada uso) ────────
   const laboresPorTipo = useMemo(() => {
     const map = new Map<string, {
-      nombre: string; cantidadTotal: number; costoTotal: number; usos: number;
+      nombre: string; hectareasTotal: number; costoTotal: number; usos: number;
     }>();
     for (const l of labores) {
       if (!riaIdsFiltrados.has(l.remito_id)) continue;
       const key = l.tipo_labor_nombre ?? l.descripcion ?? 'Sin tipo';
-      const g = map.get(key) ?? { nombre: key, cantidadTotal: 0, costoTotal: 0, usos: 0 };
-      g.cantidadTotal += Number(l.cantidad);
+      const g = map.get(key) ?? { nombre: key, hectareasTotal: 0, costoTotal: 0, usos: 0 };
+      const ria = riaInfoMap.get(l.remito_id);
+      g.hectareasTotal += Number(ria?.superficie_afectada ?? 0);
       g.costoTotal += Number(l.subtotal);
       g.usos += 1;
       map.set(key, g);
     }
     return Array.from(map.values()).sort((a, b) => b.costoTotal - a.costoTotal);
-  }, [labores, riaIdsFiltrados]);
+  }, [labores, riaIdsFiltrados, riaInfoMap]);
+
+  // ── Drill-down: lotes donde se usó un insumo/labor puntual ──────────────────
+  const [productoSeleccionado, setProductoSeleccionado] = useState('');
+  const [laborSeleccionada, setLaborSeleccionada] = useState('');
+
+  const lotesPorProducto = useMemo(() => {
+    if (!productoSeleccionado) return [];
+    const map = new Map<string, {
+      loteNombre: string; campoNombre: string; cultivo: string;
+      cantidad: number; costo: number; usos: number;
+    }>();
+    for (const i of insumos) {
+      if (!riaIdsFiltrados.has(i.remito_id)) continue;
+      if ((i.producto?.id ?? 'sin-producto') !== productoSeleccionado) continue;
+      const ria = riaInfoMap.get(i.remito_id);
+      const loteId = ria?.lote_id ?? 'sin-lote';
+      const g = map.get(loteId) ?? {
+        loteNombre: ria?.lote?.nombre ?? '—',
+        campoNombre: ria?.lote?.campo?.nombre ?? '—',
+        cultivo: ria?.cultivo_descripcion ?? '—',
+        cantidad: 0, costo: 0, usos: 0,
+      };
+      g.cantidad += Number(i.cantidad);
+      g.costo += Number(i.subtotal);
+      g.usos += 1;
+      map.set(loteId, g);
+    }
+    return Array.from(map.values()).sort((a, b) => b.costo - a.costo);
+  }, [insumos, productoSeleccionado, riaIdsFiltrados, riaInfoMap]);
+
+  const lotesPorLabor = useMemo(() => {
+    if (!laborSeleccionada) return [];
+    const map = new Map<string, {
+      loteNombre: string; campoNombre: string; cultivo: string;
+      hectareas: number; costo: number; usos: number;
+    }>();
+    for (const l of labores) {
+      if (!riaIdsFiltrados.has(l.remito_id)) continue;
+      const key = l.tipo_labor_nombre ?? l.descripcion ?? 'Sin tipo';
+      if (key !== laborSeleccionada) continue;
+      const ria = riaInfoMap.get(l.remito_id);
+      const loteId = ria?.lote_id ?? 'sin-lote';
+      const g = map.get(loteId) ?? {
+        loteNombre: ria?.lote?.nombre ?? '—',
+        campoNombre: ria?.lote?.campo?.nombre ?? '—',
+        cultivo: ria?.cultivo_descripcion ?? '—',
+        hectareas: 0, costo: 0, usos: 0,
+      };
+      g.hectareas += Number(ria?.superficie_afectada ?? 0);
+      g.costo += Number(l.subtotal);
+      g.usos += 1;
+      map.set(loteId, g);
+    }
+    return Array.from(map.values()).sort((a, b) => b.costo - a.costo);
+  }, [labores, laborSeleccionada, riaIdsFiltrados, riaInfoMap]);
 
   const totalInsumos = insumosPorProducto.reduce((acc, i) => acc + i.costoTotal, 0);
   const totalLabores = laboresPorTipo.reduce((acc, l) => acc + l.costoTotal, 0);
@@ -171,7 +231,7 @@ export default function InsumosLaboresReport({ rias, insumos, labores, campanias
 
   const exportDataLabores = useMemo(() => laboresPorTipo.map((l) => ({
     nombre: l.nombre,
-    cantidadTotal: l.cantidadTotal,
+    hectareasTotal: l.hectareasTotal,
     costoTotal: l.costoTotal,
     usos: l.usos,
   })), [laboresPorTipo]);
@@ -187,8 +247,26 @@ export default function InsumosLaboresReport({ rias, insumos, labores, campanias
 
   const exportColumnsLabores: ExportColumn[] = [
     { header: 'Labor', key: 'nombre', width: 24 },
-    { header: 'Cantidad total', key: 'cantidadTotal', width: 14, align: 'right', format: (v) => qty.format(v) },
+    { header: 'Hectáreas', key: 'hectareasTotal', width: 14, align: 'right', format: (v) => `${qty.format(v)} ha` },
     { header: 'Costo total', key: 'costoTotal', width: 16, align: 'right', format: (v) => formatMoney(v), total: true },
+    { header: 'Usos', key: 'usos', width: 8, align: 'right' },
+  ];
+
+  const exportColumnsLotesProducto: ExportColumn[] = [
+    { header: 'Lote', key: 'loteNombre', width: 20 },
+    { header: 'Campo', key: 'campoNombre', width: 20 },
+    { header: 'Cultivo', key: 'cultivo', width: 18 },
+    { header: 'Cantidad', key: 'cantidad', width: 14, align: 'right', format: (v) => qty.format(v) },
+    { header: 'Costo', key: 'costo', width: 16, align: 'right', format: (v) => formatMoney(v), total: true },
+    { header: 'Usos', key: 'usos', width: 8, align: 'right' },
+  ];
+
+  const exportColumnsLotesLabor: ExportColumn[] = [
+    { header: 'Lote', key: 'loteNombre', width: 20 },
+    { header: 'Campo', key: 'campoNombre', width: 20 },
+    { header: 'Cultivo', key: 'cultivo', width: 18 },
+    { header: 'Hectáreas', key: 'hectareas', width: 14, align: 'right', format: (v) => `${qty.format(v)} ha` },
+    { header: 'Costo', key: 'costo', width: 16, align: 'right', format: (v) => formatMoney(v), total: true },
     { header: 'Usos', key: 'usos', width: 8, align: 'right' },
   ];
 
@@ -311,7 +389,7 @@ export default function InsumosLaboresReport({ rias, insumos, labores, campanias
                     ) : (
                       <>
                         <th className="px-4 py-3 text-xs font-medium text-zinc-400">Labor</th>
-                        <th className="px-4 py-3 text-xs font-medium text-zinc-400 text-right">Cantidad total</th>
+                        <th className="px-4 py-3 text-xs font-medium text-zinc-400 text-right">Hectáreas</th>
                         <th className="px-4 py-3 text-xs font-medium text-zinc-400 text-right">Costo total</th>
                         <th className="px-4 py-3 text-xs font-medium text-zinc-400 text-right">Usos</th>
                       </>
@@ -321,7 +399,11 @@ export default function InsumosLaboresReport({ rias, insumos, labores, campanias
                 <tbody className="divide-y divide-zinc-100">
                   {tab === 'insumos'
                     ? insumosPorProducto.map((i, idx) => (
-                        <tr key={idx} className="hover:bg-zinc-50">
+                        <tr
+                          key={idx}
+                          onClick={() => setProductoSeleccionado(i.id)}
+                          className={cn('cursor-pointer transition-colors', i.id === productoSeleccionado ? 'bg-[#006836]/5' : 'hover:bg-zinc-50')}
+                        >
                           <td className="px-4 py-3 font-medium text-zinc-800">{i.nombre}</td>
                           <td className="px-4 py-3 text-zinc-500 text-xs capitalize">{i.categoria || '—'}</td>
                           <td className="px-4 py-3 text-right text-zinc-700">{qty.format(i.cantidadTotal)} {i.unidad}</td>
@@ -330,9 +412,13 @@ export default function InsumosLaboresReport({ rias, insumos, labores, campanias
                         </tr>
                       ))
                     : laboresPorTipo.map((l, idx) => (
-                        <tr key={idx} className="hover:bg-zinc-50">
+                        <tr
+                          key={idx}
+                          onClick={() => setLaborSeleccionada(l.nombre)}
+                          className={cn('cursor-pointer transition-colors', l.nombre === laborSeleccionada ? 'bg-[#006836]/5' : 'hover:bg-zinc-50')}
+                        >
                           <td className="px-4 py-3 font-medium text-zinc-800">{l.nombre}</td>
-                          <td className="px-4 py-3 text-right text-zinc-700">{qty.format(l.cantidadTotal)}</td>
+                          <td className="px-4 py-3 text-right text-zinc-700">{qty.format(l.hectareasTotal)} ha</td>
                           <td className="px-4 py-3 text-right font-semibold text-zinc-900">{formatMoney(l.costoTotal)}</td>
                           <td className="px-4 py-3 text-right text-zinc-400">{l.usos}</td>
                         </tr>
@@ -360,6 +446,140 @@ export default function InsumosLaboresReport({ rias, insumos, labores, campanias
           </div>
         </>
       )}
+
+      {/* Drill-down: lotes donde se usó un insumo/labor puntual */}
+      <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden shadow-sm">
+        <div className="px-5 py-3 border-b border-zinc-100 bg-zinc-50 flex flex-wrap items-center gap-3">
+          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide shrink-0">
+            {tab === 'insumos' ? 'Lotes donde se usó un insumo' : 'Lotes donde se usó una labor'}
+          </p>
+          {tab === 'insumos' ? (
+            <select
+              value={productoSeleccionado}
+              onChange={(e) => setProductoSeleccionado(e.target.value)}
+              className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 bg-white ml-auto"
+            >
+              <option value="">Seleccioná un insumo...</option>
+              {insumosPorProducto.map((i) => (
+                <option key={i.id} value={i.id}>{i.nombre}</option>
+              ))}
+            </select>
+          ) : (
+            <select
+              value={laborSeleccionada}
+              onChange={(e) => setLaborSeleccionada(e.target.value)}
+              className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 bg-white ml-auto"
+            >
+              <option value="">Seleccioná una labor...</option>
+              {laboresPorTipo.map((l) => (
+                <option key={l.nombre} value={l.nombre}>{l.nombre}</option>
+              ))}
+            </select>
+          )}
+          {(tab === 'insumos' ? productoSeleccionado : laborSeleccionada) && (
+            <button
+              onClick={() => (tab === 'insumos' ? setProductoSeleccionado('') : setLaborSeleccionada(''))}
+              className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-red-500 transition-colors"
+            >
+              <X className="w-3 h-3" /> Limpiar
+            </button>
+          )}
+        </div>
+
+        {tab === 'insumos' ? (
+          !productoSeleccionado ? (
+            <div className="p-10 text-center">
+              <Package className="w-8 h-8 text-zinc-200 mx-auto mb-2" />
+              <p className="text-sm text-zinc-400">Elegí un insumo para ver en qué lotes se usó.</p>
+            </div>
+          ) : lotesPorProducto.length === 0 ? (
+            <div className="p-8 text-center"><p className="text-sm text-zinc-400">Sin usos registrados.</p></div>
+          ) : (
+            <div className="p-5 space-y-3">
+              <div className="overflow-x-auto border border-zinc-100 rounded-xl">
+                <table className="w-full text-sm">
+                  <thead className="bg-zinc-50 border-b border-zinc-100">
+                    <tr className="text-left">
+                      <th className="px-4 py-2.5 text-xs font-medium text-zinc-400">Lote</th>
+                      <th className="px-4 py-2.5 text-xs font-medium text-zinc-400">Campo</th>
+                      <th className="px-4 py-2.5 text-xs font-medium text-zinc-400">Cultivo</th>
+                      <th className="px-4 py-2.5 text-xs font-medium text-zinc-400 text-right">Cantidad</th>
+                      <th className="px-4 py-2.5 text-xs font-medium text-zinc-400 text-right">Costo</th>
+                      <th className="px-4 py-2.5 text-xs font-medium text-zinc-400 text-right">Usos</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-50">
+                    {lotesPorProducto.map((l, idx) => (
+                      <tr key={idx} className="hover:bg-zinc-50">
+                        <td className="px-4 py-3 font-medium text-zinc-800">{l.loteNombre}</td>
+                        <td className="px-4 py-3 text-zinc-500">{l.campoNombre}</td>
+                        <td className="px-4 py-3 text-zinc-500 text-xs">{l.cultivo}</td>
+                        <td className="px-4 py-3 text-right text-zinc-700">{qty.format(l.cantidad)}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-zinc-900">{formatMoney(l.costo)}</td>
+                        <td className="px-4 py-3 text-right text-zinc-400">{l.usos}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end">
+                <ExportButtons
+                  data={lotesPorProducto}
+                  columns={exportColumnsLotesProducto}
+                  filename={`insumo-${(insumosPorProducto.find((i) => i.id === productoSeleccionado)?.nombre ?? 'lotes').toLowerCase()}`}
+                  title={`Lotes · ${insumosPorProducto.find((i) => i.id === productoSeleccionado)?.nombre ?? ''}`}
+                />
+              </div>
+            </div>
+          )
+        ) : (
+          !laborSeleccionada ? (
+            <div className="p-10 text-center">
+              <Wrench className="w-8 h-8 text-zinc-200 mx-auto mb-2" />
+              <p className="text-sm text-zinc-400">Elegí una labor para ver en qué lotes se hizo.</p>
+            </div>
+          ) : lotesPorLabor.length === 0 ? (
+            <div className="p-8 text-center"><p className="text-sm text-zinc-400">Sin usos registrados.</p></div>
+          ) : (
+            <div className="p-5 space-y-3">
+              <div className="overflow-x-auto border border-zinc-100 rounded-xl">
+                <table className="w-full text-sm">
+                  <thead className="bg-zinc-50 border-b border-zinc-100">
+                    <tr className="text-left">
+                      <th className="px-4 py-2.5 text-xs font-medium text-zinc-400">Lote</th>
+                      <th className="px-4 py-2.5 text-xs font-medium text-zinc-400">Campo</th>
+                      <th className="px-4 py-2.5 text-xs font-medium text-zinc-400">Cultivo</th>
+                      <th className="px-4 py-2.5 text-xs font-medium text-zinc-400 text-right">Hectáreas</th>
+                      <th className="px-4 py-2.5 text-xs font-medium text-zinc-400 text-right">Costo</th>
+                      <th className="px-4 py-2.5 text-xs font-medium text-zinc-400 text-right">Usos</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-50">
+                    {lotesPorLabor.map((l, idx) => (
+                      <tr key={idx} className="hover:bg-zinc-50">
+                        <td className="px-4 py-3 font-medium text-zinc-800">{l.loteNombre}</td>
+                        <td className="px-4 py-3 text-zinc-500">{l.campoNombre}</td>
+                        <td className="px-4 py-3 text-zinc-500 text-xs">{l.cultivo}</td>
+                        <td className="px-4 py-3 text-right text-zinc-700">{qty.format(l.hectareas)} ha</td>
+                        <td className="px-4 py-3 text-right font-semibold text-zinc-900">{formatMoney(l.costo)}</td>
+                        <td className="px-4 py-3 text-right text-zinc-400">{l.usos}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end">
+                <ExportButtons
+                  data={lotesPorLabor}
+                  columns={exportColumnsLotesLabor}
+                  filename={`labor-${laborSeleccionada.toLowerCase()}`}
+                  title={`Lotes · ${laborSeleccionada}`}
+                />
+              </div>
+            </div>
+          )
+        )}
+      </div>
     </div>
   );
 }
