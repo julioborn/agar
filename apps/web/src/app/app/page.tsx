@@ -79,17 +79,6 @@ export default async function DashboardPage() {
       {/* ── Encabezado ───────────────────────────────────────────────── */}
       <div className="rounded-2xl bg-[#006836] p-6 sm:p-8 text-white relative overflow-hidden shadow-md shadow-[#006836]/20">
 
-        {/* Anillos decorativos */}
-        <div className="absolute -right-14 -top-14 w-60 h-60 rounded-full border border-white/10 pointer-events-none" />
-        <div className="absolute -right-7 -top-7 w-44 h-44 rounded-full border border-white/[0.08] pointer-events-none" />
-        <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-black/10 pointer-events-none" />
-        <div className="absolute right-20 bottom-2 w-16 h-16 rounded-full bg-white/5 pointer-events-none" />
-
-        {/* Ícono decorativo de fondo */}
-        <div className="absolute right-5 bottom-0 opacity-[0.06] pointer-events-none">
-          <Sprout className="w-52 h-52" />
-        </div>
-
         <div className="relative">
           {/* Rol + fecha */}
           <div className="flex items-center gap-2 mb-5">
