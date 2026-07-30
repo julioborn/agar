@@ -77,36 +77,36 @@ export default async function DashboardPage() {
     <div className="max-w-5xl mx-auto space-y-6">
 
       {/* ── Encabezado ───────────────────────────────────────────────── */}
-      <div className="rounded-2xl bg-gradient-to-br from-zinc-950 via-zinc-900 to-black p-6 sm:p-8 text-white relative overflow-hidden shadow-lg shadow-black/40 border border-white/5">
+      <div className="rounded-2xl bg-white p-6 sm:p-8 relative overflow-hidden shadow-sm border-2 border-zinc-900">
 
         {/* Anillos decorativos */}
-        <div className="absolute -right-14 -top-14 w-60 h-60 rounded-full border border-white/10 pointer-events-none" />
-        <div className="absolute -right-7 -top-7 w-44 h-44 rounded-full border border-white/[0.06] pointer-events-none" />
-        <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-black/20 pointer-events-none" />
-        <div className="absolute right-20 bottom-2 w-16 h-16 rounded-full bg-white/5 pointer-events-none" />
+        <div className="absolute -right-14 -top-14 w-60 h-60 rounded-full border border-zinc-900/10 pointer-events-none" />
+        <div className="absolute -right-7 -top-7 w-44 h-44 rounded-full border border-zinc-900/[0.06] pointer-events-none" />
+        <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-zinc-900/[0.03] pointer-events-none" />
+        <div className="absolute right-20 bottom-2 w-16 h-16 rounded-full bg-zinc-900/[0.03] pointer-events-none" />
 
         {/* Ícono decorativo de fondo */}
         <div className="absolute right-5 bottom-0 opacity-[0.04] pointer-events-none">
-          <Sprout className="w-52 h-52" />
+          <Sprout className="w-52 h-52 text-zinc-900" />
         </div>
 
         <div className="relative">
           {/* Rol + fecha */}
           <div className="flex items-center gap-2 mb-5">
-            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/15 text-white/90 tracking-wide border border-white/10">
+            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-zinc-900 text-white tracking-wide">
               {ROL_LABEL[rol] ?? rol}
             </span>
-            <span className="text-white/30 text-xs">·</span>
-            <span className="text-white/50 text-xs">{fechaLabel}</span>
+            <span className="text-zinc-300 text-xs">·</span>
+            <span className="text-zinc-400 text-xs">{fechaLabel}</span>
           </div>
 
           {/* Empresa: avatar + nombre */}
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center flex-shrink-0 shadow-inner">
-              <Building2 className="w-7 h-7 text-white/70" />
+            <div className="w-14 h-14 rounded-2xl bg-zinc-900 flex items-center justify-center flex-shrink-0 shadow-inner">
+              <Building2 className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight">{empresa.nombre}</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight text-zinc-900">{empresa.nombre}</h1>
             </div>
           </div>
         </div>
