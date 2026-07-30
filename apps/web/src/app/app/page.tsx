@@ -77,23 +77,26 @@ export default async function DashboardPage() {
     <div className="max-w-5xl mx-auto space-y-6">
 
       {/* ── Encabezado ───────────────────────────────────────────────── */}
-      <div className="rounded-2xl bg-white p-6 sm:p-8 relative overflow-hidden shadow-sm border-2 border-zinc-900">
+      <div className="rounded-2xl bg-white pl-7 pr-6 py-6 sm:pl-9 sm:pr-8 sm:py-8 relative overflow-hidden shadow-sm border border-zinc-100">
+
+        {/* Franja de acento */}
+        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-[#006836] to-[#00381f]" />
 
         {/* Anillos decorativos */}
-        <div className="absolute -right-14 -top-14 w-60 h-60 rounded-full border border-zinc-900/10 pointer-events-none" />
-        <div className="absolute -right-7 -top-7 w-44 h-44 rounded-full border border-zinc-900/[0.06] pointer-events-none" />
-        <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-zinc-900/[0.03] pointer-events-none" />
-        <div className="absolute right-20 bottom-2 w-16 h-16 rounded-full bg-zinc-900/[0.03] pointer-events-none" />
+        <div className="absolute -right-14 -top-14 w-60 h-60 rounded-full border border-[#006836]/10 pointer-events-none" />
+        <div className="absolute -right-7 -top-7 w-44 h-44 rounded-full border border-[#006836]/[0.06] pointer-events-none" />
+        <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-[#006836]/[0.04] pointer-events-none" />
+        <div className="absolute right-20 bottom-2 w-16 h-16 rounded-full bg-[#006836]/[0.04] pointer-events-none" />
 
         {/* Ícono decorativo de fondo */}
-        <div className="absolute right-5 bottom-0 opacity-[0.04] pointer-events-none">
-          <Sprout className="w-52 h-52 text-zinc-900" />
+        <div className="absolute right-5 bottom-0 opacity-[0.05] pointer-events-none">
+          <Sprout className="w-52 h-52 text-[#006836]" />
         </div>
 
         <div className="relative">
           {/* Rol + fecha */}
           <div className="flex items-center gap-2 mb-5">
-            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-zinc-900 text-white tracking-wide">
+            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#006836]/10 text-[#006836] tracking-wide">
               {ROL_LABEL[rol] ?? rol}
             </span>
             <span className="text-zinc-300 text-xs">·</span>
@@ -102,8 +105,8 @@ export default async function DashboardPage() {
 
           {/* Empresa: avatar + nombre */}
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-zinc-900 flex items-center justify-center flex-shrink-0 shadow-inner">
-              <Building2 className="w-7 h-7 text-white" />
+            <div className="w-14 h-14 rounded-2xl bg-[#006836]/10 flex items-center justify-center flex-shrink-0">
+              <Building2 className="w-7 h-7 text-[#006836]" />
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight text-zinc-900">{empresa.nombre}</h1>
