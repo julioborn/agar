@@ -125,6 +125,9 @@ function isActiveHref(pathname: string, href: string, exact = false) {
   return exact ? pathname === href : pathname.startsWith(href);
 }
 
+// Estas secciones arrancan siempre desplegadas
+const SECCIONES_SIEMPRE_ABIERTAS = ['Estructura', 'Insumos', 'Operaciones'];
+
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -147,12 +150,13 @@ export default function SidebarNav({
   const pathname = usePathname();
 
   const [openSections, setOpenSections] = useState<Set<string>>(() => {
+    const iniciales = new Set(SECCIONES_SIEMPRE_ABIERTAS);
     const activa = navSections.find((s) => s.items.some((item) => isActiveHref(pathname, item.href, item.exact)));
-    if (activa) return new Set([activa.label]);
+    if (activa) iniciales.add(activa.label);
     if (isActiveHref(pathname, '/app/usuarios') || isActiveHref(pathname, '/app/empresas')) {
-      return new Set(['Administración']);
+      iniciales.add('Administración');
     }
-    return new Set();
+    return iniciales;
   });
 
   function isActive(href: string, exact = false) {
