@@ -4,10 +4,10 @@ import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 import { cn } from '@/lib/utils';
 import {
-  Sprout, Package, ShoppingCart, AlertTriangle,
-  MapPin, Warehouse, ArrowRight, TrendingUp, CircleDollarSign, FileUp, Building2, FileText, BarChart3,
+  Sprout, ShoppingCart, AlertTriangle, ArrowRight, CircleDollarSign, Building2,
 } from 'lucide-react';
 import { Money } from '@/lib/currency-context';
+import AccesosRapidos from './accesos-rapidos';
 
 const ROL_LABEL: Record<string, string> = {
   super_admin:     'Super Administrador',
@@ -218,108 +218,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Accesos rápidos ───────────────────────────────────────────── */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp className="w-4 h-4 text-[#006836]" />
-          <h2 className="text-md font-semibold text-zinc-500 tracking-wider">Accesos rápidos</h2>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-
-          {!esLector && (
-            <Link href="/app/ria/nuevo" className="group col-span-2 sm:col-span-1">
-              <div className="bg-[#006836] rounded-2xl border border-[#006836] p-5 flex flex-col justify-between hover:bg-[#005228] transition-all duration-200 shadow-sm">
-                <FileText className="w-5 h-5 text-white" />
-                <div className="mt-6">
-                  <p className="text-white font-semibold text-sm">Nuevo RIA</p>
-                  <p className="text-white/60 text-xs mt-0.5">Remito interno agrícola</p>
-                </div>
-              </div>
-            </Link>
-          )}
-
-          {!esLector && (
-            <Link href="/app/compras/importar" className="group col-span-2 sm:col-span-1">
-              <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
-                <FileUp className="w-5 h-5 text-[#006836]" />
-                <div className="mt-6">
-                  <p className="text-zinc-800 font-semibold text-sm">Importar factura</p>
-                  <p className="text-zinc-400 text-xs mt-0.5">PDF o Excel con IA</p>
-                </div>
-              </div>
-            </Link>
-          )}
-
-          {!esLector && (
-            <Link href="/app/compras/nueva" className="group">
-              <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
-                <ShoppingCart className="w-5 h-5 text-[#006836]" />
-                <div className="mt-6">
-                  <p className="text-zinc-800 font-semibold text-sm">Registrar compra</p>
-                  <p className="text-zinc-400 text-xs mt-0.5">Carga manual</p>
-                </div>
-              </div>
-            </Link>
-          )}
-
-          <Link href="/app/cultivos" className="group">
-            <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
-              <Sprout className="w-5 h-5 text-[#006836]" />
-              <div className="mt-6">
-                <p className="text-zinc-800 font-semibold text-sm">Cultivos</p>
-                <p className="text-zinc-400 text-xs mt-0.5">Ver campañas</p>
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/app/campos" className="group">
-            <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
-              <MapPin className="w-5 h-5 text-[#006836]" />
-              <div className="mt-6">
-                <p className="text-zinc-800 font-semibold text-sm">Campos</p>
-                <p className="text-zinc-400 text-xs mt-0.5">Lotes y mapas</p>
-              </div>
-            </div>
-          </Link>
-
-          {!esLector && (
-            <Link href="/app/stock" className="group">
-              <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
-                <Warehouse className="w-5 h-5 text-[#006836]" />
-                <div className="mt-6">
-                  <p className="text-zinc-800 font-semibold text-sm">Stock</p>
-                  <p className="text-zinc-400 text-xs mt-0.5">Inventario actual</p>
-                </div>
-              </div>
-            </Link>
-          )}
-
-          {!esLector && (
-            <Link href="/app/productos" className="group">
-              <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
-                <Package className="w-5 h-5 text-[#006836]" />
-                <div className="mt-6">
-                  <p className="text-zinc-800 font-semibold text-sm">Productos</p>
-                  <p className="text-zinc-400 text-xs mt-0.5">Catálogo e insumos</p>
-                </div>
-              </div>
-            </Link>
-          )}
-
-          {esLector && (
-            <Link href="/app/reportes" className="group">
-              <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col justify-between hover:border-[#006836]/30 hover:shadow-sm transition-all duration-200">
-                <BarChart3 className="w-5 h-5 text-[#006836]" />
-                <div className="mt-6">
-                  <p className="text-zinc-800 font-semibold text-sm">Reportes</p>
-                  <p className="text-zinc-400 text-xs mt-0.5">Márgenes y análisis</p>
-                </div>
-              </div>
-            </Link>
-          )}
-
-        </div>
-      </div>
+      <AccesosRapidos esLector={esLector} />
 
     </div>
   );
