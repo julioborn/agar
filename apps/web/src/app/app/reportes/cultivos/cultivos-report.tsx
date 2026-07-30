@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
-import { Sprout } from 'lucide-react';
+import { Sprout, Package, Wrench, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/lib/currency-context';
 import ExportButtons, { ExportColumn } from '@/components/export-buttons';
@@ -20,10 +20,29 @@ interface CultivoRow {
   campania_id: string | null;
   lote: { id: string; nombre: string; hectareas: number | null; campo_id: string; campo: { nombre: string } | null } | null;
 }
+interface InsumoDetalle {
+  remito_id: string;
+  cultivo_id: string | null;
+  cantidad: number;
+  subtotal: number;
+  producto: { id: string; nombre: string; unidad_base: string; categoria: string } | null;
+}
+interface LaborDetalle {
+  remito_id: string;
+  cultivo_id: string | null;
+  tipo_labor_nombre: string | null;
+  descripcion: string;
+  cantidad: number;
+  subtotal: number;
+}
 interface Props {
   cultivos: CultivoRow[];
   campanias: { id: string; nombre: string }[];
+  insumos: InsumoDetalle[];
+  labores: LaborDetalle[];
 }
+
+const qty = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
 
 const fmt = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 1 });
 
@@ -53,7 +72,7 @@ function CustomYTick({ x, y, payload }: any) {
   );
 }
 
-export default function CultivosReport({ cultivos, campanias }: Props) {
+export default function CultivosReport({ cultivos, campanias, insumos, labores }: Props) {
   const { formatMoney, currency, usdRate } = useCurrency();
 
   function fmtAxis(v: number) {
@@ -87,6 +106,7 @@ export default function CultivosReport({ cultivos, campanias }: Props) {
   // Agrupar por tipo de cultivo
   const grupos = useMemo(() => {
     const map = new Map<string, {
+      key: string;
       label: string;
       lotes: number;
       hectareas: number;
@@ -94,27 +114,14 @@ export default function CultivosReport({ cultivos, campanias }: Props) {
       costo: number;
       margen: number;
       estados: Record<string, number>;
+      cultivoIds: string[];
+      lotesInfo: { id: string; nombre: string; campoNombre: string }[];
     }>();
 
     for (const c of cultivosFiltrados) {
       const raw = (c.cultivo ?? '').trim();
-      if (!raw) {
-        // sin cultivo
-        const key = 'sin-cultivo';
-        const label = 'Sin cultivo';
-        const g = map.get(key) ?? { label, lotes: 0, hectareas: 0, ingreso: 0, costo: 0, margen: 0, estados: {} };
-        const ha = c.lote?.hectareas ?? 0;
-        const ingreso = Number(c.ingreso_bruto_ars ?? 0);
-        const costo = Number(c.costo_directo_ars ?? 0);
-        g.lotes += 1; g.hectareas += ha; g.ingreso += ingreso; g.costo += costo; g.margen += ingreso - costo;
-        g.estados[c.estado] = (g.estados[c.estado] ?? 0) + 1;
-        map.set(key, g);
-        continue;
-      }
-      // Normalizar: split por coma, trim, filtrar vacíos, ordenar → key estable
-      const tokens = raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean).sort();
-      const key = tokens.join(', ');
-      const label = raw.trim().toUpperCase();
+      const key = raw ? raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean).sort().join(', ') : 'sin-cultivo';
+      const label = raw ? raw.trim().toUpperCase() : 'Sin cultivo';
 
       const ha = c.lote?.hectareas ?? 0;
       const ingreso = Number(c.ingreso_bruto_ars ?? 0);
@@ -122,6 +129,7 @@ export default function CultivosReport({ cultivos, campanias }: Props) {
       const margen = ingreso - costo;
 
       const g = map.get(key) ?? {
+        key,
         label,
         lotes: 0,
         hectareas: 0,
@@ -129,6 +137,8 @@ export default function CultivosReport({ cultivos, campanias }: Props) {
         costo: 0,
         margen: 0,
         estados: {},
+        cultivoIds: [],
+        lotesInfo: [],
       };
 
       g.lotes += 1;
@@ -137,12 +147,85 @@ export default function CultivosReport({ cultivos, campanias }: Props) {
       g.costo += costo;
       g.margen += margen;
       g.estados[c.estado] = (g.estados[c.estado] ?? 0) + 1;
+      g.cultivoIds.push(c.id);
+      if (c.lote && !g.lotesInfo.some((l) => l.id === c.lote!.id)) {
+        g.lotesInfo.push({ id: c.lote.id, nombre: c.lote.nombre, campoNombre: c.lote.campo?.nombre ?? '—' });
+      }
 
       map.set(key, g);
     }
 
     return Array.from(map.values()).sort((a, b) => b.margen - a.margen);
   }, [cultivosFiltrados]);
+
+  const [cultivoKeySeleccionado, setCultivoKeySeleccionado] = useState('');
+  const [loteSeleccionado, setLoteSeleccionado] = useState('');
+
+  const grupoSeleccionado = useMemo(() =>
+    grupos.find((g) => g.key === cultivoKeySeleccionado) ?? null,
+    [grupos, cultivoKeySeleccionado]);
+
+  const gruposOrdenAlfabetico = useMemo(() =>
+    [...grupos].sort((a, b) => a.label.localeCompare(b.label)),
+    [grupos]);
+
+  // IDs de cultivo (instancias lote+cultivo) dentro del alcance elegido
+  const cultivoIdsAlcance = useMemo(() => {
+    if (!grupoSeleccionado) return new Set<string>();
+    if (!loteSeleccionado) return new Set(grupoSeleccionado.cultivoIds);
+    const idsDelLote = cultivosFiltrados
+      .filter((c) => c.lote?.id === loteSeleccionado && grupoSeleccionado.cultivoIds.includes(c.id))
+      .map((c) => c.id);
+    return new Set(idsDelLote);
+  }, [grupoSeleccionado, loteSeleccionado, cultivosFiltrados]);
+
+  const [tabDetalle, setTabDetalle] = useState<'insumos' | 'labores'>('insumos');
+
+  const insumosPorProducto = useMemo(() => {
+    const map = new Map<string, { nombre: string; unidad: string; categoria: string; cantidadTotal: number; costoTotal: number; usos: number }>();
+    for (const i of insumos) {
+      if (!i.cultivo_id || !cultivoIdsAlcance.has(i.cultivo_id)) continue;
+      const id = i.producto?.id ?? 'sin-producto';
+      const g = map.get(id) ?? { nombre: i.producto?.nombre ?? '—', unidad: i.producto?.unidad_base ?? '', categoria: i.producto?.categoria ?? '', cantidadTotal: 0, costoTotal: 0, usos: 0 };
+      g.cantidadTotal += Number(i.cantidad);
+      g.costoTotal += Number(i.subtotal);
+      g.usos += 1;
+      map.set(id, g);
+    }
+    return Array.from(map.values()).sort((a, b) => b.costoTotal - a.costoTotal);
+  }, [insumos, cultivoIdsAlcance]);
+
+  const laboresPorTipo = useMemo(() => {
+    const map = new Map<string, { nombre: string; cantidadTotal: number; costoTotal: number; usos: number }>();
+    for (const l of labores) {
+      if (!l.cultivo_id || !cultivoIdsAlcance.has(l.cultivo_id)) continue;
+      const key = l.tipo_labor_nombre ?? l.descripcion ?? 'Sin tipo';
+      const g = map.get(key) ?? { nombre: key, cantidadTotal: 0, costoTotal: 0, usos: 0 };
+      g.cantidadTotal += Number(l.cantidad);
+      g.costoTotal += Number(l.subtotal);
+      g.usos += 1;
+      map.set(key, g);
+    }
+    return Array.from(map.values()).sort((a, b) => b.costoTotal - a.costoTotal);
+  }, [labores, cultivoIdsAlcance]);
+
+  const totalInsumosDetalle = insumosPorProducto.reduce((acc, i) => acc + i.costoTotal, 0);
+  const totalLaboresDetalle = laboresPorTipo.reduce((acc, l) => acc + l.costoTotal, 0);
+
+  const exportColumnsInsumosDetalle: ExportColumn[] = [
+    { header: 'Producto', key: 'nombre', width: 24 },
+    { header: 'Categoría', key: 'categoria', width: 16 },
+    { header: 'Unidad', key: 'unidad', width: 10 },
+    { header: 'Cantidad total', key: 'cantidadTotal', width: 14, align: 'right', format: (v) => qty.format(v) },
+    { header: 'Costo total', key: 'costoTotal', width: 16, align: 'right', format: (v) => formatMoney(v), total: true },
+    { header: 'Usos', key: 'usos', width: 8, align: 'right' },
+  ];
+  const exportColumnsLaboresDetalle: ExportColumn[] = [
+    { header: 'Labor', key: 'nombre', width: 24 },
+    { header: 'Cantidad total', key: 'cantidadTotal', width: 14, align: 'right', format: (v) => qty.format(v) },
+    { header: 'Costo total', key: 'costoTotal', width: 16, align: 'right', format: (v) => formatMoney(v), total: true },
+    { header: 'Usos', key: 'usos', width: 8, align: 'right' },
+  ];
 
   const totalHa = grupos.reduce((acc, g) => acc + g.hectareas, 0);
   const totalIngreso = grupos.reduce((acc, g) => acc + g.ingreso, 0);
@@ -290,8 +373,13 @@ export default function CultivosReport({ cultivos, campanias }: Props) {
             <tbody className="divide-y divide-zinc-100">
               {grupos.map((g, i) => {
                 const margenHa = g.hectareas > 0 ? g.margen / g.hectareas : null;
+                const seleccionada = g.key === cultivoKeySeleccionado;
                 return (
-                  <tr key={i} className="hover:bg-zinc-50">
+                  <tr
+                    key={i}
+                    onClick={() => { setCultivoKeySeleccionado(g.key); setLoteSeleccionado(''); }}
+                    className={cn('cursor-pointer transition-colors', seleccionada ? 'bg-[#006836]/5' : 'hover:bg-zinc-50')}
+                  >
                     <td className="px-4 py-3 font-medium text-zinc-800">{g.label}</td>
                     <td className="px-4 py-3 text-right text-zinc-400">{g.lotes}</td>
                     <td className="px-4 py-3 text-right text-zinc-500">
@@ -334,6 +422,161 @@ export default function CultivosReport({ cultivos, campanias }: Props) {
             </tfoot>
           </table>
         </div>
+      </div>
+
+      {/* Drill-down: insumos y labores de un cultivo, en todos sus lotes (o uno elegido) */}
+      <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden shadow-sm">
+        <div className="px-5 py-3 border-b border-zinc-100 bg-zinc-50 flex flex-wrap items-center gap-3">
+          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide shrink-0">Insumos y labores por cultivo</p>
+          <select
+            value={cultivoKeySeleccionado}
+            onChange={(e) => { setCultivoKeySeleccionado(e.target.value); setLoteSeleccionado(''); }}
+            className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 bg-white ml-auto"
+          >
+            <option value="">Seleccioná un cultivo...</option>
+            {gruposOrdenAlfabetico.map((g) => (
+              <option key={g.key} value={g.key}>{g.label} ({g.lotes} lote{g.lotes !== 1 ? 's' : ''})</option>
+            ))}
+          </select>
+          {cultivoKeySeleccionado && (
+            <button
+              onClick={() => { setCultivoKeySeleccionado(''); setLoteSeleccionado(''); }}
+              className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-red-500 transition-colors"
+            >
+              <X className="w-3 h-3" /> Limpiar
+            </button>
+          )}
+        </div>
+
+        {!grupoSeleccionado ? (
+          <div className="p-12 text-center">
+            <Sprout className="w-8 h-8 text-zinc-200 mx-auto mb-2" />
+            <p className="text-sm text-zinc-400">Elegí un cultivo para ver todos sus insumos y labores.</p>
+          </div>
+        ) : (
+          <div className="p-5 space-y-4">
+            {/* Lotes involucrados + filtro de lote */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-zinc-500">Lotes con {grupoSeleccionado.label}:</span>
+              <button
+                onClick={() => setLoteSeleccionado('')}
+                className={cn('px-2.5 py-1 rounded-full text-xs font-medium border transition-colors',
+                  !loteSeleccionado ? 'bg-[#006836] text-white border-[#006836]' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-50')}
+              >
+                Todos ({grupoSeleccionado.lotesInfo.length})
+              </button>
+              {grupoSeleccionado.lotesInfo.map((l) => (
+                <button
+                  key={l.id}
+                  onClick={() => setLoteSeleccionado(l.id)}
+                  className={cn('px-2.5 py-1 rounded-full text-xs font-medium border transition-colors',
+                    loteSeleccionado === l.id ? 'bg-[#006836] text-white border-[#006836]' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-50')}
+                >
+                  {l.nombre} <span className="opacity-60">· {l.campoNombre}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* KPIs del alcance */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <KpiCard label="Costo insumos (RIA)" value={formatMoney(totalInsumosDetalle)} color="bg-amber-400" />
+              <KpiCard label="Costo labores (RIA)" value={formatMoney(totalLaboresDetalle)} color="bg-orange-400" />
+              <KpiCard label="Lotes en el alcance" value={(loteSeleccionado ? 1 : grupoSeleccionado.lotesInfo.length).toString()} color="bg-blue-400" />
+            </div>
+
+            {/* Tabs insumos / labores */}
+            <div className="flex rounded-xl border border-zinc-200 overflow-hidden bg-white w-fit">
+              {([['insumos', Package, 'Insumos'], ['labores', Wrench, 'Labores']] as const).map(([id, Icon, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setTabDetalle(id)}
+                  className={cn('flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors',
+                    tabDetalle === id ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50')}
+                >
+                  <Icon className="w-4 h-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {(tabDetalle === 'insumos' ? insumosPorProducto.length === 0 : laboresPorTipo.length === 0) ? (
+              <div className="p-8 text-center">
+                <p className="text-sm text-zinc-400">Sin {tabDetalle === 'insumos' ? 'insumos' : 'labores'} cargados vía RIA para este alcance.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto border border-zinc-100 rounded-xl">
+                <table className="w-full text-sm">
+                  <thead className="bg-zinc-50 border-b border-zinc-100">
+                    <tr className="text-left">
+                      {tabDetalle === 'insumos' ? (
+                        <>
+                          <th className="px-4 py-2.5 text-xs font-medium text-zinc-400">Producto</th>
+                          <th className="px-4 py-2.5 text-xs font-medium text-zinc-400">Categoría</th>
+                          <th className="px-4 py-2.5 text-xs font-medium text-zinc-400 text-right">Cantidad total</th>
+                          <th className="px-4 py-2.5 text-xs font-medium text-zinc-400 text-right">Costo total</th>
+                          <th className="px-4 py-2.5 text-xs font-medium text-zinc-400 text-right">Usos</th>
+                        </>
+                      ) : (
+                        <>
+                          <th className="px-4 py-2.5 text-xs font-medium text-zinc-400">Labor</th>
+                          <th className="px-4 py-2.5 text-xs font-medium text-zinc-400 text-right">Cantidad total</th>
+                          <th className="px-4 py-2.5 text-xs font-medium text-zinc-400 text-right">Costo total</th>
+                          <th className="px-4 py-2.5 text-xs font-medium text-zinc-400 text-right">Usos</th>
+                        </>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-50">
+                    {tabDetalle === 'insumos'
+                      ? insumosPorProducto.map((i, idx) => (
+                          <tr key={idx} className="hover:bg-zinc-50">
+                            <td className="px-4 py-3 font-medium text-zinc-800">{i.nombre}</td>
+                            <td className="px-4 py-3 text-zinc-500 text-xs capitalize">{i.categoria || '—'}</td>
+                            <td className="px-4 py-3 text-right text-zinc-700">{qty.format(i.cantidadTotal)} {i.unidad}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-zinc-900">{formatMoney(i.costoTotal)}</td>
+                            <td className="px-4 py-3 text-right text-zinc-400">{i.usos}</td>
+                          </tr>
+                        ))
+                      : laboresPorTipo.map((l, idx) => (
+                          <tr key={idx} className="hover:bg-zinc-50">
+                            <td className="px-4 py-3 font-medium text-zinc-800">{l.nombre}</td>
+                            <td className="px-4 py-3 text-right text-zinc-700">{qty.format(l.cantidadTotal)}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-zinc-900">{formatMoney(l.costoTotal)}</td>
+                            <td className="px-4 py-3 text-right text-zinc-400">{l.usos}</td>
+                          </tr>
+                        ))}
+                  </tbody>
+                  <tfoot className="border-t border-zinc-200 bg-zinc-50">
+                    <tr>
+                      {tabDetalle === 'insumos' ? (
+                        <>
+                          <td className="px-4 py-2.5 text-xs font-semibold text-zinc-600" colSpan={3}>Total</td>
+                          <td className="px-4 py-2.5 text-right font-bold text-zinc-900">{formatMoney(totalInsumosDetalle)}</td>
+                          <td />
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-4 py-2.5 text-xs font-semibold text-zinc-600">Total</td>
+                          <td className="px-4 py-2.5 text-right font-bold text-zinc-900">{formatMoney(totalLaboresDetalle)}</td>
+                          <td />
+                        </>
+                      )}
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <ExportButtons
+                data={tabDetalle === 'insumos' ? insumosPorProducto : laboresPorTipo}
+                columns={tabDetalle === 'insumos' ? exportColumnsInsumosDetalle : exportColumnsLaboresDetalle}
+                filename={`${grupoSeleccionado.label.toLowerCase()}-${tabDetalle}`}
+                title={`${grupoSeleccionado.label} · ${tabDetalle === 'insumos' ? 'Insumos' : 'Labores'}`}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

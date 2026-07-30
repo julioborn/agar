@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Filter, X, BarChart2, Upload, ChevronRight, Search } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Filter, X, BarChart2, Upload, ChevronRight, Search, CalendarClock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ExportButtons from '@/components/export-buttons';
 import { CATEGORIAS } from '../productos/constants';
@@ -29,12 +30,14 @@ interface StockRow {
   precio_fuente: 'compra' | 'ria' | 'produccion' | null;
 }
 
-interface Props { stockRows: StockRow[]; empresaNombre: string }
+interface Props { stockRows: StockRow[]; empresaNombre: string; hasta: string | null }
 
 const numFmt = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 });
 const num = (n: number, unit: string) => `${numFmt.format(n)} ${unit}`;
+const hoyStr = () => new Date().toISOString().slice(0, 10);
 
-export default function StockManager({ stockRows, empresaNombre }: Props) {
+export default function StockManager({ stockRows, empresaNombre, hasta }: Props) {
+  const router = useRouter();
   const { formatMoney, usdRate } = useCurrency();
   const [vista, setVista]               = useState<'insumos' | 'produccion'>('insumos');
   const [searchText, setSearchText]     = useState('');
@@ -107,17 +110,47 @@ export default function StockManager({ stockRows, empresaNombre }: Props) {
   return (
     <div className="space-y-5">
 
-      {/* Insumos / Producción */}
-      <div className="flex rounded-2xl border border-zinc-100 bg-white p-1 shadow-sm w-fit">
-        {(['insumos', 'produccion'] as const).map((v) => (
-          <button key={v} type="button"
-            onClick={() => { setVista(v); setCategoria(''); }}
-            className={cn('px-5 py-2 text-sm font-semibold rounded-xl transition-colors',
-              vista === v ? 'bg-[#006836] text-white' : 'text-zinc-500 hover:bg-zinc-50')}>
-            {v === 'insumos' ? 'Stock de Insumos' : 'Stock de Producción'}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Insumos / Producción */}
+        <div className="flex rounded-2xl border border-zinc-100 bg-white p-1 shadow-sm w-fit">
+          {(['insumos', 'produccion'] as const).map((v) => (
+            <button key={v} type="button"
+              onClick={() => { setVista(v); setCategoria(''); }}
+              className={cn('px-5 py-2 text-sm font-semibold rounded-xl transition-colors',
+                vista === v ? 'bg-[#006836] text-white' : 'text-zinc-500 hover:bg-zinc-50')}>
+              {v === 'insumos' ? 'Stock de Insumos' : 'Stock de Producción'}
+            </button>
+          ))}
+        </div>
+
+        {/* Filtro de fecha: stock acumulado hasta la fecha elegida */}
+        <div className="flex items-center gap-2 bg-white rounded-2xl border border-zinc-100 px-3 py-2 shadow-sm">
+          <CalendarClock className="w-4 h-4 text-zinc-400 shrink-0" />
+          <label className="text-xs text-zinc-500 font-medium whitespace-nowrap">Ver stock al</label>
+          <input
+            type="date"
+            value={hasta ?? ''}
+            max={hoyStr()}
+            onChange={(e) => router.push(e.target.value ? `/app/stock?hasta=${e.target.value}` : '/app/stock')}
+            className="text-sm border border-zinc-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#006836]/40"
+          />
+          {hasta && (
+            <button
+              onClick={() => router.push('/app/stock')}
+              className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-red-500 transition-colors"
+            >
+              <X className="w-3 h-3" /> Ver actual
+            </button>
+          )}
+        </div>
       </div>
+
+      {hasta && (
+        <div className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5 w-fit">
+          <CalendarClock className="w-3.5 h-3.5" />
+          Mostrando stock acumulado desde el inicio hasta el {new Date(`${hasta}T00:00:00`).toLocaleDateString('es-AR')} (no el stock actual)
+        </div>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-3 gap-3">

@@ -90,6 +90,40 @@ export default async function ReporteCultivosPage() {
     costo_directo_ars: costoPorCultivo[c.id] ?? 0,
   }));
 
+  // Paso 3: detalle de insumos y labores por RIA confirmado, para el drill-down por cultivo
+  const { data: riasRaw } = await supabase
+    .from('remitos_internos')
+    .select('id, lote_id, cultivo_id')
+    .eq('empresa_id', empresa.id)
+    .eq('estado', 'confirmado');
+
+  const riaIds = (riasRaw ?? []).map((r: any) => r.id as string);
+
+  const [insumosRiaRes, laboresRiaRes] = await Promise.all([
+    riaIds.length
+      ? supabase
+          .from('remitos_insumos')
+          .select('remito_id, cantidad, subtotal, producto:productos(id, nombre, unidad_base, categoria)')
+          .in('remito_id', riaIds)
+      : Promise.resolve({ data: [] as any[] }),
+    riaIds.length
+      ? supabase
+          .from('remitos_labores')
+          .select('remito_id, tipo_labor_nombre, descripcion, cantidad, subtotal')
+          .in('remito_id', riaIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+
+  const riaCultivoMap = new Map((riasRaw ?? []).map((r: any) => [r.id as string, r.cultivo_id as string | null]));
+  const insumosDetalle = (insumosRiaRes.data ?? []).map((i: any) => ({
+    ...i,
+    cultivo_id: riaCultivoMap.get(i.remito_id) ?? null,
+  }));
+  const laboresDetalle = (laboresRiaRes.data ?? []).map((l: any) => ({
+    ...l,
+    cultivo_id: riaCultivoMap.get(l.remito_id) ?? null,
+  }));
+
   return (
     <div className="max-w-6xl mx-auto space-y-5">
       <div className="flex items-center gap-3">
@@ -105,6 +139,8 @@ export default async function ReporteCultivosPage() {
       <CultivosReport
         cultivos={cultivos as any}
         campanias={campaniaRes.data ?? []}
+        insumos={insumosDetalle as any}
+        labores={laboresDetalle as any}
       />
     </div>
   );

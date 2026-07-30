@@ -4,7 +4,21 @@ import { getEmpresaActiva } from '@/lib/empresa-actual';
 import { BarChart2 } from 'lucide-react';
 import StockManager from './stock-manager';
 
-export default async function StockPage() {
+// Mismo criterio de signo que aplicar_movimiento_stock() (migración 036)
+const TIPOS_ENTRADA = new Set(['entrada_compra', 'entrada_devolucion', 'transferencia_entrada', 'entrada_produccion_ria']);
+const TIPOS_SALIDA = new Set(['salida_aplicacion', 'transferencia_salida', 'merma', 'salida_ria', 'salida_consumo_ganadero']);
+function deltaMovimiento(tipo: string, cantidad: number) {
+  if (TIPOS_ENTRADA.has(tipo)) return cantidad;
+  if (TIPOS_SALIDA.has(tipo)) return -cantidad;
+  if (tipo === 'ajuste') return cantidad;
+  return 0;
+}
+
+interface Props {
+  searchParams: Promise<{ hasta?: string }>;
+}
+
+export default async function StockPage({ searchParams }: Props) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
@@ -14,8 +28,50 @@ export default async function StockPage() {
 
   const { empresa } = empresaData;
 
-  const [{ data: rawStock }, { data: ultimasCompras }, { data: preciosRia }, { data: tiposProduccion }] = await Promise.all([
-    supabase
+  const sp = await searchParams;
+  const hasta = sp?.hasta && /^\d{4}-\d{2}-\d{2}$/.test(sp.hasta) ? sp.hasta : null;
+
+  let rawStock: any[];
+
+  if (hasta) {
+    // Stock acumulado desde el inicio hasta la fecha seleccionada (inclusive),
+    // reconstruido a partir del historial de movimientos_stock.
+    const finDia = new Date(`${hasta}T00:00:00`);
+    finDia.setDate(finDia.getDate() + 1);
+
+    const [{ data: movimientos }, { data: productosEmpresa }, { data: depositosEmpresa }] = await Promise.all([
+      supabase
+        .from('movimientos_stock')
+        .select('deposito_id, producto_id, tipo, cantidad')
+        .lt('fecha', finDia.toISOString()),
+      supabase.from('productos').select('id, nombre, categoria, unidad_base, stock_minimo').eq('empresa_id', empresa.id),
+      supabase.from('depositos').select('id, nombre').eq('empresa_id', empresa.id),
+    ]);
+
+    const productoMap = new Map((productosEmpresa ?? []).map((p: any) => [p.id, p]));
+    const depositoMap = new Map((depositosEmpresa ?? []).map((d: any) => [d.id, d]));
+
+    const acumulado = new Map<string, number>();
+    for (const m of movimientos ?? []) {
+      const key = `${(m as any).deposito_id}|${(m as any).producto_id}`;
+      const delta = deltaMovimiento((m as any).tipo, Number((m as any).cantidad));
+      acumulado.set(key, (acumulado.get(key) ?? 0) + delta);
+    }
+
+    rawStock = Array.from(acumulado.entries())
+      .filter(([key]) => productoMap.has(key.split('|')[1]))
+      .map(([key, cantidad]) => {
+        const [depositoId, productoId] = key.split('|');
+        return {
+          id: key,
+          cantidad_actual: cantidad,
+          producto: productoMap.get(productoId) ?? null,
+          deposito: depositoMap.get(depositoId) ?? null,
+        };
+      })
+      .sort((a, b) => b.cantidad_actual - a.cantidad_actual);
+  } else {
+    const { data } = await supabase
       .from('stock')
       .select(`
         id,
@@ -23,16 +79,22 @@ export default async function StockPage() {
         producto:productos(id, nombre, categoria, unidad_base, stock_minimo),
         deposito:depositos(id, nombre)
       `)
-      .order('cantidad_actual', { ascending: false }),
+      .order('cantidad_actual', { ascending: false });
+    rawStock = data ?? [];
+  }
+
+  const [{ data: ultimasCompras }, { data: preciosRia }, { data: tiposProduccion }] = await Promise.all([
     supabase
       .from('compras_items')
       .select('producto_id, precio_unitario_ars, compra:compras!inner(fecha)')
+      .lte('compra.fecha', hasta ?? '9999-12-31')
       .order('fecha', { referencedTable: 'compras', ascending: false }),
     // Precio del último RIA confirmado por producto (fallback si no hay compra)
     supabase
       .from('remitos_insumos')
       .select('producto_id, costo_unitario, remito:remitos_internos!inner(fecha, estado)')
       .eq('remito.estado', 'confirmado')
+      .lte('remito.fecha', hasta ?? '9999-12-31')
       .gt('costo_unitario', 0)
       .order('fecha', { referencedTable: 'remitos_internos', ascending: false }),
     // Precio de mercado (Tipos de Producción, en USD) para el stock de producción propia
@@ -99,7 +161,7 @@ export default async function StockPage() {
         </div>
       </div>
 
-      <StockManager stockRows={stockRows} empresaNombre={empresa.nombre} />
+      <StockManager stockRows={stockRows} empresaNombre={empresa.nombre} hasta={hasta} />
     </div>
   );
 }
