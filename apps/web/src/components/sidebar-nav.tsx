@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -9,7 +10,7 @@ import {
   Users, Menu, Wheat,
   Tractor, Wrench, Settings, Building, Landmark, BarChart3,
   FileText, TrendingUp, Scale, CalendarRange, Layers, Pin,
-  Beef, Fence, Rows3, Tag,
+  Beef, Fence, Rows3, Tag, ChevronDown,
 } from 'lucide-react';
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -120,6 +121,10 @@ const navSections: NavSection[] = [
   },
 ];
 
+function isActiveHref(pathname: string, href: string, exact = false) {
+  return exact ? pathname === href : pathname.startsWith(href);
+}
+
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -141,8 +146,22 @@ export default function SidebarNav({
 }: Props) {
   const pathname = usePathname();
 
+  const [openSections, setOpenSections] = useState<Set<string>>(() => {
+    const activa = navSections.find((s) => s.items.some((item) => isActiveHref(pathname, item.href, item.exact)));
+    return new Set(activa ? [activa.label] : []);
+  });
+
   function isActive(href: string, exact = false) {
-    return exact ? pathname === href : pathname.startsWith(href);
+    return isActiveHref(pathname, href, exact);
+  }
+
+  function toggleSection(label: string) {
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
   }
 
   const linkClass = (active: boolean) =>
@@ -202,33 +221,43 @@ export default function SidebarNav({
               : section.items,
           }))
           .filter((section) => section.items.length > 0)
-          .map((section, sIdx) => (
+          .map((section, sIdx) => {
+            const abierta = collapsed || openSections.has(section.label);
+            return (
           <div key={section.label} className={cn('mt-4', sIdx === 0 && 'mt-3')}>
             {/* Encabezado de sección */}
             {!collapsed ? (
-              <p className="px-3 mb-1 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest select-none">
-                {section.label}
-              </p>
+              <button
+                type="button"
+                onClick={() => toggleSection(section.label)}
+                className="w-full flex items-center justify-between px-3 mb-1 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest select-none hover:text-zinc-300 transition-colors"
+              >
+                <span>{section.label}</span>
+                <ChevronDown className={cn('w-3 h-3 shrink-0 transition-transform', abierta && 'rotate-180')} />
+              </button>
             ) : (
               <div className="my-2 mx-3 border-t border-white/5" />
             )}
 
             {/* Items de la sección */}
-            <div className="space-y-0.5">
-              {section.items.map(({ href, label, icon: Icon, exact }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  title={collapsed ? label : undefined}
-                  className={linkClass(isActive(href, exact))}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  {!collapsed && <span className="truncate">{label}</span>}
-                </Link>
-              ))}
-            </div>
+            {abierta && (
+              <div className="space-y-0.5">
+                {section.items.map(({ href, label, icon: Icon, exact }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    title={collapsed ? label : undefined}
+                    className={linkClass(isActive(href, exact))}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    {!collapsed && <span className="truncate">{label}</span>}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
-        ))}
+            );
+          })}
 
         {/* Usuarios (admin / superadmin) */}
         {(esAdmin || esSuperAdmin) && (
