@@ -87,8 +87,15 @@ body:has(.land) { background: #221609; }
 }
 
 .l-hero-text {
-  flex: 1 1 480px;
+  flex: 1 1 380px;
   min-width: 0;
+}
+
+.l-hero-logo {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .l-login-pane {
@@ -107,7 +114,6 @@ body:has(.land) { background: #221609; }
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1.75rem;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255,255,255,0.08);
 }
 
@@ -129,10 +135,11 @@ body:has(.land) { background: #221609; }
 /* ── Responsive ──────────────────────────────────────── */
 @media (max-width: 900px) {
   .l-hero-inner { flex-direction: column; padding: 3rem 1.5rem; gap: 2.5rem; }
-  .l-hero-text { flex-basis: auto; width: 100%; text-align: center; }
+  .l-hero-logo { order: 1; }
+  .l-hero-text { order: 2; flex-basis: auto; width: 100%; text-align: center; }
+  .l-login-pane { order: 3; flex-basis: auto; width: 100%; margin: 0 auto; }
   .l-logo-circle { margin-left: auto; margin-right: auto; }
   .l-headline { text-align: center; max-width: 100%; margin-left: auto; margin-right: auto; }
-  .l-login-pane { flex-basis: auto; width: 100%; margin: 0 auto; }
 }
 @media (max-width: 600px) {
   .l-hero-inner { padding: 2.5rem 1.25rem; }
@@ -345,14 +352,16 @@ export default function LoginPage() {
 
           <div className="l-hero-inner">
             <div className="l-hero-text">
-              <div className="l-logo-circle">
-                <Image src="/agar-final.png" alt="agar" width={44} height={44} />
-              </div>
-
               <h1 className="l-headline">
                 Sistema de gestión integral<br />
                 de <span className="l-headline-accent">agricultura y ganadería</span>.
               </h1>
+            </div>
+
+            <div className="l-hero-logo">
+              <div className="l-logo-circle">
+                <Image src="/agar-final.png" alt="agar" width={44} height={44} />
+              </div>
             </div>
 
             <div className="l-login-pane">
