@@ -87,15 +87,8 @@ body:has(.land) { background: #221609; }
 }
 
 .l-hero-text {
-  flex: 1 1 380px;
+  flex: 1 1 480px;
   min-width: 0;
-}
-
-.l-hero-logo {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .l-login-pane {
@@ -106,15 +99,16 @@ body:has(.land) { background: #221609; }
 
 /* Logo circular */
 .l-logo-circle {
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: #ffffff;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255,255,255,0.08);
+  margin: 0 auto 1.25rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0,0,0,0.04);
 }
 
 .l-headline {
@@ -135,10 +129,8 @@ body:has(.land) { background: #221609; }
 /* ── Responsive ──────────────────────────────────────── */
 @media (max-width: 900px) {
   .l-hero-inner { flex-direction: column; padding: 3rem 1.5rem; gap: 2.5rem; }
-  .l-hero-logo { order: 1; }
-  .l-hero-text { order: 2; flex-basis: auto; width: 100%; text-align: center; }
-  .l-login-pane { order: 3; flex-basis: auto; width: 100%; margin: 0 auto; }
-  .l-logo-circle { margin-left: auto; margin-right: auto; }
+  .l-hero-text { flex-basis: auto; width: 100%; text-align: center; }
+  .l-login-pane { flex-basis: auto; width: 100%; margin: 0 auto; }
   .l-headline { text-align: center; max-width: 100%; margin-left: auto; margin-right: auto; }
 }
 @media (max-width: 600px) {
@@ -218,6 +210,10 @@ function LoginForm() {
           boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
         }}
       >
+        <div className="l-logo-circle">
+          <Image src="/agar-final.png" alt="agar" width={40} height={40} />
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
 
           {/* Email */}
@@ -356,12 +352,6 @@ export default function LoginPage() {
                 Sistema de gestión integral<br />
                 de <span className="l-headline-accent">agricultura y ganadería</span>.
               </h1>
-            </div>
-
-            <div className="l-hero-logo">
-              <div className="l-logo-circle">
-                <Image src="/agar-final.png" alt="agar" width={44} height={44} />
-              </div>
             </div>
 
             <div className="l-login-pane">
