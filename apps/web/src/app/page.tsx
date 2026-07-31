@@ -95,9 +95,9 @@ body:has(.land) { background: #221609; }
 }
 
 .l-headline {
-  font-family: Georgia, 'Palatino Linotype', 'Book Antiqua', serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   font-size: clamp(2.5rem, 6.5vw, 4.5rem);
-  font-weight: 400;
+  font-weight: 700;
   line-height: 1.1;
   color: #f6efe2;
   margin: 0 0 2.25rem;
@@ -107,7 +107,6 @@ body:has(.land) { background: #221609; }
 }
 .l-headline-accent {
   color: #dbb93a;
-  font-style: italic;
 }
 
 .l-cta {
