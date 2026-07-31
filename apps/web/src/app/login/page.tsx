@@ -206,7 +206,8 @@ function LoginForm() {
       <div
         className="rounded-2xl p-6"
         style={{
-          background: '#ffffff',
+          background: 'rgba(255,255,255,0.88)',
+          backdropFilter: 'blur(14px)',
           boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
         }}
       >
