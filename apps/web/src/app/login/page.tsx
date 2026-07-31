@@ -6,39 +6,141 @@ import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
 import AppLoader from '@/components/app-loader';
 
-// ── Logo circular con anillo y sombra verde ────────────────────────────────
+// 8 × 6 = 48 parcelas — valores deterministas pseudo-aleatorios
+const PARCELS = Array.from({ length: 48 }, (_, i) => {
+  const isAmber = i % 7 === 0 || i % 13 === 0;
+  const delay    = ((i * 7919 + 31) % 97) / 10;
+  const duration = 3.5 + ((i * 6271 + 17) % 45) / 10;
+  const sat      = isAmber ? 60 + (i % 3) * 8  : 28 + ((i * 3301) % 34);
+  const lit1     = isAmber ? 10 + (i % 4) * 2  :  6 + ((i * 5003) % 10);
+  const lit2     = isAmber ? 22 + (i % 5) * 3  : 13 + ((i * 2017) % 16);
+  const hue      = isAmber ? 42 + (i % 3) * 4  : 124 + (i % 7) * 3;
+  return { delay, duration, sat, lit1, lit2, hue };
+});
 
-function Logo({ size = 88 }: { size?: number }) {
-  return (
-    <div
-      className="relative flex-shrink-0"
-      style={{ width: size, height: size }}
-    >
-      {/* Anillo exterior con glow */}
-      <div
-        className="absolute inset-0 rounded-full"
-        style={{
-          background: 'conic-gradient(from 180deg, #006836 0%, #4ade80 40%, #006836 70%, #004d24 100%)',
-          padding: 2,
-          boxShadow: '0 0 28px 4px rgba(0,104,54,0.45)',
-        }}
-      >
-        <div className="w-full h-full rounded-full bg-zinc-950" />
-      </div>
+const CSS = `
+body:has(.land) { background: #221609; }
 
-      {/* Imagen */}
-      <Image
-        src="/agar-final.png"
-        alt="agar"
-        width={size}
-        height={size}
-        className="absolute inset-0 rounded-full object-cover"
-        style={{ padding: 3 }}
-        priority
-      />
-    </div>
-  );
+.land {
+  min-height: 100svh;
+  background: #221609;
+  color: #f2ece1;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* ── Hero ────────────────────────────────────────────── */
+.l-hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: #221609;
+}
+
+.l-field {
+  position: absolute;
+  inset: -8%;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 4px;
+  transform: rotate(3.5deg) scale(1.18);
+  pointer-events: none;
+}
+.l-parcel {
+  border-radius: 5px;
+  background: var(--c1);
+  animation: parcel-pulse var(--dur) ease-in-out var(--delay) infinite alternate;
+}
+@keyframes parcel-pulse {
+  from { background: var(--c1); }
+  to   { background: var(--c2); }
+}
+
+.l-veil {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 85% at 15% 50%, transparent 20%, rgba(34,22,9,0.9) 78%),
+    linear-gradient(to bottom,
+      rgba(34,22,9,0.6) 0%,
+      rgba(34,22,9,0.15) 18%,
+      rgba(34,22,9,0.15) 72%,
+      rgba(34,22,9,0.96) 100%
+    );
+  pointer-events: none;
+}
+
+.l-hero-inner {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 4rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3rem;
+}
+
+.l-hero-text {
+  flex: 1 1 480px;
+  min-width: 0;
+}
+
+.l-login-pane {
+  flex: 0 0 400px;
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Logo circular */
+.l-logo-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #ffffff;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.75rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255,255,255,0.08);
+}
+
+.l-headline {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: clamp(2.25rem, 4.5vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  color: #f6efe2;
+  margin: 0;
+  text-wrap: balance;
+  max-width: 560px;
+  letter-spacing: -0.02em;
+}
+.l-headline-accent {
+  color: #dbb93a;
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+@media (max-width: 900px) {
+  .l-hero-inner { flex-direction: column; padding: 3rem 1.5rem; gap: 2.5rem; }
+  .l-hero-text { text-align: center; display: flex; flex-direction: column; align-items: center; flex-basis: auto; }
+  .l-headline { text-align: left; align-self: flex-start; }
+  .l-login-pane { flex-basis: auto; }
+}
+@media (max-width: 600px) {
+  .l-hero-inner { padding: 2.5rem 1.25rem; }
+  .l-field { gap: 2px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .l-parcel { animation: none; }
+}
+`;
 
 // ── Formulario ─────────────────────────────────────────────────────────────
 
@@ -90,20 +192,14 @@ function LoginForm() {
 
   if (recovering) {
     return (
-      <div className="flex flex-col items-center gap-6">
-        <Logo />
+      <div className="flex items-center justify-center py-10">
         <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-[360px] mx-auto">
-
-      {/* Logo + nombre */}
-      <div className="flex flex-col items-center mb-8">
-        <Logo />
-      </div>
+    <div className="w-full max-w-[400px] mx-auto">
 
       {/* Card de formulario */}
       <div
@@ -228,56 +324,47 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <main
-      className="relative min-h-screen overflow-hidden flex flex-col items-center justify-center px-6 py-12"
-      style={{
-        background: '#060d08',
-        paddingTop: 'max(3rem, calc(env(safe-area-inset-top) + 1rem))',
-      }}
-    >
-      {/* Orbe verde superior-derecha */}
-      <div
-        className="absolute pointer-events-none"
-        style={{
-          width: 420,
-          height: 420,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(0,104,54,0.22) 0%, transparent 70%)',
-          top: '-80px',
-          right: '-100px',
-          filter: 'blur(1px)',
-        }}
-      />
+    <>
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <div className="land">
+        <section className="l-hero">
+          <div className="l-field" aria-hidden="true">
+            {PARCELS.map((p, i) => (
+              <div
+                key={i}
+                className="l-parcel"
+                style={{
+                  '--delay': `${p.delay}s`,
+                  '--dur':   `${p.duration}s`,
+                  '--c1':    `hsl(${p.hue} ${p.sat}% ${p.lit1}%)`,
+                  '--c2':    `hsl(${p.hue} ${p.sat}% ${p.lit2}%)`,
+                } as React.CSSProperties}
+              />
+            ))}
+          </div>
 
-      {/* Orbe verde inferior-izquierda */}
-      <div
-        className="absolute pointer-events-none"
-        style={{
-          width: 360,
-          height: 360,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(0,77,36,0.18) 0%, transparent 70%)',
-          bottom: '-60px',
-          left: '-80px',
-          filter: 'blur(1px)',
-        }}
-      />
+          <div className="l-veil" aria-hidden="true" />
 
-      {/* Línea horizontal decorativa tenue */}
-      <div
-        className="absolute pointer-events-none"
-        style={{
-          height: 1,
-          width: '100%',
-          top: '55%',
-          background: 'linear-gradient(90deg, transparent 0%, rgba(0,104,54,0.12) 30%, rgba(0,104,54,0.12) 70%, transparent 100%)',
-        }}
-      />
+          <div className="l-hero-inner">
+            <div className="l-hero-text">
+              <div className="l-logo-circle">
+                <Image src="/agar-final.png" alt="agar" width={44} height={44} />
+              </div>
 
-      <Suspense fallback={<AppLoader size="lg" className="py-0" />}>
-        <LoginForm />
-      </Suspense>
-      
-    </main>
+              <h1 className="l-headline">
+                Sistema de gestión integral<br />
+                de <span className="l-headline-accent">agricultura y ganadería</span>.
+              </h1>
+            </div>
+
+            <div className="l-login-pane">
+              <Suspense fallback={<AppLoader size="lg" className="py-0" />}>
+                <LoginForm />
+              </Suspense>
+            </div>
+          </div>
+        </section>
+      </div>
+    </>
   );
 }
