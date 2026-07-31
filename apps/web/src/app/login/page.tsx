@@ -130,7 +130,7 @@ body:has(.land) { background: #221609; }
 @media (max-width: 900px) {
   .l-hero-inner { flex-direction: column; padding: 3rem 1.5rem; gap: 2.5rem; }
   .l-hero-text { text-align: center; display: flex; flex-direction: column; align-items: center; flex-basis: auto; }
-  .l-headline { text-align: left; align-self: flex-start; }
+  .l-headline { text-align: center; }
   .l-login-pane { flex-basis: auto; }
 }
 @media (max-width: 600px) {
