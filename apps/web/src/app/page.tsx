@@ -94,6 +94,22 @@ body:has(.land) { background: #221609; }
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255,255,255,0.08);
 }
 
+.l-headline {
+  font-family: Georgia, 'Palatino Linotype', 'Book Antiqua', serif;
+  font-size: clamp(2.5rem, 6.5vw, 4.5rem);
+  font-weight: 400;
+  line-height: 1.1;
+  color: #f6efe2;
+  margin: 0 0 2.25rem;
+  text-wrap: balance;
+  max-width: 720px;
+  letter-spacing: -0.02em;
+}
+.l-headline-accent {
+  color: #dbb93a;
+  font-style: italic;
+}
+
 .l-cta {
   display: inline-flex;
   align-items: center;
@@ -144,6 +160,7 @@ body:has(.land) { background: #221609; }
 /* ── Responsive ──────────────────────────────────────── */
 @media (max-width: 600px) {
   .l-hero-inner { padding: 3.5rem 1.25rem; text-align: center; display: flex; flex-direction: column; align-items: center; }
+  .l-headline { text-align: left; align-self: flex-start; }
   .l-field { gap: 2px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -194,6 +211,11 @@ export default async function RootPage() {
             <div className="l-logo-circle">
               <Image src="/agar-final.png" alt="agar" width={44} height={44} />
             </div>
+
+            <h1 className="l-headline">
+              Sistema de gestión integral<br />
+              de <span className="l-headline-accent">agricultura y ganadería</span>.
+            </h1>
 
             <Link href="/login" className="l-cta">
               Iniciar sesión
