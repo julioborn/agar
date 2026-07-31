@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import EmpresaSelector from './empresa-selector';
-import LogoutButton from './logout-button';
 import SidebarNav from './sidebar-nav';
 import { CurrencyProvider, useCurrency } from '@/lib/currency-context';
 import { ReadOnlyProvider } from '@/lib/readonly-context';
@@ -157,10 +156,9 @@ export default function AppShell({
                 {/* Spacer mobile */}
                 <div className="flex-1 lg:hidden" />
 
-                {/* Derecha: toggle moneda + logout */}
+                {/* Derecha: toggle moneda */}
                 <div className="flex items-center gap-2 shrink-0">
                   <CurrencyToggle />
-                  <LogoutButton />
                 </div>
               </div>
 

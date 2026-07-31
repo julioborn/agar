@@ -2,15 +2,16 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
 import {
   LayoutDashboard, MapPin, Package, Archive, Warehouse,
   ShoppingCart, Truck, Sprout, Briefcase, Building2,
   Users, Menu, Wheat,
   Tractor, Wrench, Settings, Building, Landmark, BarChart3,
   FileText, TrendingUp, Scale, CalendarRange, Layers, Pin,
-  Beef, Fence, Rows3, Tag, ChevronDown,
+  Beef, Fence, Rows3, Tag, ChevronDown, LogOut, X,
 } from 'lucide-react';
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -150,6 +151,16 @@ export default function SidebarNav({
   onToggleCollapse,
 }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+  }
 
   const [openSections, setOpenSections] = useState<Set<string>>(() => {
     const iniciales = new Set(SECCIONES_SIEMPRE_ABIERTAS);
@@ -184,6 +195,7 @@ export default function SidebarNav({
     );
 
   return (
+    <>
     <aside
       className={cn(
         'h-full bg-zinc-950 flex flex-col transition-all duration-200 ease-in-out',
@@ -315,6 +327,58 @@ export default function SidebarNav({
         })()}
 
       </nav>
+
+      {/* Salir — fijo al final del todo */}
+      <div className={cn('shrink-0 py-2 border-t border-white/5', collapsed ? 'px-2' : 'px-2')}>
+        <button
+          type="button"
+          onClick={() => setShowLogoutConfirm(true)}
+          title={collapsed ? 'Salir' : undefined}
+          className={cn(
+            'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium w-full transition-colors',
+            collapsed && 'justify-center px-0',
+            'text-red-400 hover:bg-red-500/10 hover:text-red-300',
+          )}
+        >
+          <LogOut className="w-4 h-4 shrink-0" />
+          {!collapsed && <span className="truncate">Salir</span>}
+        </button>
+      </div>
     </aside>
+
+    {/* Modal de doble confirmación */}
+    {showLogoutConfirm && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4">
+        <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 relative">
+          <button
+            onClick={() => setShowLogoutConfirm(false)}
+            className="absolute top-3 right-3 text-zinc-400 hover:text-zinc-600"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <div className="w-11 h-11 rounded-xl bg-red-50 flex items-center justify-center mb-4">
+            <LogOut className="w-5 h-5 text-red-600" />
+          </div>
+          <h2 className="text-base font-bold text-zinc-900 mb-1">¿Cerrar sesión?</h2>
+          <p className="text-sm text-zinc-500 mb-6">Vas a tener que volver a iniciar sesión para acceder al sistema.</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowLogoutConfirm(false)}
+              className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-zinc-600 border border-zinc-200 hover:bg-zinc-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
+            >
+              {loggingOut ? 'Saliendo…' : 'Sí, salir'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
