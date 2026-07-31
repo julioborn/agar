@@ -373,7 +373,7 @@ export default function SidebarNav({
               disabled={loggingOut}
               className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
             >
-              {loggingOut ? 'Saliendo…' : 'Salir'}
+              {loggingOut ? '…' : 'Salir'}
             </button>
           </div>
         </div>
