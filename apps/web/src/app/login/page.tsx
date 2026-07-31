@@ -205,16 +205,15 @@ function LoginForm() {
       <div
         className="rounded-2xl p-6"
         style={{
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          backdropFilter: 'blur(12px)',
+          background: '#ffffff',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
         }}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
 
           {/* Email */}
           <div>
-            <label className="block text-xs font-semibold text-white/50 uppercase tracking-widest mb-2">
+            <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-2">
               Email
             </label>
             <div className="relative">
@@ -225,17 +224,17 @@ function LoginForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="tu@email.com"
-                className="w-full px-4 py-3 rounded-xl text-white placeholder-white/20 text-base text-left transition-all outline-none"
+                className="w-full px-4 py-3 rounded-xl text-zinc-900 placeholder-zinc-300 text-base text-left transition-all outline-none"
                 style={{
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.10)',
+                  background: '#f4f4f5',
+                  border: '1px solid #e4e4e7',
                 }}
                 onFocus={(e) => {
-                  e.target.style.border = '1px solid rgba(74,222,128,0.45)';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(74,222,128,0.10)';
+                  e.target.style.border = '1px solid #006836';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(0,104,54,0.12)';
                 }}
                 onBlur={(e) => {
-                  e.target.style.border = '1px solid rgba(255,255,255,0.10)';
+                  e.target.style.border = '1px solid #e4e4e7';
                   e.target.style.boxShadow = 'none';
                 }}
               />
@@ -244,7 +243,7 @@ function LoginForm() {
 
           {/* Contraseña */}
           <div>
-            <label className="block text-xs font-semibold text-white/50 uppercase tracking-widest mb-2">
+            <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-2">
               Contraseña
             </label>
             <div className="relative">
@@ -255,17 +254,17 @@ function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-4 py-3 rounded-xl text-white placeholder-white/20 text-base text-left transition-all outline-none"
+                className="w-full px-4 py-3 rounded-xl text-zinc-900 placeholder-zinc-300 text-base text-left transition-all outline-none"
                 style={{
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.10)',
+                  background: '#f4f4f5',
+                  border: '1px solid #e4e4e7',
                 }}
                 onFocus={(e) => {
-                  e.target.style.border = '1px solid rgba(74,222,128,0.45)';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(74,222,128,0.10)';
+                  e.target.style.border = '1px solid #006836';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(0,104,54,0.12)';
                 }}
                 onBlur={(e) => {
-                  e.target.style.border = '1px solid rgba(255,255,255,0.10)';
+                  e.target.style.border = '1px solid #e4e4e7';
                   e.target.style.boxShadow = 'none';
                 }}
               />
@@ -275,19 +274,16 @@ function LoginForm() {
                 type="checkbox"
                 checked={showPassword}
                 onChange={(e) => setShowPassword(e.target.checked)}
-                className="w-3.5 h-3.5 rounded accent-[#4ade80] cursor-pointer"
+                className="w-3.5 h-3.5 rounded accent-[#006836] cursor-pointer"
               />
-              <span className="text-xs text-white/50">Mostrar contraseña</span>
+              <span className="text-xs text-zinc-500">Mostrar contraseña</span>
             </label>
           </div>
 
           {/* Error */}
           {error && (
-            <div
-              className="rounded-xl px-4 py-3"
-              style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.20)' }}
-            >
-              <p className="text-red-400 text-sm">{error}</p>
+            <div className="rounded-xl px-4 py-3 bg-red-50 border border-red-200">
+              <p className="text-red-600 text-sm">{error}</p>
             </div>
           )}
 
