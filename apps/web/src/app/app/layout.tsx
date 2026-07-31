@@ -103,6 +103,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       esSuperAdmin={esSuperAdmin}
       esAdmin={rol === 'admin_empresa'}
       esLector={rol === 'lector'}
+      esContador={rol === 'contador'}
       usdRate={usdRate}
       tickerData={tickerData}
     >

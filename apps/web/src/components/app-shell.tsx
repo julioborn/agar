@@ -24,6 +24,7 @@ interface Props {
   esSuperAdmin: boolean;
   esAdmin: boolean;
   esLector?: boolean;
+  esContador?: boolean;
   usdRate: number | null;
   tickerData: TickerData;
 }
@@ -55,7 +56,7 @@ function CurrencyToggle() {
 }
 
 export default function AppShell({
-  children, userEmail, empresaActiva, todasLasEmpresas, esSuperAdmin, esAdmin, esLector = false, usdRate, tickerData,
+  children, userEmail, empresaActiva, todasLasEmpresas, esSuperAdmin, esAdmin, esLector = false, esContador = false, usdRate, tickerData,
 }: Props) {
   const pathname = usePathname();
   const router   = useRouter();
@@ -115,6 +116,7 @@ export default function AppShell({
               esSuperAdmin={esSuperAdmin}
               esAdmin={esAdmin}
               esLector={esLector}
+              esContador={esContador}
               collapsed={sidebarCollapsed}
               onToggleCollapse={() => setSidebarCollapsed(v => !v)}
             />

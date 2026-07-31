@@ -134,6 +134,7 @@ interface Props {
   esSuperAdmin: boolean;
   esAdmin?: boolean;
   esLector?: boolean;
+  esContador?: boolean;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
 }
@@ -144,6 +145,7 @@ export default function SidebarNav({
   esSuperAdmin,
   esAdmin = false,
   esLector = false,
+  esContador = false,
   collapsed = false,
   onToggleCollapse,
 }: Props) {
@@ -221,7 +223,7 @@ export default function SidebarNav({
 
         {/* Secciones agrupadas */}
         {navSections
-          .filter((s) => !s.requiereAdmin || esAdmin || esSuperAdmin || esLector)
+          .filter((s) => !s.requiereAdmin || esAdmin || esSuperAdmin || esLector || esContador)
           .map((section) => ({
             ...section,
             items: esLector
