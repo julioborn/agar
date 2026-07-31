@@ -129,9 +129,10 @@ body:has(.land) { background: #221609; }
 /* ── Responsive ──────────────────────────────────────── */
 @media (max-width: 900px) {
   .l-hero-inner { flex-direction: column; padding: 3rem 1.5rem; gap: 2.5rem; }
-  .l-hero-text { text-align: center; display: flex; flex-direction: column; align-items: center; flex-basis: auto; }
-  .l-headline { text-align: center; }
-  .l-login-pane { flex-basis: auto; }
+  .l-hero-text { flex-basis: auto; width: 100%; text-align: center; }
+  .l-logo-circle { margin-left: auto; margin-right: auto; }
+  .l-headline { text-align: center; max-width: 100%; margin-left: auto; margin-right: auto; }
+  .l-login-pane { flex-basis: auto; width: 100%; margin: 0 auto; }
 }
 @media (max-width: 600px) {
   .l-hero-inner { padding: 2.5rem 1.25rem; }
