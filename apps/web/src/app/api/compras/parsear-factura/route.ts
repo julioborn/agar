@@ -87,7 +87,16 @@ Reglas adicionales:
    documento, es MIL QUINIENTOS ONCE (1511), el punto/coma ahí es separador de miles, NO decimal.
    ✗ Incorrecto devolver cotizacion_usd: 1.511   ✓ Correcto: cotizacion_usd: 1511
    Ante cualquier duda con este campo, preferí la lectura que da un número más grande (miles), nunca
-   un decimal menor a 10.`;
+   un decimal menor a 10.
+9. CRÍTICO — lectura de fechas: los documentos argentinos escriben las fechas como DÍA/MES/AÑO
+   (DD/MM/AAAA o DD/MM/AA), NUNCA mes/día como en inglés (MM/DD).
+   Ejemplos de lectura correcta:
+   - "03/09/26"   → 2026-09-03  (3 de septiembre de 2026, NO 9 de marzo)
+   - "15/01/2026" → 2026-01-15  (15 de enero de 2026)
+   - "31/12/25"   → 2025-12-31  (31 de diciembre de 2025)
+   Si el año viene con 2 dígitos, es siempre 20XX (nunca 19XX). El primer número es SIEMPRE el día.
+   Si el primer número es mayor a 12, confirma que ese formato es día/mes (ej. "25/03/26" no puede
+   leerse como mes 25).`;
 
 export async function POST(req: NextRequest) {
   try {
