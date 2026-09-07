@@ -81,7 +81,13 @@ Reglas adicionales:
    - "50,500"    → 50.5     (cincuenta con medio litro)
    NO interpretes la coma como separador de miles como se hace en inglés.
 7. CRÍTICO — formato de números en el JSON de respuesta: usá SIEMPRE punto como separador decimal y SIN separador de miles.
-   ✓ Correcto: 3425.10   ✗ Incorrecto: 3.425,10 o 3.425.10 o 3425,10`;
+   ✓ Correcto: 3425.10   ✗ Incorrecto: 3.425,10 o 3.425.10 o 3425,10
+8. CRÍTICO — "cotizacion_usd": una cotización del dólar en pesos argentinos SIEMPRE es un número de al
+   menos 3 o 4 cifras enteras (nunca un valor menor a 10). Si ves algo como "1.511" o "1,511" en el
+   documento, es MIL QUINIENTOS ONCE (1511), el punto/coma ahí es separador de miles, NO decimal.
+   ✗ Incorrecto devolver cotizacion_usd: 1.511   ✓ Correcto: cotizacion_usd: 1511
+   Ante cualquier duda con este campo, preferí la lectura que da un número más grande (miles), nunca
+   un decimal menor a 10.`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -191,7 +197,16 @@ function interpretarRespuesta(text: string): NextResponse {
     ?? parsear(normalizarNumerosJSON(limpio))
     ?? (() => { const m = limpio.match(/\{[\s\S]*\}/); return m ? (parsear(m[0]) ?? parsear(normalizarNumerosJSON(m[0]))) : null; })();
 
-  if (factura) return NextResponse.json({ factura });
+  if (factura) {
+    // Red de seguridad: una cotización del dólar en pesos argentinos nunca es
+    // menor a 10. Si la IA devolvió algo así, casi siempre es un "1.511" cuyo
+    // punto de miles fue leído como decimal (1.511 en vez de 1511) — lo
+    // corregimos automáticamente en vez de dejarlo pasar.
+    if (factura.cotizacion_usd != null && factura.cotizacion_usd > 0 && factura.cotizacion_usd < 10) {
+      factura.cotizacion_usd = Math.round(factura.cotizacion_usd * 1000 * 100) / 100;
+    }
+    return NextResponse.json({ factura });
+  }
 
   return NextResponse.json(
     { error: 'No se pudo interpretar la respuesta de la IA. Revisá el archivo.', raw: text.slice(0, 300) },
