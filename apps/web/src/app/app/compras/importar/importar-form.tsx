@@ -6,7 +6,7 @@ import { Upload, FileText, Loader2, CheckCircle2, AlertCircle, ChevronDown, Plus
 import { cn } from '@/lib/utils';
 import { CATEGORIAS, UNIDADES } from '@/app/app/productos/constants';
 import { crearCompra } from '../actions';
-import { guardarCodigosProveedor, crearProductoNuevo } from './actions';
+import { guardarCodigosProveedor, crearProductoNuevo, crearProveedorNuevo } from './actions';
 import type { FacturaExtraida } from '@/app/api/compras/parsear-factura/route';
 
 interface Proveedor { id: string; nombre: string; cuit: string | null; }
@@ -156,6 +156,8 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
 
   // Cabecera editable
   const [proveedorId, setProveedorId] = useState('');
+  const [nuevoProveedorNombre, setNuevoProveedorNombre] = useState('');
+  const [nuevoProveedorCuit, setNuevoProveedorCuit] = useState('');
   const [fecha, setFecha] = useState('');
   const [tipoDoc, setTipoDoc] = useState<'factura' | 'remito'>('factura');
   const [nroFactura, setNroFactura] = useState('');
@@ -216,8 +218,13 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
                normalizar(f.proveedor_nombre).includes(normalizar(p.nombre)) ||
                (f.proveedor_cuit && p.cuit?.replace(/\D/g, '') === f.proveedor_cuit?.replace(/\D/g, ''))
       );
-      if (provMatch) setProveedorId(provMatch.id);
-      else setProveedorId('');
+      if (provMatch) {
+        setProveedorId(provMatch.id);
+      } else {
+        setProveedorId('');
+        setNuevoProveedorNombre(f.proveedor_nombre ?? '');
+        setNuevoProveedorCuit(f.proveedor_cuit ?? '');
+      }
 
       // Inicializar items con auto-matching
       const revisados: ItemReview[] = f.items.map((item) => {
@@ -304,6 +311,9 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
     if (moneda === 'USD' && (!cotizacion || parseFloat(cotizacion) <= 0)) {
       setError('Ingresá la cotización del dólar'); return;
     }
+    if (proveedorId === '_nuevo_' && !nuevoProveedorNombre.trim()) {
+      setError('Ingresá el nombre del nuevo proveedor'); return;
+    }
     for (const item of items) {
       if (!item.producto_id) { setError(`Asigná un producto a: "${item.descripcion_factura}"`); return; }
       if (item.producto_id === '_nuevo_' && !item.nuevo_nombre.trim()) {
@@ -324,6 +334,21 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
 
     try {
       const cotizNum = parseFloat(cotizacion) || null;
+
+      // 0. Crear proveedor nuevo si corresponde
+      let proveedorIdFinal = proveedorId;
+      if (proveedorId === '_nuevo_') {
+        const result = await crearProveedorNuevo({
+          nombre: nuevoProveedorNombre.trim(),
+          cuit: nuevoProveedorCuit.trim() || undefined,
+        });
+        if (result.error || !result.id) {
+          setError(result.error ?? 'Error al crear proveedor');
+          setFase('revision');
+          return;
+        }
+        proveedorIdFinal = result.id;
+      }
 
       // 1. Crear productos nuevos si hay
       const productosCreados: Record<string, string> = {};
@@ -372,7 +397,7 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
       const totalArs = itemsData.reduce((s, i) => s + i.subtotal_ars, 0);
 
       const result = await crearCompra({
-        proveedor_id: proveedorId || null,
+        proveedor_id: proveedorIdFinal || null,
         fecha,
         tipo_documento: tipoDoc,
         numero_factura: nroFactura || null,
@@ -390,7 +415,7 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
         .filter((i) => i.producto_id !== '_nuevo_' && i.descripcion_factura)
         .map((i) => ({
           producto_id: resolverProductoId(i),
-          proveedor_id: proveedorId || null,
+          proveedor_id: proveedorIdFinal || null,
           codigo_externo: i.codigo_proveedor_ext,
           nombre_en_factura: i.descripcion_factura,
         }))
@@ -399,7 +424,7 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
             .filter((i) => i.producto_id === '_nuevo_' && productosCreados[i._id])
             .map((i) => ({
               producto_id: productosCreados[i._id],
-              proveedor_id: proveedorId || null,
+              proveedor_id: proveedorIdFinal || null,
               codigo_externo: i.codigo_proveedor_ext,
               nombre_en_factura: i.descripcion_factura,
             }))
@@ -536,9 +561,30 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
               <select value={proveedorId} onChange={(e) => setProveedorId(e.target.value)} className={field} disabled={fase === 'guardando'}>
                 <option value="">Sin proveedor / Crear después</option>
                 {proveedores.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                <option value="_nuevo_">+ Crear nuevo proveedor…</option>
               </select>
               {factura?.proveedor_nombre && !proveedorId && (
-                <p className="text-xs text-amber-600">Extraído: "{factura.proveedor_nombre}" — seleccioná el proveedor correspondiente</p>
+                <p className="text-xs text-amber-600">Extraído: "{factura.proveedor_nombre}" — seleccioná el proveedor correspondiente o creá uno nuevo</p>
+              )}
+              {proveedorId === '_nuevo_' && (
+                <div className="bg-blue-50/60 rounded-xl border border-blue-200 p-3 space-y-2 mt-1">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-zinc-500">Nombre del proveedor</label>
+                    <input
+                      type="text" value={nuevoProveedorNombre}
+                      onChange={(e) => setNuevoProveedorNombre(e.target.value)}
+                      className={field} placeholder="Razón social" disabled={fase === 'guardando'}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-zinc-500">CUIT (opcional)</label>
+                    <input
+                      type="text" value={nuevoProveedorCuit}
+                      onChange={(e) => setNuevoProveedorCuit(e.target.value)}
+                      className={field} placeholder="30-12345678-9" disabled={fase === 'guardando'}
+                    />
+                  </div>
+                </div>
               )}
             </div>
 
