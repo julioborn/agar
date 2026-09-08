@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Upload, FileText, Loader2, CheckCircle2, AlertCircle, ChevronDown, Plus, X, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CATEGORIAS, UNIDADES } from '@/app/app/productos/constants';
+import { createClient } from '@/lib/supabase/client';
 import { crearCompra } from '../actions';
 import { guardarCodigosProveedor, crearProductoNuevo, crearProveedorNuevo } from './actions';
 import type { FacturaExtraida } from '@/app/api/compras/parsear-factura/route';
@@ -33,6 +34,7 @@ interface ItemReview {
   cantidad: string;
   unidad: string;
   precio_unitario_neto: string;
+  precioAutocompletado?: boolean;
   subtotal_neto: number;
 
   // Asignación de producto
@@ -144,7 +146,7 @@ function normalizarUnidad(u: string): string {
   return UNIDAD_MAP[u.toLowerCase()] ?? u;
 }
 
-export default function ImportarFacturaFlow({ proveedores, productos, presentaciones, depositos, codigosProveedor }: Props) {
+export default function ImportarFacturaFlow({ proveedores, productos, presentaciones, depositos, codigosProveedor, empresaId }: Props) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -269,6 +271,26 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
 
       setItems(revisados);
       setFase('revision');
+
+      // Ítems sin precio en el documento pero con producto identificado:
+      // completar con el último precio de compra/RIA registrado para ese producto.
+      const sinPrecio = revisados.filter((i) => i.producto_id && parseFloat(i.precio_unitario_neto) <= 0);
+      if (sinPrecio.length > 0) {
+        const sb = createClient();
+        const cotiz = f.cotizacion_usd && f.cotizacion_usd > 0 ? f.cotizacion_usd : null;
+        const resultados = await Promise.all(
+          sinPrecio.map((i) =>
+            sb.rpc('fn_precio_ultima_compra', { p_producto_id: i.producto_id, p_empresa_id: empresaId })
+              .then(({ data }) => ({ id: i._id, precioArs: data as number | null })),
+          ),
+        );
+        setItems((prev) => prev.map((item) => {
+          const r = resultados.find((x) => x.id === item._id);
+          if (!r || r.precioArs == null || r.precioArs <= 0) return item;
+          const precioEnMoneda = f.moneda === 'USD' && cotiz ? r.precioArs / cotiz : r.precioArs;
+          return { ...item, precio_unitario_neto: String(Math.round(precioEnMoneda * 100) / 100), precioAutocompletado: true };
+        }));
+      }
     } catch (err) {
       setError('Error de red al procesar el archivo');
       setFase('upload');
@@ -289,6 +311,7 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
   // ── Edición de items ───────────────────────────────────────────────────────
 
   function updateItem(id: string, patch: Partial<ItemReview>) {
+    if ('precio_unitario_neto' in patch) patch = { ...patch, precioAutocompletado: false };
     setItems((prev) => prev.map((i) => i._id === id ? { ...i, ...patch } : i));
   }
 
@@ -750,8 +773,12 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
                       type="number" step="0.01" min="0"
                       value={item.precio_unitario_neto}
                       onChange={(e) => updateItem(item._id, { precio_unitario_neto: e.target.value })}
-                      className={field} disabled={fase === 'guardando'}
+                      className={cn(field, item.precioAutocompletado && 'border-amber-300 bg-amber-50/40')}
+                      disabled={fase === 'guardando'}
                     />
+                    {item.precioAutocompletado && (
+                      <p className="text-xs text-amber-600">Sin precio en el documento — se tomó el último precio registrado, revisalo</p>
+                    )}
                   </div>
                 </div>
 
