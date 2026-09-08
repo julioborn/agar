@@ -345,8 +345,8 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
       if (!item.cantidad || parseFloat(item.cantidad) <= 0) {
         setError(`La cantidad de "${item.descripcion_factura}" debe ser mayor a cero`); return;
       }
-      if (!item.precio_unitario_neto || parseFloat(item.precio_unitario_neto) <= 0) {
-        setError(`El precio de "${item.descripcion_factura}" debe ser mayor a cero`); return;
+      if (item.precio_unitario_neto && parseFloat(item.precio_unitario_neto) < 0) {
+        setError(`El precio de "${item.descripcion_factura}" no puede ser negativo`); return;
       }
       if (!item.deposito_id) {
         setError(`Seleccioná el depósito para: "${item.descripcion_factura}"`); return;
@@ -398,7 +398,7 @@ export default function ImportarFacturaFlow({ proveedores, productos, presentaci
         const pid = resolverProductoId(item);
         const prod = productos.find((p) => p.id === pid);
         const cantNum = parseFloat(item.cantidad);
-        const precioNum = parseFloat(item.precio_unitario_neto);
+        const precioNum = parseFloat(item.precio_unitario_neto) || 0;
         const cotizReal = cotizNum ?? 1;
         const precio_ars = moneda === 'USD' ? precioNum * cotizReal : precioNum;
         const subtotal_ars = cantNum * precio_ars;
