@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Package, TrendingDown, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CATEGORIAS } from '../../productos/constants';
-import ExportButtons, { ExportColumn } from '@/components/export-buttons';
+import HistorialExportButton from './historial-export-button';
 
 interface Props { params: Promise<{ productoId: string }> }
 
@@ -152,15 +152,6 @@ export default async function StockProductoPage({ params }: Props) {
     detalle: m.detalle,
     saldo: m.saldoAntes,
   }));
-  const exportColumns: ExportColumn[] = [
-    { header: 'Fecha', key: 'fecha', width: 18 },
-    { header: 'Dirección', key: 'direccion', width: 12 },
-    { header: 'Tipo', key: 'tipo', width: 18 },
-    { header: `Cantidad (${producto.unidad_base})`, key: 'cantidad', width: 14, align: 'right', format: (v: number) => nFmt.format(v) },
-    { header: 'Depósito', key: 'deposito', width: 18 },
-    { header: 'Detalle', key: 'detalle', width: 30 },
-    { header: `Saldo antes (${producto.unidad_base})`, key: 'saldo', width: 16, align: 'right', format: (v: number) => nFmt.format(v) },
-  ];
 
   const bajo = stockTotal <= producto.stock_minimo && producto.stock_minimo > 0;
 
@@ -228,9 +219,9 @@ export default async function StockProductoPage({ params }: Props) {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-zinc-700">Historial de movimientos</h2>
-          <ExportButtons
+          <HistorialExportButton
             data={exportData}
-            columns={exportColumns}
+            unidad={producto.unidad_base}
             filename={`stock-${producto.nombre.toLowerCase().replace(/\s+/g, '-')}`}
             title={`Historial de stock · ${producto.nombre}`}
           />
