@@ -2,9 +2,10 @@ import { redirect, notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 import Link from 'next/link';
-import { ArrowLeft, ArrowDownCircle, ArrowUpCircle, Minus, Package } from 'lucide-react';
+import { ArrowLeft, Package, TrendingDown, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CATEGORIAS } from '../../productos/constants';
+import ExportButtons, { ExportColumn } from '@/components/export-buttons';
 
 interface Props { params: Promise<{ productoId: string }> }
 
@@ -117,8 +118,49 @@ export default async function StockProductoPage({ params }: Props) {
         ? saldo - Number(m.cantidad)
         : saldo;
     saldo = saldoAntes;
-    return { ...m, meta, saldoAntes };
+
+    const compra  = m.referencia_tipo === 'compra' ? comprasMap[m.referencia_id!] : null;
+    const ria     = (m.referencia_tipo === 'remito_interno' || m.referencia_tipo === 'anulacion_ria') ? riasMap[m.referencia_id!] : null;
+    const aplItem = m.referencia_tipo === 'aplicaciones_items' ? aplItemsMap[m.referencia_id!] : null;
+    const apl     = aplItem?.aplicacion ?? null;
+
+    let detalle = '';
+    if (compra) {
+      detalle = `${compra.numero_factura ? `Factura ${compra.numero_factura}` : 'Sin N° de factura'}${compra.proveedor?.nombre ? ` · ${compra.proveedor.nombre}` : ''}`;
+    } else if (ria) {
+      detalle = `${ria.numero_ria}${(ria.lote as any)?.campo?.nombre ? ` · ${(ria.lote as any).campo.nombre}` : ''}${(ria.lote as any)?.nombre ? ` › ${(ria.lote as any).nombre}` : ''}`;
+    } else if (apl) {
+      detalle = `${apl.tipo ? apl.tipo.charAt(0).toUpperCase() + apl.tipo.slice(1) : ''}${(apl.cultivo as any)?.cultivo ? ` · ${(apl.cultivo as any).cultivo}` : ''}${(apl.cultivo as any)?.lote?.nombre ? ` › ${(apl.cultivo as any).lote.nombre}` : ''}`;
+    } else if (m.observaciones) {
+      detalle = m.observaciones;
+    }
+
+    return { ...m, meta, saldoAntes, compra, ria, apl, detalle };
   });
+
+  const entradas = movConSaldo.filter((m) => m.meta.esEntrada);
+  const salidas  = movConSaldo.filter((m) => !m.meta.esEntrada);
+  const totalEntradas = entradas.reduce((s, m) => s + Number(m.cantidad), 0);
+  const totalSalidas  = salidas.reduce((s, m) => s + Number(m.cantidad), 0);
+
+  const exportData = movConSaldo.map((m) => ({
+    fecha: `${fmtFecha(m.created_at)} ${fmtHora(m.created_at)}`,
+    direccion: m.meta.esEntrada ? 'Entrada' : 'Salida',
+    tipo: m.meta.label,
+    cantidad: Number(m.cantidad),
+    deposito: (m.deposito as any)?.nombre ?? '—',
+    detalle: m.detalle,
+    saldo: m.saldoAntes,
+  }));
+  const exportColumns: ExportColumn[] = [
+    { header: 'Fecha', key: 'fecha', width: 18 },
+    { header: 'Dirección', key: 'direccion', width: 12 },
+    { header: 'Tipo', key: 'tipo', width: 18 },
+    { header: `Cantidad (${producto.unidad_base})`, key: 'cantidad', width: 14, align: 'right', format: (v: number) => nFmt.format(v) },
+    { header: 'Depósito', key: 'deposito', width: 18 },
+    { header: 'Detalle', key: 'detalle', width: 30 },
+    { header: `Saldo antes (${producto.unidad_base})`, key: 'saldo', width: 16, align: 'right', format: (v: number) => nFmt.format(v) },
+  ];
 
   const bajo = stockTotal <= producto.stock_minimo && producto.stock_minimo > 0;
 
@@ -182,104 +224,101 @@ export default async function StockProductoPage({ params }: Props) {
         )}
       </div>
 
-      {/* Historial */}
-      <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden shadow-sm">
-        <div className="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
+      {/* Historial: entradas / salidas */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-zinc-700">Historial de movimientos</h2>
-          <span className="text-xs text-zinc-400">{movConSaldo.length} registros</span>
+          <ExportButtons
+            data={exportData}
+            columns={exportColumns}
+            filename={`stock-${producto.nombre.toLowerCase().replace(/\s+/g, '-')}`}
+            title={`Historial de stock · ${producto.nombre}`}
+          />
         </div>
 
-        {movConSaldo.length === 0 ? (
-          <div className="p-12 text-center">
-            <p className="text-sm text-zinc-400">Sin movimientos registrados todavía.</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-zinc-50">
-            {movConSaldo.map((mov) => {
-              const compra   = mov.referencia_tipo === 'compra'            ? comprasMap[mov.referencia_id!]   : null;
-              const ria      = (mov.referencia_tipo === 'remito_interno' || mov.referencia_tipo === 'anulacion_ria')
-                                 ? riasMap[mov.referencia_id!] : null;
-              const aplItem  = mov.referencia_tipo === 'aplicaciones_items' ? aplItemsMap[mov.referencia_id!] : null;
-              const apl      = aplItem?.aplicacion ?? null;
-
-              return (
-                <div key={mov.id} className="px-5 py-4 flex items-start gap-4 hover:bg-zinc-50/60 transition-colors">
-
-                  {/* Ícono dirección */}
-                  <div className={cn(
-                    'w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5',
-                    mov.meta.esEntrada ? 'bg-[#006836]/10' :
-                    mov.meta.signo === '-' ? 'bg-orange-50' : 'bg-zinc-100',
-                  )}>
-                    {mov.meta.esEntrada && mov.meta.signo === '+'
-                      ? <ArrowUpCircle className="w-4 h-4 text-[#006836]" />
-                      : mov.meta.signo === '-'
-                        ? <ArrowDownCircle className="w-4 h-4 text-orange-500" />
-                        : <Minus className="w-4 h-4 text-zinc-400" />}
-                  </div>
-
-                  {/* Detalle */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-zinc-800">{mov.meta.label}</p>
-
-                        {/* Origen: compra */}
-                        {compra && (
-                          <p className="text-xs text-zinc-500 mt-0.5">
-                            {compra.numero_factura ? `Factura ${compra.numero_factura}` : 'Sin N° de factura'}
-                            {compra.proveedor?.nombre ? ` · ${compra.proveedor.nombre}` : ''}
-                            {compra.fecha ? ` · ${fmtFecha(compra.fecha)}` : ''}
-                          </p>
-                        )}
-
-                        {/* Origen: RIA */}
-                        {ria && (
-                          <p className="text-xs text-zinc-500 mt-0.5">
-                            {ria.numero_ria}
-                            {(ria.lote as any)?.campo?.nombre ? ` · ${(ria.lote as any).campo.nombre}` : ''}
-                            {(ria.lote as any)?.nombre ? ` › ${(ria.lote as any).nombre}` : ''}
-                          </p>
-                        )}
-
-                        {/* Origen: aplicación */}
-                        {apl && (
-                          <p className="text-xs text-zinc-500 mt-0.5">
-                            {apl.tipo ? apl.tipo.charAt(0).toUpperCase() + apl.tipo.slice(1) : ''}
-                            {(apl.cultivo as any)?.cultivo ? ` · ${(apl.cultivo as any).cultivo}` : ''}
-                            {(apl.cultivo as any)?.lote?.nombre ? ` › ${(apl.cultivo as any).lote.nombre}` : ''}
-                            {(apl.cultivo as any)?.lote?.campo?.nombre ? ` (${(apl.cultivo as any).lote.campo.nombre})` : ''}
-                          </p>
-                        )}
-
-                        {/* Observaciones fallback */}
-                        {!compra && !ria && !apl && mov.observaciones && (
-                          <p className="text-xs text-zinc-400 mt-0.5 italic">{mov.observaciones}</p>
-                        )}
-
-                        {/* Depósito + timestamp */}
-                        <p className="text-xs text-zinc-400 mt-1">
-                          {(mov.deposito as any)?.nombre ?? '—'} · {fmtFecha(mov.created_at)} {fmtHora(mov.created_at)}
-                        </p>
-                      </div>
-
-                      {/* Cantidad + saldo */}
-                      <div className="text-right shrink-0">
-                        <p className={cn('text-sm font-bold tabular-nums', mov.meta.color)}>
-                          {mov.meta.signo !== '~' ? mov.meta.signo : ''}{nFmt.format(Number(mov.cantidad))} {producto.unidad_base}
-                        </p>
-                        <p className="text-xs text-zinc-400 mt-0.5 tabular-nums">
-                          Saldo: {nFmt.format(mov.saldoAntes)} {producto.unidad_base}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <MovColumn
+            titulo="Entradas"
+            icon={<TrendingUp className="w-4 h-4 text-[#006836]" />}
+            total={totalEntradas}
+            unidad={producto.unidad_base}
+            movs={entradas}
+            nFmt={nFmt}
+            fmtFecha={fmtFecha}
+            fmtHora={fmtHora}
+          />
+          <MovColumn
+            titulo="Salidas"
+            icon={<TrendingDown className="w-4 h-4 text-orange-500" />}
+            total={totalSalidas}
+            unidad={producto.unidad_base}
+            movs={salidas}
+            nFmt={nFmt}
+            fmtFecha={fmtFecha}
+            fmtHora={fmtHora}
+          />
+        </div>
       </div>
+    </div>
+  );
+}
+
+// ── Columna de entradas o salidas ─────────────────────────────────────────────
+
+function MovColumn({ titulo, icon, total, unidad, movs, nFmt, fmtFecha, fmtHora }: {
+  titulo: string;
+  icon: React.ReactNode;
+  total: number;
+  unidad: string;
+  movs: any[];
+  nFmt: Intl.NumberFormat;
+  fmtFecha: (s: string) => string;
+  fmtHora: (s: string) => string;
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden shadow-sm">
+      <div className="px-5 py-4 border-b border-zinc-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {icon}
+            <h3 className="text-sm font-semibold text-zinc-700">{titulo}</h3>
+          </div>
+          <span className="text-xs text-zinc-400">{movs.length} registros</span>
+        </div>
+        <p className="text-lg font-bold text-zinc-900 mt-1 tabular-nums">{nFmt.format(total)} {unidad}</p>
+      </div>
+
+      {movs.length === 0 ? (
+        <div className="p-8 text-center">
+          <p className="text-sm text-zinc-400">Sin movimientos.</p>
+        </div>
+      ) : (
+        <div className="divide-y divide-zinc-50 max-h-[480px] overflow-y-auto">
+          {movs.map((mov) => (
+            <div key={mov.id} className="px-5 py-3.5 hover:bg-zinc-50/60 transition-colors">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-zinc-800">{mov.meta.label}</p>
+                  {mov.detalle && (
+                    <p className="text-xs text-zinc-500 mt-0.5">{mov.detalle}</p>
+                  )}
+                  <p className="text-xs text-zinc-400 mt-1">
+                    {mov.deposito?.nombre ?? '—'} · {fmtFecha(mov.created_at)} {fmtHora(mov.created_at)}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className={cn('text-sm font-bold tabular-nums', mov.meta.color)}>
+                    {mov.meta.signo !== '~' ? mov.meta.signo : ''}{nFmt.format(Number(mov.cantidad))} {unidad}
+                  </p>
+                  <p className="text-xs text-zinc-400 mt-0.5 tabular-nums">
+                    Saldo: {nFmt.format(mov.saldoAntes)} {unidad}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
