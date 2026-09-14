@@ -14,9 +14,18 @@ export interface ExportColumn {
   total?: boolean; // si true, se suma en la fila de totales
 }
 
-interface Props {
+export interface ExportSection {
+  title: string;
   data: Record<string, any>[];
   columns: ExportColumn[];
+}
+
+interface Props {
+  data?: Record<string, any>[];
+  columns?: ExportColumn[];
+  // Alternativa a data/columns: varias tablas tituladas en el mismo archivo
+  // (una debajo de la otra en Excel, una tabla por sección en PDF).
+  sections?: ExportSection[];
   filename: string;
   title?: string;
   className?: string;
@@ -58,29 +67,36 @@ async function loadCircularLogoBase64(): Promise<string | null> {
   } catch { return null; }
 }
 
-export default function ExportButtons({ data, columns, filename, title, className }: Props) {
+export default function ExportButtons({ data, columns, sections, filename, title, className }: Props) {
   const [loadingXlsx, setLoadingXlsx] = useState(false);
   const [loadingPdf,  setLoadingPdf]  = useState(false);
   const { currency } = useCurrency();
 
+  // Normalizamos todo a "secciones": si no vienen sections, tratamos data/columns
+  // como una única sección sin título (comportamiento de siempre).
+  const secciones: ExportSection[] = sections ?? [{ title: '', data: data ?? [], columns: columns ?? [] }];
+  const totalRows = secciones.reduce((s, sec) => s + sec.data.length, 0);
+
   const now      = new Date();
   const dateStr  = DATE_FMT(now);
   const timeStr  = TIME_FMT(now);
-  const metaLine = `Moneda: ${currency}   ·   ${data.length} registros   ·   Generado: ${dateStr} ${timeStr}`;
+  const metaLine = `Moneda: ${currency}   ·   ${totalRows} registros   ·   Generado: ${dateStr} ${timeStr}`;
   const docTitle = title ?? filename;
 
-  // Calcular totales de columnas marcadas con total: true
-  const totalCols = columns.filter((c) => c.total);
-  const totalsMap = Object.fromEntries(
-    totalCols.map((col) => [
-      col.key,
-      data.reduce((acc, row) => {
-        const v = row[col.key];
-        return acc + (typeof v === 'number' && !isNaN(v) ? v : 0);
-      }, 0),
-    ]),
-  );
-  const hasTotals = totalCols.length > 0;
+  // Totales por columna (marcadas con total: true), calculados por sección
+  function totalesDeSeccion(sec: ExportSection) {
+    const totalCols = sec.columns.filter((c) => c.total);
+    const totalsMap = Object.fromEntries(
+      totalCols.map((col) => [
+        col.key,
+        sec.data.reduce((acc, row) => {
+          const v = row[col.key];
+          return acc + (typeof v === 'number' && !isNaN(v) ? v : 0);
+        }, 0),
+      ]),
+    );
+    return { hasTotals: totalCols.length > 0, totalsMap };
+  }
 
   /* ── EXCEL ─────────────────────────────────────────────────────────────── */
   async function exportExcel() {
@@ -124,71 +140,95 @@ export default function ExportButtons({ data, columns, filename, title, classNam
       const sepRow = ws.addRow([]);
       sepRow.height = 6;
 
-      /* Row 6: Encabezados */
-      const headRow = ws.addRow(columns.map(c => c.header));
-      headRow.height = 20;
-      headRow.eachCell((cell, colNum) => {
-        cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + GREEN_HEX } };
-        cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 9.5 };
-        cell.alignment = { vertical: 'middle', horizontal: columns[colNum - 1]?.align ?? 'left', wrapText: false };
-        cell.border    = { bottom: { style: 'medium', color: { argb: 'FF004d24' } } };
-      });
-
-      /* Anchos de columna */
-      columns.forEach((col, i) => { ws.getColumn(i + 1).width = col.width ?? 20; });
+      /* Ancho de columna: el máximo pedido por cada sección, por posición */
+      const colCount = Math.max(...secciones.map(s => s.columns.length), 1);
+      for (let i = 0; i < colCount; i++) {
+        const anchos = secciones.map(s => s.columns[i]?.width).filter((w): w is number => w != null);
+        ws.getColumn(i + 1).width = anchos.length ? Math.max(...anchos) : 20;
+      }
 
       /* Mergear título y meta */
-      const colCount = columns.length;
       if (colCount > 1) {
         ws.mergeCells(3, 1, 3, colCount);
         ws.mergeCells(4, 1, 4, colCount);
       }
 
-      /* Auto-filter */
-      ws.autoFilter = { from: { row: 6, column: 1 }, to: { row: 6, column: colCount } };
+      const mostrarTitulosSeccion = secciones.length > 1;
 
-      /* Filas de datos */
-      data.forEach((row, idx) => {
-        const values  = columns.map(col => {
-          const val = row[col.key];
-          return col.format ? col.format(val) : (val ?? '');
-        });
-        const dataRow = ws.addRow(values);
-        dataRow.height = 15;
+      secciones.forEach((sec, secIdx) => {
+        const { hasTotals, totalsMap } = totalesDeSeccion(sec);
 
-        if (idx % 2 === 1) {
-          dataRow.eachCell(cell => {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + LIGHT_HEX } };
-          });
+        /* Título de la sección (si hay más de una) */
+        if (mostrarTitulosSeccion) {
+          const secRow = ws.addRow([sec.title]);
+          secRow.height = 18;
+          secRow.getCell(1).font = { bold: true, size: 11.5, color: { argb: 'FF' + GREEN_HEX } };
+          if (colCount > 1) ws.mergeCells(secRow.number, 1, secRow.number, colCount);
         }
-        dataRow.eachCell((cell, colNum) => {
-          cell.alignment = { vertical: 'middle', horizontal: columns[colNum - 1]?.align ?? 'left' };
-          cell.border    = { bottom: { style: 'hair', color: { argb: 'FFD4E9DC' } } };
-        });
-      });
 
-      /* Fila de totales */
-      if (hasTotals) {
-        const sepTotalRow = ws.addRow([]);
-        sepTotalRow.height = 4;
-
-        const totalValues = columns.map((col, i) => {
-          if (i === 0) return 'TOTAL';
-          if (col.total) {
-            const v = totalsMap[col.key];
-            return col.format ? col.format(v) : v;
-          }
-          return '';
-        });
-        const totalRow = ws.addRow(totalValues);
-        totalRow.height = 18;
-        totalRow.eachCell((cell, colNum) => {
+        /* Encabezados */
+        const headRow = ws.addRow(sec.columns.map(c => c.header));
+        headRow.height = 20;
+        headRow.eachCell((cell, colNum) => {
           cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + GREEN_HEX } };
           cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 9.5 };
-          cell.alignment = { vertical: 'middle', horizontal: columns[colNum - 1]?.align ?? 'left' };
-          cell.border    = { top: { style: 'medium', color: { argb: 'FF004d24' } } };
+          cell.alignment = { vertical: 'middle', horizontal: sec.columns[colNum - 1]?.align ?? 'left', wrapText: false };
+          cell.border    = { bottom: { style: 'medium', color: { argb: 'FF004d24' } } };
         });
-      }
+
+        if (secIdx === 0) {
+          ws.autoFilter = { from: { row: headRow.number, column: 1 }, to: { row: headRow.number, column: sec.columns.length } };
+        }
+
+        /* Filas de datos */
+        sec.data.forEach((row, idx) => {
+          const values  = sec.columns.map(col => {
+            const val = row[col.key];
+            return col.format ? col.format(val) : (val ?? '');
+          });
+          const dataRow = ws.addRow(values);
+          dataRow.height = 15;
+
+          if (idx % 2 === 1) {
+            dataRow.eachCell(cell => {
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + LIGHT_HEX } };
+            });
+          }
+          dataRow.eachCell((cell, colNum) => {
+            cell.alignment = { vertical: 'middle', horizontal: sec.columns[colNum - 1]?.align ?? 'left' };
+            cell.border    = { bottom: { style: 'hair', color: { argb: 'FFD4E9DC' } } };
+          });
+        });
+
+        /* Fila de totales */
+        if (hasTotals) {
+          const sepTotalRow = ws.addRow([]);
+          sepTotalRow.height = 4;
+
+          const totalValues = sec.columns.map((col, i) => {
+            if (i === 0) return 'TOTAL';
+            if (col.total) {
+              const v = totalsMap[col.key];
+              return col.format ? col.format(v) : v;
+            }
+            return '';
+          });
+          const totalRow = ws.addRow(totalValues);
+          totalRow.height = 18;
+          totalRow.eachCell((cell, colNum) => {
+            cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + GREEN_HEX } };
+            cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 9.5 };
+            cell.alignment = { vertical: 'middle', horizontal: sec.columns[colNum - 1]?.align ?? 'left' };
+            cell.border    = { top: { style: 'medium', color: { argb: 'FF004d24' } } };
+          });
+        }
+
+        /* Separador entre secciones */
+        if (secIdx < secciones.length - 1) {
+          const gap = ws.addRow([]);
+          gap.height = 14;
+        }
+      });
 
       /* Fila de pie */
       ws.addRow([]);
@@ -245,51 +285,68 @@ export default function ExportButtons({ data, columns, filename, title, classNam
       doc.setTextColor(190, 235, 210);
       doc.text(metaLine, textX, 21);
 
-      /* Fila de totales para PDF */
-      const pdfFoot = hasTotals
-        ? [columns.map((col, i) => {
-            if (i === 0) return 'TOTAL';
-            if (col.total) {
-              const v = totalsMap[col.key];
-              return col.format ? col.format(v) : String(v ?? '');
-            }
-            return '';
-          })]
-        : undefined;
+      /* Tablas (una por sección) */
+      const mostrarTitulosSeccion = secciones.length > 1;
+      let cursorY = 35;
 
-      /* Tabla */
-      autoTable(doc, {
-        startY: 35,
-        head:   [columns.map(c => c.header)],
-        body:   data.map(row =>
-          columns.map(col =>
-            col.format ? col.format(row[col.key]) : (row[col.key] ?? '')
-          )
-        ),
-        foot:   pdfFoot,
-        showFoot: 'lastPage',
-        styles: {
-          fontSize:    8,
-          cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
-          overflow:    'linebreak',
-        },
-        headStyles: {
-          fillColor:  [...GREEN_RGB],
-          textColor:  [255, 255, 255],
-          fontStyle:  'bold',
-          fontSize:   8.5,
-          minCellHeight: 9,
-        },
-        footStyles: {
-          fillColor:  [...GREEN_RGB],
-          textColor:  [255, 255, 255],
-          fontStyle:  'bold',
-          fontSize:   8.5,
-        },
-        alternateRowStyles: { fillColor: [240, 247, 243] },
-        margin:             { left: 10, right: 10, bottom: 14 },
-        tableLineColor:     [210, 230, 218],
-        tableLineWidth:     0.1,
+      secciones.forEach((sec) => {
+        const { hasTotals, totalsMap } = totalesDeSeccion(sec);
+
+        if (mostrarTitulosSeccion) {
+          if (cursorY > pageH - 30) { doc.addPage(); cursorY = 20; }
+          doc.setTextColor(...GREEN_RGB);
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'bold');
+          doc.text(sec.title, 10, cursorY);
+          cursorY += 5;
+        }
+
+        const pdfFoot = hasTotals
+          ? [sec.columns.map((col, i) => {
+              if (i === 0) return 'TOTAL';
+              if (col.total) {
+                const v = totalsMap[col.key];
+                return col.format ? col.format(v) : String(v ?? '');
+              }
+              return '';
+            })]
+          : undefined;
+
+        autoTable(doc, {
+          startY: cursorY,
+          head:   [sec.columns.map(c => c.header)],
+          body:   sec.data.map(row =>
+            sec.columns.map(col =>
+              col.format ? col.format(row[col.key]) : (row[col.key] ?? '')
+            )
+          ),
+          foot:   pdfFoot,
+          showFoot: 'lastPage',
+          styles: {
+            fontSize:    8,
+            cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
+            overflow:    'linebreak',
+          },
+          headStyles: {
+            fillColor:  [...GREEN_RGB],
+            textColor:  [255, 255, 255],
+            fontStyle:  'bold',
+            fontSize:   8.5,
+            minCellHeight: 9,
+          },
+          footStyles: {
+            fillColor:  [...GREEN_RGB],
+            textColor:  [255, 255, 255],
+            fontStyle:  'bold',
+            fontSize:   8.5,
+          },
+          alternateRowStyles: { fillColor: [240, 247, 243] },
+          margin:             { left: 10, right: 10, bottom: 14 },
+          tableLineColor:     [210, 230, 218],
+          tableLineWidth:     0.1,
+        });
+
+        cursorY = (doc as any).lastAutoTable.finalY + 12;
       });
 
       /* Pie de página en todas las páginas */
@@ -321,7 +378,7 @@ export default function ExportButtons({ data, columns, filename, title, classNam
     <div className={cn('flex items-center gap-2', className)}>
       <button
         onClick={exportExcel}
-        disabled={loadingXlsx || data.length === 0}
+        disabled={loadingXlsx || totalRows === 0}
         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-green-200 text-green-700 bg-green-50 hover:bg-green-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
       >
         {loadingXlsx ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />}
@@ -329,7 +386,7 @@ export default function ExportButtons({ data, columns, filename, title, classNam
       </button>
       <button
         onClick={exportPdf}
-        disabled={loadingPdf || data.length === 0}
+        disabled={loadingPdf || totalRows === 0}
         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
       >
         {loadingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
