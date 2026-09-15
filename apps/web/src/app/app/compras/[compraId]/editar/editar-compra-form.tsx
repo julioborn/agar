@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, ArrowLeft, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Save, ArrowLeft, AlertCircle, CheckCircle2, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { editarCompraCompleta } from '../../actions';
@@ -32,13 +32,30 @@ interface Compra {
   proveedor: { nombre: string } | null;
 }
 
+interface Producto {
+  id: string;
+  nombre: string;
+  unidad_base: string;
+}
+
+interface NuevoItem {
+  _id: string;
+  producto_id: string;
+  cantidad: string;
+  precio: string;
+  deposito_id: string;
+}
+
 interface Props {
   compraId: string;
   compra: Compra;
   items: Item[];
   proveedores: { id: string; nombre: string }[];
   depositos: { id: string; nombre: string }[];
+  productos: Producto[];
 }
+
+function uid() { return Math.random().toString(36).slice(2, 10); }
 
 const fmtNum = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 });
 const fmtArs = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 });
@@ -61,7 +78,7 @@ function fmtInput(n: number): string {
 
 const input = 'w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#006836]/40';
 
-export default function EditarCompraForm({ compraId, compra, items, proveedores, depositos }: Props) {
+export default function EditarCompraForm({ compraId, compra, items, proveedores, depositos, productos }: Props) {
   const router = useRouter();
 
   // — Cabecera —
@@ -82,6 +99,21 @@ export default function EditarCompraForm({ compraId, compra, items, proveedores,
     Object.fromEntries(items.map((i) => [i.id, i.deposito_destino_id]))
   );
 
+  // — Ítems nuevos (productos agregados a la factura) —
+  const [nuevosItems, setNuevosItems] = useState<NuevoItem[]>([]);
+
+  function agregarItem() {
+    setNuevosItems((prev) => [...prev, {
+      _id: uid(), producto_id: '', cantidad: '', precio: '', deposito_id: depositos[0]?.id ?? '',
+    }]);
+  }
+  function actualizarNuevoItem(id: string, patch: Partial<NuevoItem>) {
+    setNuevosItems((prev) => prev.map((i) => i._id === id ? { ...i, ...patch } : i));
+  }
+  function quitarNuevoItem(id: string) {
+    setNuevosItems((prev) => prev.filter((i) => i._id !== id));
+  }
+
   const [guardando,  setGuardando]  = useState(false);
   const [resultado,  setResultado]  = useState<{ ok?: boolean; error?: string } | null>(null);
 
@@ -98,11 +130,25 @@ export default function EditarCompraForm({ compraId, compra, items, proveedores,
     return precioArs(itemId, precio) * cant;
   }
 
-  const totalArs = items.reduce((s, i) => s + subtotalFila(i.id), 0);
+  function subtotalNuevoFila(item: NuevoItem): number {
+    const precio = parseNum(item.precio || '0');
+    const cant   = parseNum(item.cantidad || '0');
+    return (esUsd ? precio * cotiz : precio) * cant;
+  }
+
+  const totalArs = items.reduce((s, i) => s + subtotalFila(i.id), 0)
+    + nuevosItems.reduce((s, i) => s + subtotalNuevoFila(i), 0);
 
   async function handleGuardar() {
-    setGuardando(true);
     setResultado(null);
+
+    for (const n of nuevosItems) {
+      if (!n.producto_id) { setResultado({ error: 'Elegí un producto para cada ítem agregado.' }); return; }
+      if (!n.deposito_id) { setResultado({ error: 'Elegí un depósito para cada ítem agregado.' }); return; }
+      if (!(parseNum(n.cantidad) > 0)) { setResultado({ error: 'La cantidad de los ítems agregados debe ser mayor a cero.' }); return; }
+    }
+
+    setGuardando(true);
 
     const itemsPayload = items.map((i) => {
       const precioOrig = parseNum(precios[i.id] ?? '0');
@@ -117,6 +163,19 @@ export default function EditarCompraForm({ compraId, compra, items, proveedores,
       };
     });
 
+    const nuevosItemsPayload = nuevosItems.map((n) => {
+      const precioOrig = parseNum(n.precio || '0');
+      const cant       = parseNum(n.cantidad || '0');
+      const pArs       = esUsd ? precioOrig * cotiz : precioOrig;
+      return {
+        producto_id: n.producto_id,
+        cantidad_unidad_base: cant,
+        precio_unitario_moneda_original: precioOrig,
+        precio_unitario_ars: pArs,
+        deposito_destino_id: n.deposito_id,
+      };
+    });
+
     const result = await editarCompraCompleta(
       compraId,
       {
@@ -127,6 +186,7 @@ export default function EditarCompraForm({ compraId, compra, items, proveedores,
         cotizacion_usd: esUsd ? parseNum(cotizUsd) || null : null,
       },
       itemsPayload,
+      nuevosItemsPayload,
     );
 
     setGuardando(false);
@@ -238,6 +298,7 @@ export default function EditarCompraForm({ compraId, compra, items, proveedores,
                   <th className="text-right px-4 py-3 font-medium text-zinc-400 text-xs">$/ARS</th>
                 )}
                 <th className="text-right px-4 py-3 font-medium text-zinc-500">Subtotal ARS</th>
+                <th className="px-2 py-3 w-8"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-50">
@@ -333,6 +394,88 @@ export default function EditarCompraForm({ compraId, compra, items, proveedores,
                     <td className="px-4 py-3 text-right font-medium text-zinc-700">
                       {cant > 0 && precioOrig > 0 ? fmtArs.format(sub) : '—'}
                     </td>
+                    <td className="px-2 py-3"></td>
+                  </tr>
+                );
+              })}
+
+              {nuevosItems.map((n) => {
+                const producto = productos.find((p) => p.id === n.producto_id);
+                const precioOrig = parseNum(n.precio || '');
+                const cant       = parseNum(n.cantidad || '');
+                const pArs       = esUsd ? precioOrig * cotiz : precioOrig;
+                const sub        = pArs * cant;
+
+                return (
+                  <tr key={n._id} className="bg-[#006836]/5">
+                    <td className="px-4 py-3">
+                      <select
+                        value={n.producto_id}
+                        onChange={(e) => actualizarNuevoItem(n._id, { producto_id: e.target.value })}
+                        className="w-full text-sm border border-[#006836]/30 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40 bg-white"
+                      >
+                        <option value="">Elegir producto…</option>
+                        {productos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                      </select>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <select
+                        value={n.deposito_id}
+                        onChange={(e) => actualizarNuevoItem(n._id, { deposito_id: e.target.value })}
+                        className="w-full text-xs border border-[#006836]/30 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#006836]/40 bg-white"
+                      >
+                        {depositos.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
+                      </select>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-1">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0"
+                          value={n.cantidad}
+                          onChange={(e) => actualizarNuevoItem(n._id, { cantidad: e.target.value })}
+                          className="w-24 text-center text-sm border border-[#006836]/30 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#006836]/40 bg-white"
+                        />
+                        {producto && <span className="text-xs text-zinc-400 shrink-0">{producto.unidad_base}</span>}
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-1">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0"
+                          value={n.precio}
+                          onChange={(e) => actualizarNuevoItem(n._id, { precio: e.target.value })}
+                          className="w-32 text-center text-sm border border-[#006836]/30 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#006836]/40 bg-white"
+                        />
+                        <span className="text-xs text-zinc-400">{compra.moneda}</span>
+                      </div>
+                    </td>
+
+                    {esUsd && (
+                      <td className="px-4 py-3 text-right text-xs text-zinc-400">
+                        {precioOrig > 0 ? fmtArs.format(pArs) : '—'}
+                      </td>
+                    )}
+
+                    <td className="px-4 py-3 text-right font-medium text-zinc-700">
+                      {cant > 0 && precioOrig > 0 ? fmtArs.format(sub) : '—'}
+                    </td>
+                    <td className="px-2 py-3">
+                      <button
+                        type="button"
+                        onClick={() => quitarNuevoItem(n._id)}
+                        className="p-1 rounded-lg text-zinc-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        title="Quitar"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -345,9 +488,20 @@ export default function EditarCompraForm({ compraId, compra, items, proveedores,
                 <td className="px-4 py-3 text-right text-base font-bold text-zinc-900">
                   {fmtArs.format(totalArs)}
                 </td>
+                <td></td>
               </tr>
             </tfoot>
           </table>
+        </div>
+
+        <div className="px-5 py-3 border-t border-zinc-100">
+          <button
+            type="button"
+            onClick={agregarItem}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-[#006836]/30 text-[#006836] bg-[#006836]/5 hover:bg-[#006836]/10 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> Agregar producto
+          </button>
         </div>
       </div>
 

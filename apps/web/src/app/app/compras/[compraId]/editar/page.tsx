@@ -27,7 +27,7 @@ export default async function EditarCompraPage({ params }: Props) {
 
   if (!compra) notFound();
 
-  const [{ data: items }, { data: proveedores }, { data: depositos }] = await Promise.all([
+  const [{ data: items }, { data: proveedores }, { data: depositos }, { data: productos }] = await Promise.all([
     supabase
       .from('compras_items')
       .select(`
@@ -56,6 +56,11 @@ export default async function EditarCompraPage({ params }: Props) {
       .select('id, nombre')
       .eq('empresa_id', empresaData.empresa.id)
       .order('nombre'),
+    supabase
+      .from('productos')
+      .select('id, nombre, unidad_base')
+      .eq('empresa_id', empresaData.empresa.id)
+      .order('nombre'),
   ]);
 
   return (
@@ -75,6 +80,7 @@ export default async function EditarCompraPage({ params }: Props) {
         items={(items ?? []) as any}
         proveedores={proveedores ?? []}
         depositos={depositos ?? []}
+        productos={productos ?? []}
       />
     </div>
   );

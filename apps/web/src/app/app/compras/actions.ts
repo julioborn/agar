@@ -224,7 +224,14 @@ export async function editarCompraCompleta(
     precio_unitario_moneda_original: number;
     precio_unitario_ars: number;
     deposito_destino_id: string;
-  }>
+  }>,
+  nuevosItems: Array<{
+    producto_id: string;
+    cantidad_unidad_base: number;
+    precio_unitario_moneda_original: number;
+    precio_unitario_ars: number;
+    deposito_destino_id: string;
+  }> = []
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -302,6 +309,38 @@ export async function editarCompraCompleta(
       // Agregar clave del depósito NUEVO para recalcular
       stockRecalcKeys.add(`${itemData.producto_id}::${item.deposito_destino_id}`);
     }
+  }
+
+  // 3b. Agregar ítems nuevos (productos que no estaban en la factura original)
+  for (const nuevo of nuevosItems) {
+    const subtotalArs = nuevo.precio_unitario_ars * nuevo.cantidad_unidad_base;
+    const subtotalOrig = nuevo.precio_unitario_moneda_original * nuevo.cantidad_unidad_base;
+
+    const { error: eNuevo } = await supabase.from('compras_items').insert({
+      compra_id: compraId,
+      producto_id: nuevo.producto_id,
+      cantidad_unidad_base: nuevo.cantidad_unidad_base,
+      precio_unitario_moneda_original: nuevo.precio_unitario_moneda_original,
+      precio_unitario_ars: nuevo.precio_unitario_ars,
+      subtotal_moneda_original: subtotalOrig,
+      subtotal_ars: subtotalArs,
+      deposito_destino_id: nuevo.deposito_destino_id,
+    });
+    if (eNuevo) return { error: eNuevo.message };
+
+    const { error: eMov } = await supabase.from('movimientos_stock').insert({
+      deposito_id: nuevo.deposito_destino_id,
+      producto_id: nuevo.producto_id,
+      tipo: 'entrada_compra',
+      cantidad: nuevo.cantidad_unidad_base,
+      fecha: new Date(`${cabecera.fecha}T12:00:00`).toISOString(),
+      usuario_id: user.id,
+      referencia_tipo: 'compra',
+      referencia_id: compraId,
+    });
+    if (eMov) return { error: eMov.message };
+
+    stockRecalcKeys.add(`${nuevo.producto_id}::${nuevo.deposito_destino_id}`);
   }
 
   // 4. Recalcular stock para todos los depósitos afectados
