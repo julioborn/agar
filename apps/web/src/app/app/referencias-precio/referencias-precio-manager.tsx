@@ -40,9 +40,10 @@ const lbl = 'block text-xs font-medium text-zinc-500 mb-1.5';
 interface Props {
   referencias: Referencia[];
   empresaId: string;
+  extraVigentes?: { nombre: string; valor: number; unidad: string }[];
 }
 
-export default function ReferenciasPrecioManager({ referencias: initial, empresaId }: Props) {
+export default function ReferenciasPrecioManager({ referencias: initial, empresaId, extraVigentes = [] }: Props) {
   const router = useRouter();
   const [referencias, setReferencias] = useState(initial);
   const [showForm, setShowForm] = useState(false);
@@ -151,7 +152,7 @@ export default function ReferenciasPrecioManager({ referencias: initial, empresa
   return (
     <div className="space-y-5">
       {/* Vigentes en tarjetas */}
-      {vigentes.size > 0 && (
+      {(vigentes.size > 0 || extraVigentes.length > 0) && (
         <div>
           <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Valores vigentes hoy</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -160,6 +161,13 @@ export default function ReferenciasPrecioManager({ referencias: initial, empresa
                 <p className="text-lg font-bold text-zinc-900 leading-none">{num.format(r.valor)}</p>
                 <p className="text-xs text-[#006836] font-medium mt-0.5">{r.unidad}</p>
                 <p className="text-xs text-zinc-400 mt-1 truncate">{r.nombre}</p>
+              </div>
+            ))}
+            {extraVigentes.map((r) => (
+              <div key={r.nombre} className="bg-white rounded-2xl border border-zinc-100 px-4 py-3 shadow-sm">
+                <p className="text-lg font-bold text-zinc-900 leading-none">{num.format(r.valor)}</p>
+                <p className="text-xs text-[#006836] font-medium mt-0.5">{r.unidad}</p>
+                <p className="text-xs text-zinc-400 mt-1 truncate">{r.nombre} <span className="text-zinc-300">(calculado)</span></p>
               </div>
             ))}
           </div>
