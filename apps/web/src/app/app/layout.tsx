@@ -82,6 +82,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (bloqueada || riaBlockeada) redirect('/app');
   }
 
+  // Lector de Insumos → solo puede ver Depósitos/Proveedores/Productos/Compras/Stock/
+  // Referencias de Precio/Valuación; cualquier otra ruta lo manda de vuelta a Stock.
+  if (rol === 'lector_insumos') {
+    const heads = await headers();
+    const pathname = heads.get('x-pathname') ?? '';
+    const INSUMOS_PERMITIDAS = [
+      '/app/depositos', '/app/proveedores', '/app/productos',
+      '/app/compras', '/app/stock', '/app/referencias-precio', '/app/valuacion',
+    ];
+    const permitida = INSUMOS_PERMITIDAS.some(
+      (p) => pathname === p || pathname.startsWith(p + '/'),
+    );
+    if (!permitida) redirect('/app/stock');
+  }
+
   // Solo redirigir al campo si el usuario NO tiene ningún rol administrativo en ninguna empresa
   const tieneRolAdmin = todasLasEmpresas.some(
     (e) => e.rol === 'super_admin' || e.rol === 'admin_empresa' || e.rol === 'contador',
@@ -102,7 +117,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       todasLasEmpresas={todasLasEmpresas}
       esSuperAdmin={esSuperAdmin}
       esAdmin={rol === 'admin_empresa'}
-      esLector={rol === 'lector'}
+      esLector={rol === 'lector' || rol === 'lector_insumos'}
+      esLectorInsumos={rol === 'lector_insumos'}
       esContador={rol === 'contador'}
       usdRate={usdRate}
       tickerData={tickerData}

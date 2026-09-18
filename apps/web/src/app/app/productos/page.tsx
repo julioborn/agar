@@ -12,7 +12,8 @@ export default async function ProductosPage() {
   const empresaData = await getEmpresaActiva();
   if (!empresaData) redirect('/login');
 
-  const { empresa } = empresaData;
+  const { empresa, rol } = empresaData;
+  const esLectorInsumos = rol === 'lector_insumos';
 
   const { data: productos } = await supabase
     .from('productos')
@@ -36,7 +37,7 @@ export default async function ProductosPage() {
         </div>
       </div>
 
-      <ProductosManager productos={productos ?? []} empresaId={empresa.id} />
+      <ProductosManager productos={productos ?? []} empresaId={empresa.id} esLectorInsumos={esLectorInsumos} />
     </div>
   );
 }

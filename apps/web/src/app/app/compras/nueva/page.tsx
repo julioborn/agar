@@ -10,6 +10,7 @@ export default async function NuevaCompraPage() {
 
   const empresaData = await getEmpresaActiva();
   if (!empresaData) redirect('/login');
+  if (empresaData.rol === 'lector_insumos') redirect('/app/compras');
 
   // Cargar datos de referencia para el formulario (en paralelo)
   const [provRes, prodRes, presRes, depRes] = await Promise.all([

@@ -12,7 +12,8 @@ export default async function ProveedoresPage() {
   const empresaData = await getEmpresaActiva();
   if (!empresaData) redirect('/login');
 
-  const { empresa } = empresaData;
+  const { empresa, rol } = empresaData;
+  const esLectorInsumos = rol === 'lector_insumos';
 
   const { data: proveedores } = await supabase
     .from('proveedores').select('id, nombre, cuit, contacto').order('nombre');
@@ -32,7 +33,7 @@ export default async function ProveedoresPage() {
           </p>
         </div>
       </div>
-      <ProveedoresManager proveedores={proveedores ?? []} empresaId={empresa.id} />
+      <ProveedoresManager proveedores={proveedores ?? []} empresaId={empresa.id} esLectorInsumos={esLectorInsumos} />
     </div>
   );
 }

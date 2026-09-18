@@ -12,7 +12,8 @@ export default async function DepositosPage() {
   const empresaData = await getEmpresaActiva();
   if (!empresaData) redirect('/login');
 
-  const { empresa } = empresaData;
+  const { empresa, rol } = empresaData;
+  const esLectorInsumos = rol === 'lector_insumos';
 
   const [depositosRes, camposRes] = await Promise.all([
     supabase.from('depositos').select('id, nombre, tipo, campo_id, campo:campos(id, nombre)').order('nombre'),
@@ -39,6 +40,7 @@ export default async function DepositosPage() {
         depositos={(depositosRes.data ?? []) as any}
         campos={camposRes.data ?? []}
         empresaId={empresa.id}
+        esLectorInsumos={esLectorInsumos}
       />
     </div>
   );

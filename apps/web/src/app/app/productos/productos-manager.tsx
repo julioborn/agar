@@ -54,16 +54,19 @@ const CATEGORIA_HDR: Record<string, string> = {
 interface Props {
   productos: ProductoRow[];
   empresaId: string;
+  esLectorInsumos?: boolean;
 }
 
 function ProductoCard({
   p,
   onEdit,
   onDelete,
+  readOnly = false,
 }: {
   p: ProductoRow;
   onEdit: () => void;
   onDelete: () => Promise<void>;
+  readOnly?: boolean;
 }) {
   return (
     <div className="group bg-white rounded-2xl border border-zinc-100 hover:border-[#006836]/25 hover:shadow-md transition-all duration-200 overflow-hidden">
@@ -118,26 +121,28 @@ function ProductoCard({
           >
             Presentaciones <ExternalLink className="w-3 h-3" />
           </Link>
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              onClick={onEdit}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
-              title="Editar"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            </button>
-            <DeleteButton onDelete={onDelete} />
-          </div>
+          {!readOnly && (
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={onEdit}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
+                title="Editar"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+              <DeleteButton onDelete={onDelete} />
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-export default function ProductosManager({ productos, empresaId }: Props) {
+export default function ProductosManager({ productos, empresaId, esLectorInsumos = false }: Props) {
   const router = useRouter();
   const [editando, setEditando] = useState<ProductoRow | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -230,6 +235,7 @@ export default function ProductosManager({ productos, empresaId }: Props) {
       )}
 
       {/* Nuevo producto (colapsable) */}
+      {!esLectorInsumos && (
       <div className={cn(
         'bg-white rounded-2xl border overflow-hidden transition-all',
         formOpen ? 'border-[#006836]/30 shadow-sm' : 'border-zinc-100',
@@ -268,6 +274,7 @@ export default function ProductosManager({ productos, empresaId }: Props) {
           </div>
         )}
       </div>
+      )}
 
       {/* Buscador */}
       <div className="relative">
@@ -355,6 +362,7 @@ export default function ProductosManager({ productos, empresaId }: Props) {
                     p={p}
                     onEdit={() => { setEditando(p); setFormOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                     onDelete={() => handleDelete(p.id)}
+                    readOnly={esLectorInsumos}
                   />
                 ))}
               </div>
@@ -370,6 +378,7 @@ export default function ProductosManager({ productos, empresaId }: Props) {
               p={p}
               onEdit={() => { setEditando(p); setFormOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
               onDelete={() => handleDelete(p.id)}
+                    readOnly={esLectorInsumos}
             />
           ))}
         </div>

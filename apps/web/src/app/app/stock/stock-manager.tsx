@@ -30,13 +30,13 @@ interface StockRow {
   precio_fuente: 'compra' | 'ria' | 'produccion' | null;
 }
 
-interface Props { stockRows: StockRow[]; empresaNombre: string; hasta: string | null }
+interface Props { stockRows: StockRow[]; empresaNombre: string; hasta: string | null; esLectorInsumos?: boolean }
 
 const numFmt = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 });
 const num = (n: number, unit: string) => `${numFmt.format(n)} ${unit}`;
 const hoyStr = () => new Date().toISOString().slice(0, 10);
 
-export default function StockManager({ stockRows, empresaNombre, hasta }: Props) {
+export default function StockManager({ stockRows, empresaNombre, hasta, esLectorInsumos = false }: Props) {
   const router = useRouter();
   const { formatMoney, usdRate } = useCurrency();
   const [vista, setVista]               = useState<'insumos' | 'produccion'>('insumos');
@@ -217,13 +217,15 @@ export default function StockManager({ stockRows, empresaNombre, hasta }: Props)
                 <X className="w-3 h-3" /> Limpiar
               </button>
             )}
-            <Link
-              href="/app/stock/importar"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border border-[#006836]/30 text-[#006836] bg-[#006836]/5 hover:bg-[#006836]/10 transition-colors"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              Cargar desde archivo
-            </Link>
+            {!esLectorInsumos && (
+              <Link
+                href="/app/stock/importar"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border border-[#006836]/30 text-[#006836] bg-[#006836]/5 hover:bg-[#006836]/10 transition-colors"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Cargar desde archivo
+              </Link>
+            )}
             <ExportButtons data={exportData} columns={exportColumns}
               filename={`stock-${empresaNombre.replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}`}
               title={`Stock · ${empresaNombre}`} />

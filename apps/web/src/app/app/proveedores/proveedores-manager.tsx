@@ -8,9 +8,9 @@ import { cn } from '@/lib/utils';
 import ProveedorForm, { type ProveedorRow } from './proveedor-form';
 import DeleteButton from '@/components/ui/delete-button';
 
-interface Props { proveedores: ProveedorRow[]; empresaId: string }
+interface Props { proveedores: ProveedorRow[]; empresaId: string; esLectorInsumos?: boolean }
 
-export default function ProveedoresManager({ proveedores, empresaId }: Props) {
+export default function ProveedoresManager({ proveedores, empresaId, esLectorInsumos = false }: Props) {
   const router = useRouter();
   const [editando, setEditando] = useState<ProveedorRow | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -45,6 +45,7 @@ export default function ProveedoresManager({ proveedores, empresaId }: Props) {
       </div>
 
       {/* Nuevo proveedor */}
+      {!esLectorInsumos && (
       <div className={cn('bg-white rounded-2xl border overflow-hidden transition-all',
         formOpen ? 'border-[#006836]/30 shadow-sm' : 'border-zinc-100')}>
         <button type="button" onClick={() => { setFormOpen((v) => !v); setEditando(null); }}
@@ -68,6 +69,7 @@ export default function ProveedoresManager({ proveedores, empresaId }: Props) {
           </div>
         )}
       </div>
+      )}
 
       {/* Grid */}
       {proveedores.length === 0 ? (
@@ -94,17 +96,19 @@ export default function ProveedoresManager({ proveedores, empresaId }: Props) {
                   {!p.cuit && !p.contacto && <p className="text-zinc-300">Sin datos adicionales</p>}
                 </div>
 
-                <div className="flex items-center justify-end pt-1 border-t border-zinc-50">
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => { setEditando(p); setFormOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                      className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors" title="Editar">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
-                    <DeleteButton onDelete={() => handleDelete(p.id)} />
+                {!esLectorInsumos && (
+                  <div className="flex items-center justify-end pt-1 border-t border-zinc-50">
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => { setEditando(p); setFormOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors" title="Editar">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
+                      <DeleteButton onDelete={() => handleDelete(p.id)} />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           ))}

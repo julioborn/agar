@@ -11,6 +11,7 @@ export default async function ImportarFacturaPage() {
 
   const empresaData = await getEmpresaActiva();
   if (!empresaData) redirect('/login');
+  if (empresaData.rol === 'lector_insumos') redirect('/app/compras');
 
   const [provRes, prodRes, presRes, depRes, codRes] = await Promise.all([
     supabase.from('proveedores').select('id, nombre, cuit').order('nombre'),

@@ -135,6 +135,7 @@ interface Props {
   esSuperAdmin: boolean;
   esAdmin?: boolean;
   esLector?: boolean;
+  esLectorInsumos?: boolean;
   esContador?: boolean;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -146,6 +147,7 @@ export default function SidebarNav({
   esSuperAdmin,
   esAdmin = false,
   esLector = false,
+  esLectorInsumos = false,
   esContador = false,
   collapsed = false,
   onToggleCollapse,
@@ -223,22 +225,26 @@ export default function SidebarNav({
       {/* Nav */}
       <nav className="flex-1 py-2 px-2 overflow-y-auto overflow-x-hidden scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
 
-        {/* Inicio — sin grupo */}
-        <Link
-          href="/app"
-          title={collapsed ? 'Inicio' : undefined}
-          className={linkClass(isActive('/app', true))}
-        >
-          <LayoutDashboard className="w-4 h-4 shrink-0" />
-          {!collapsed && <span className="truncate">Inicio</span>}
-        </Link>
+        {/* Inicio — sin grupo (oculto para lector de Insumos, que no tiene acceso al dashboard) */}
+        {!esLectorInsumos && (
+          <Link
+            href="/app"
+            title={collapsed ? 'Inicio' : undefined}
+            className={linkClass(isActive('/app', true))}
+          >
+            <LayoutDashboard className="w-4 h-4 shrink-0" />
+            {!collapsed && <span className="truncate">Inicio</span>}
+          </Link>
+        )}
 
         {/* Secciones agrupadas */}
         {navSections
-          .filter((s) => !s.requiereAdmin || esAdmin || esSuperAdmin || esLector || esContador)
+          .filter((s) => esLectorInsumos
+            ? s.label === 'Insumos'
+            : (!s.requiereAdmin || esAdmin || esSuperAdmin || esLector || esContador))
           .map((section) => ({
             ...section,
-            items: esLector
+            items: (esLector && !esLectorInsumos)
               ? section.items.filter((item) => !LECTOR_OCULTAR.has(item.href))
               : section.items,
           }))

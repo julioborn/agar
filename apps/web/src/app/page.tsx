@@ -15,5 +15,6 @@ export default async function RootPage() {
     (e) => e.rol === 'super_admin' || e.rol === 'admin_empresa' || e.rol === 'contador',
   );
   if (rol === 'encargado_campo' && !tieneRolAdmin) redirect('/campo');
+  if (rol === 'lector_insumos') redirect('/app/stock');
   redirect('/app');
 }

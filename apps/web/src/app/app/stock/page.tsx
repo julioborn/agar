@@ -26,7 +26,8 @@ export default async function StockPage({ searchParams }: Props) {
   const empresaData = await getEmpresaActiva();
   if (!empresaData) redirect('/login');
 
-  const { empresa } = empresaData;
+  const { empresa, rol } = empresaData;
+  const esLectorInsumos = rol === 'lector_insumos';
 
   const sp = await searchParams;
   const hasta = sp?.hasta && /^\d{4}-\d{2}-\d{2}$/.test(sp.hasta) ? sp.hasta : null;
@@ -161,7 +162,7 @@ export default async function StockPage({ searchParams }: Props) {
         </div>
       </div>
 
-      <StockManager stockRows={stockRows} empresaNombre={empresa.nombre} hasta={hasta} />
+      <StockManager stockRows={stockRows} empresaNombre={empresa.nombre} hasta={hasta} esLectorInsumos={esLectorInsumos} />
     </div>
   );
 }

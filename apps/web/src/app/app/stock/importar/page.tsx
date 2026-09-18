@@ -11,6 +11,7 @@ export default async function ImportarStockPage() {
 
   const empresaData = await getEmpresaActiva();
   if (!empresaData) redirect('/login');
+  if (empresaData.rol === 'lector_insumos') redirect('/app/stock');
 
   const [prodRes, depRes, provRes] = await Promise.all([
     supabase.from('productos').select('id, nombre, categoria, unidad_base, principio_activo').order('nombre'),
