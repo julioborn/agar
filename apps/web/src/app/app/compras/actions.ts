@@ -4,11 +4,15 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 
+// Mismo criterio que aplicar_movimiento_stock() (trigger de Postgres, migración 036).
+// Un tipo que no esté en ninguno de los dos sets no debe sumar ni restar (igual que el
+// ELSE delta:=0 del trigger) — así un tipo_movimiento nuevo que se nos pase por alto acá
+// no infla el stock en vez de romper el conteo, como pasó con "salida_ria".
 const TIPOS_ENTRADA = new Set([
-  'entrada_compra', 'entrada_devolucion', 'transferencia_entrada', 'ajuste', 'carga_stock',
+  'entrada_compra', 'entrada_devolucion', 'transferencia_entrada', 'entrada_produccion_ria', 'ajuste',
 ]);
 const TIPOS_SALIDA = new Set([
-  'salida_aplicacion', 'transferencia_salida', 'merma',
+  'salida_aplicacion', 'transferencia_salida', 'merma', 'salida_ria', 'salida_consumo_ganadero',
 ]);
 
 function calcStock(movs: { tipo: string; cantidad: number | string }[]): number {
@@ -16,7 +20,7 @@ function calcStock(movs: { tipo: string; cantidad: number | string }[]): number 
     const qty = Number(m.cantidad ?? 0);
     if (TIPOS_ENTRADA.has(String(m.tipo))) return acc + qty;
     if (TIPOS_SALIDA.has(String(m.tipo))) return acc - qty;
-    return acc + qty;
+    return acc;
   }, 0);
 }
 
@@ -178,7 +182,7 @@ export async function corregirItemsCompra(
 
     const nuevaCantidadStock = (movs ?? []).reduce((acc: number, m: any) => {
       const qty = Number(m.cantidad ?? 0);
-      return acc + (TIPOS_ENTRADA.has(String(m.tipo)) ? qty : TIPOS_SALIDA.has(String(m.tipo)) ? -qty : qty);
+      return TIPOS_ENTRADA.has(String(m.tipo)) ? acc + qty : TIPOS_SALIDA.has(String(m.tipo)) ? acc - qty : acc;
     }, 0);
 
     await supabase
@@ -354,7 +358,7 @@ export async function editarCompraCompleta(
 
     const nuevaCantidad = (movs ?? []).reduce((acc: number, m: any) => {
       const qty = Number(m.cantidad ?? 0);
-      return acc + (TIPOS_ENTRADA.has(String(m.tipo)) ? qty : TIPOS_SALIDA.has(String(m.tipo)) ? -qty : qty);
+      return TIPOS_ENTRADA.has(String(m.tipo)) ? acc + qty : TIPOS_SALIDA.has(String(m.tipo)) ? acc - qty : acc;
     }, 0);
 
     await supabase
