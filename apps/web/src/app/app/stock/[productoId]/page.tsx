@@ -22,6 +22,7 @@ const TIPO_META: Record<string, {
   salida_ria:             { label: 'Remito (RIA)',    color: 'text-orange-600', signo: '-', esEntrada: false },
   transferencia_salida:   { label: 'Transferencia ↑', color: 'text-blue-600',   signo: '-', esEntrada: false },
   merma:                  { label: 'Merma / pérdida', color: 'text-red-600',    signo: '-', esEntrada: false },
+  salida_consumo_ganadero:{ label: 'Consumo ganadero (RIG)', color: 'text-orange-600', signo: '-', esEntrada: false },
   ajuste:                 { label: 'Ajuste',          color: 'text-zinc-500',   signo: '~', esEntrada: true  },
 };
 
@@ -77,8 +78,9 @@ export default async function StockProductoPage({ params }: Props) {
   const compraIds = [...new Set(movList.filter(m => m.referencia_tipo === 'compra' && m.referencia_id).map(m => m.referencia_id!))];
   const riaIds    = [...new Set(movList.filter(m => (m.referencia_tipo === 'remito_interno' || m.referencia_tipo === 'anulacion_ria') && m.referencia_id).map(m => m.referencia_id!))];
   const aplItemIds = [...new Set(movList.filter(m => m.referencia_tipo === 'aplicaciones_items' && m.referencia_id).map(m => m.referencia_id!))];
+  const rigIds    = [...new Set(movList.filter(m => (m.referencia_tipo === 'remito_ganadero' || m.referencia_tipo === 'anulacion_remito_ganadero') && m.referencia_id).map(m => m.referencia_id!))];
 
-  const [comprasMap, riasMap, aplItemsMap] = await Promise.all([
+  const [comprasMap, riasMap, aplItemsMap, rigsMap] = await Promise.all([
     // Compras → factura + proveedor
     compraIds.length > 0
       ? supabase
@@ -105,6 +107,15 @@ export default async function StockProductoPage({ params }: Props) {
           .in('id', aplItemIds)
           .then(({ data }) => Object.fromEntries((data ?? []).map(ai => [ai.id, ai])))
       : Promise.resolve({} as Record<string, any>),
+
+    // Remitos ganaderos → numero + lote de hacienda
+    rigIds.length > 0
+      ? supabase
+          .from('remitos_ganaderos')
+          .select('id, numero_rig, lote_hacienda:lotes_hacienda(nombre)')
+          .in('id', rigIds)
+          .then(({ data }) => Object.fromEntries((data ?? []).map(r => [r.id, r])))
+      : Promise.resolve({} as Record<string, any>),
   ]);
 
   // ── Saldo acumulado (reconstruimos de fin hacia atrás) ────────────────────
@@ -123,6 +134,7 @@ export default async function StockProductoPage({ params }: Props) {
     const ria     = (m.referencia_tipo === 'remito_interno' || m.referencia_tipo === 'anulacion_ria') ? riasMap[m.referencia_id!] : null;
     const aplItem = m.referencia_tipo === 'aplicaciones_items' ? aplItemsMap[m.referencia_id!] : null;
     const apl     = aplItem?.aplicacion ?? null;
+    const rig     = (m.referencia_tipo === 'remito_ganadero' || m.referencia_tipo === 'anulacion_remito_ganadero') ? rigsMap[m.referencia_id!] : null;
 
     let detalle = '';
     if (compra) {
@@ -131,11 +143,13 @@ export default async function StockProductoPage({ params }: Props) {
       detalle = `${ria.numero_ria}${(ria.lote as any)?.campo?.nombre ? ` · ${(ria.lote as any).campo.nombre}` : ''}${(ria.lote as any)?.nombre ? ` › ${(ria.lote as any).nombre}` : ''}`;
     } else if (apl) {
       detalle = `${apl.tipo ? apl.tipo.charAt(0).toUpperCase() + apl.tipo.slice(1) : ''}${(apl.cultivo as any)?.cultivo ? ` · ${(apl.cultivo as any).cultivo}` : ''}${(apl.cultivo as any)?.lote?.nombre ? ` › ${(apl.cultivo as any).lote.nombre}` : ''}`;
+    } else if (rig) {
+      detalle = `${rig.numero_rig}${(rig.lote_hacienda as any)?.nombre ? ` · ${(rig.lote_hacienda as any).nombre}` : ''}`;
     } else if (m.observaciones) {
       detalle = m.observaciones;
     }
 
-    return { ...m, meta, saldoAntes, compra, ria, apl, detalle };
+    return { ...m, meta, saldoAntes, compra, ria, apl, rig, detalle };
   });
 
   const entradas = movConSaldo.filter((m) => m.meta.esEntrada);
