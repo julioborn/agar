@@ -9,7 +9,7 @@ import {
   Package, Wrench, Wheat, ChevronDown, ChevronUp, Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
-import { saveRiaBorrador, confirmarRia } from './actions';
+import { saveRiaBorrador, confirmarRia, guardarRiaMultiLote, type ResultadoRiaLote } from './actions';
 import RiaPdfButton from './ria-pdf-button';
 import { crearTipoProduccion, type GrupoProduccion } from '../tipos-produccion/actions';
 import { useCurrency } from '@/lib/currency-context';
@@ -223,6 +223,19 @@ export default function RiaForm({
   // Header state
   const [fecha, setFecha] = useState(riaExistente?.fecha ?? today());
   const [loteId, setLoteId] = useState(riaExistente?.lote_id ?? '');
+
+  // Modo multi-lote: replica los mismos insumos/labores en varios lotes a la vez,
+  // generando un RIA independiente por cada uno (mismo mecanismo de siempre, solo
+  // que se llama una vez por lote). Solo disponible al crear un RIA nuevo.
+  const [multiLote, setMultiLote] = useState(false);
+  const [loteIdsMulti, setLoteIdsMulti] = useState<string[]>([]);
+  const [savingMulti, setSavingMulti] = useState(false);
+  const [confirmingMulti, setConfirmingMulti] = useState(false);
+  const [resultadosMulti, setResultadosMulti] = useState<ResultadoRiaLote[] | null>(null);
+
+  function toggleLoteMulti(id: string) {
+    setLoteIdsMulti((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  }
   const [campaniaId, setCampaniaId] = useState(
     riaExistente?.campania_id ?? (campanias[campanias.length - 1]?.id ?? ''),
   );
@@ -831,6 +844,99 @@ export default function RiaForm({
     router.refresh();
   }
 
+  // ── Multi-lote: construir un payload por lote, recalculando cantidades por ha ──
+  function buildPayloadsMulti() {
+    return loteIdsMulti.map((lId) => {
+      const lote = lotes.find((l) => l.id === lId)!;
+      const ha = lote.hectareas ?? 0;
+
+      const insumosLote = insumos.map((i) => {
+        const dosis = parseFloat(i.dosisPorHa || '0');
+        const cantidad = dosis > 0 && ha > 0 ? dosis * ha : parseFloat(i.cantidad || '0');
+        const costo = parseFloat(i.costoUnitario || '0');
+        return {
+          depositoId: i.depositoId,
+          productoId: i.productoId,
+          hectareasAfectadas: ha > 0 ? ha : undefined,
+          cantidad,
+          dosisPorHa: dosis > 0 ? dosis : undefined,
+          costoUnitario: costo,
+          subtotal: calc(cantidad.toString(), costo.toString()),
+          observaciones: i.obs || undefined,
+        };
+      });
+
+      const laboresLote = labores.map((l) => {
+        const esHa = l.unidadMedida === 'has';
+        const cantidad = esHa && ha > 0 ? ha : parseFloat(l.cantidad || '0');
+        const tarifa = parseFloat(l.tarifa || '0');
+        return {
+          tipoLaborId: l.tipoLaborId || undefined,
+          tipoLaborNombre: l.tipoLaborNombre || undefined,
+          descripcion: l.descripcion,
+          prestadorId: l.prestadorId || undefined,
+          prestadorNombre: l.prestadorNombre || undefined,
+          unidadMedida: l.unidadMedida,
+          hectareasAfectadas: esHa && ha > 0 ? ha : undefined,
+          cantidad,
+          tarifa,
+          subtotal: calc(cantidad.toString(), tarifa.toString()),
+          fechaEjecucion: l.fechaEjecucion || undefined,
+          observaciones: l.obs || undefined,
+        };
+      });
+
+      return {
+        loteNombre: lote.campo?.nombre ? `${lote.campo.nombre} › ${lote.nombre}` : lote.nombre,
+        fecha,
+        loteId: lId,
+        campaniaId: campaniaId || undefined,
+        superficieAfectada: ha > 0 ? ha : undefined,
+        cultivoDescripcion: nuevoCultivoDesc.trim() || undefined,
+        tipoCultivoId: nuevoCultivoTipoId || undefined,
+        crearNuevoCultivo: !!nuevoCultivoTipoId && !!nuevoCultivoDesc.trim(),
+        observaciones: observaciones.trim() || undefined,
+        insumos: insumosLote,
+        labores: laboresLote,
+        produccion: [],
+      };
+    });
+  }
+
+  function validateMulti() {
+    if (loteIdsMulti.length === 0) return 'Seleccioná al menos un lote.';
+    if (!fecha) return 'La fecha es obligatoria.';
+    if (!campaniaId) return 'La campaña es obligatoria.';
+    if (insumos.length === 0 && labores.length === 0) return 'Agregá al menos un insumo o labor antes de guardar.';
+    for (const i of insumos) {
+      if (!i.depositoId) return 'Cada insumo debe tener un depósito seleccionado.';
+      if (!i.productoId) return 'Cada insumo debe tener un producto seleccionado.';
+      if (!parseFloat(i.dosisPorHa || '0') && !parseFloat(i.cantidad || '0')) {
+        return 'Cada insumo debe tener una dosis/ha (recomendado) o una cantidad.';
+      }
+    }
+    for (const l of labores) {
+      if (!l.unidadMedida) return 'Cada labor debe tener una unidad de medida.';
+    }
+    return null;
+  }
+
+  async function handleGuardarMulti(confirmar: boolean) {
+    const err = validateMulti();
+    if (err) { setErrorMsg(err); return; }
+    setErrorMsg(''); setResultadosMulti(null);
+    confirmar ? setConfirmingMulti(true) : setSavingMulti(true);
+
+    const { resultados } = await guardarRiaMultiLote(buildPayloadsMulti(), confirmar);
+
+    setSavingMulti(false); setConfirmingMulti(false);
+    setResultadosMulti(resultados);
+    if (resultados.every((r) => !r.error)) {
+      clearDraft();
+      router.refresh();
+    }
+  }
+
   // ── Render helpers ────────────────────────────────────────────────────────────
   const inputCls = (error = false) =>
     cn(
@@ -987,39 +1093,103 @@ export default function RiaForm({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-zinc-600 mb-1">Lote *</label>
-          <select
-            value={loteId}
-            onChange={(e) => setLoteId(e.target.value)}
-            disabled={esReadOnly}
-            className={inputCls(!loteId && !esReadOnly)}
-          >
-            <option value="">Seleccioná un lote…</option>
-            {lotes.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.campo?.nombre ? `${l.campo.nombre} › ` : ''}{l.nombre} — {l.hectareas} ha
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-medium text-zinc-600">
+              {multiLote ? `Lotes * (${loteIdsMulti.length} seleccionado${loteIdsMulti.length === 1 ? '' : 's'})` : 'Lote *'}
+            </label>
+            {mode === 'nuevo' && !riaExistente && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMultiLote((v) => !v);
+                  setResultadosMulti(null);
+                  setErrorMsg('');
+                }}
+                className="text-xs text-[#006836] hover:underline"
+              >
+                {multiLote ? 'Volver a un solo lote' : 'Aplicar a varios lotes…'}
+              </button>
+            )}
+          </div>
+
+          {multiLote ? (
+            <div className="border border-zinc-200 rounded-xl divide-y divide-zinc-100 max-h-56 overflow-y-auto">
+              {lotes.map((l) => (
+                <label key={l.id} className="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-zinc-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={loteIdsMulti.includes(l.id)}
+                    onChange={() => toggleLoteMulti(l.id)}
+                    className="accent-[#006836]"
+                  />
+                  <span className="text-zinc-700">
+                    {l.campo?.nombre ? `${l.campo.nombre} › ` : ''}{l.nombre}
+                    <span className="text-zinc-400"> — {l.hectareas} ha</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <select
+              value={loteId}
+              onChange={(e) => setLoteId(e.target.value)}
+              disabled={esReadOnly}
+              className={inputCls(!loteId && !esReadOnly)}
+            >
+              <option value="">Seleccioná un lote…</option>
+              {lotes.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.campo?.nombre ? `${l.campo.nombre} › ` : ''}{l.nombre} — {l.hectareas} ha
+                </option>
+              ))}
+            </select>
+          )}
+          {multiLote && (
+            <p className="text-xs text-zinc-400 mt-1.5">
+              Se va a crear un RIA independiente por cada lote, con la dosis/ha recalculada según la superficie de cada uno.
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-zinc-600 mb-1">Superficie afectada (ha)</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={superficieAfectada}
-              onChange={(e) => setSuperficieAfectada(e.target.value)}
-              disabled={esReadOnly}
-              placeholder="Ej: 150.5"
-              className={inputCls()}
-            />
+            {multiLote ? (
+              <div className="text-sm text-zinc-400 border border-zinc-100 bg-zinc-50 rounded-lg px-2.5 py-1.5">
+                Se usa la superficie de cada lote
+              </div>
+            ) : (
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={superficieAfectada}
+                onChange={(e) => setSuperficieAfectada(e.target.value)}
+                disabled={esReadOnly}
+                placeholder="Ej: 150.5"
+                className={inputCls()}
+              />
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium text-zinc-600 mb-1">Cultivo / Actividad</label>
-            {cultivosDelLote.length > 0 ? (
+            {multiLote ? (
+              <select
+                value={nuevoCultivoTipoId}
+                onChange={(e) => {
+                  const tid = e.target.value;
+                  setNuevoCultivoTipoId(tid);
+                  const tipo = tiposCultivo.find((t) => t.id === tid);
+                  setNuevoCultivoDesc(tipo?.nombre ?? '');
+                }}
+                className={inputCls()}
+              >
+                <option value="">Sin cultivo (opcional)</option>
+                {tiposCultivo.map((t) => (
+                  <option key={t.id} value={t.id}>{t.nombre}</option>
+                ))}
+              </select>
+            ) : cultivosDelLote.length > 0 ? (
               <>
                 <select
                   value={cultivoId}
@@ -1436,6 +1606,7 @@ export default function RiaForm({
       </div>
 
       {/* ── PRODUCCION ────────────────────────────────────────────────────────── */}
+      {!multiLote && (
       <div className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
         {sectionHeader('produccion', <Wheat className="w-4 h-4 text-zinc-500" />, 'Producción del lote', produccion.length, undefined, addProduccion)}
         {secOpen.produccion && (
@@ -1657,6 +1828,13 @@ export default function RiaForm({
           )
         )}
       </div>
+      )}
+
+      {multiLote && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-700">
+          La producción no está disponible en modo multi-lote — cargala después en cada RIA individual si hace falta.
+        </div>
+      )}
 
       {/* ── TOTALES ───────────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
@@ -1726,27 +1904,71 @@ export default function RiaForm({
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              disabled={saving || confirming}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 border border-zinc-300 text-zinc-700 text-sm font-medium rounded-xl hover:bg-zinc-50 disabled:opacity-50 transition-colors"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {saving ? 'Guardando…' : 'Guardar borrador'}
-            </button>
+          {resultadosMulti && (
+            <div className="mb-4 rounded-xl border border-zinc-200 divide-y divide-zinc-100 overflow-hidden">
+              {resultadosMulti.map((r) => (
+                <div key={r.loteId} className={cn('flex items-center justify-between gap-3 px-4 py-2.5 text-sm',
+                  r.error ? 'bg-red-50' : 'bg-[#006836]/5')}>
+                  <span className="text-zinc-700">{r.loteNombre}</span>
+                  {r.error ? (
+                    <span className="text-red-600 text-xs flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" /> {r.error}
+                    </span>
+                  ) : (
+                    <Link href={`${basePath}/${r.riaId}`} className="text-[#006836] text-xs font-semibold hover:underline flex items-center gap-1">
+                      <CheckCircle className="w-3.5 h-3.5" /> {r.numeroRia}
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
-            <button
-              type="button"
-              onClick={handleConfirm}
-              disabled={saving || confirming}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#006836] hover:bg-[#005228] text-white text-sm font-semibold rounded-xl disabled:opacity-50 transition-colors"
-            >
-              {confirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-              {confirming ? 'Confirmando…' : 'Confirmar RIA'}
-            </button>
-          </div>
+          {multiLote ? (
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                onClick={() => handleGuardarMulti(false)}
+                disabled={savingMulti || confirmingMulti}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 border border-zinc-300 text-zinc-700 text-sm font-medium rounded-xl hover:bg-zinc-50 disabled:opacity-50 transition-colors"
+              >
+                {savingMulti ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {savingMulti ? 'Guardando…' : `Guardar ${loteIdsMulti.length || ''} borradores`}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleGuardarMulti(true)}
+                disabled={savingMulti || confirmingMulti}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#006836] hover:bg-[#005228] text-white text-sm font-semibold rounded-xl disabled:opacity-50 transition-colors"
+              >
+                {confirmingMulti ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                {confirmingMulti ? 'Confirmando…' : `Confirmar ${loteIdsMulti.length || ''} RIA`}
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={saving || confirming}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 border border-zinc-300 text-zinc-700 text-sm font-medium rounded-xl hover:bg-zinc-50 disabled:opacity-50 transition-colors"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {saving ? 'Guardando…' : 'Guardar borrador'}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleConfirm}
+                disabled={saving || confirming}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#006836] hover:bg-[#005228] text-white text-sm font-semibold rounded-xl disabled:opacity-50 transition-colors"
+              >
+                {confirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                {confirming ? 'Confirmando…' : 'Confirmar RIA'}
+              </button>
+            </div>
+          )}
 
           <p className="text-xs text-zinc-400 mt-3 text-center">
             Al confirmar, se descuentan los insumos del depósito y se acumulan los costos al lote. Esta acción no se puede deshacer sin anular el remito.

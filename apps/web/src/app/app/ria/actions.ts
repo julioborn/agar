@@ -231,6 +231,53 @@ export async function saveRiaBorrador(payload: SaveRiaPayload) {
   return { riaId, cultivoCreado };
 }
 
+export interface ResultadoRiaLote {
+  loteId: string;
+  loteNombre: string;
+  riaId?: string;
+  numeroRia?: string;
+  error?: string;
+}
+
+// Crea (y opcionalmente confirma) un RIA por cada lote de la lista, replicando
+// los mismos insumos/labores. Se reutiliza saveRiaBorrador/confirmarRia tal cual
+// para no duplicar la lógica de numeración, stock ni costeo — se llama en serie
+// (no en paralelo) porque el número correlativo de cada RIA se calcula por
+// consulta al momento de insertar, y en paralelo podría repetirse.
+export async function guardarRiaMultiLote(
+  payloads: (SaveRiaPayload & { loteNombre: string })[],
+  confirmar: boolean,
+): Promise<{ resultados: ResultadoRiaLote[] }> {
+  const resultados: ResultadoRiaLote[] = [];
+
+  for (const payload of payloads) {
+    const saveResult = await saveRiaBorrador(payload);
+    if (saveResult.error || !saveResult.riaId) {
+      resultados.push({ loteId: payload.loteId, loteNombre: payload.loteNombre, error: saveResult.error ?? 'Error al guardar.' });
+      continue;
+    }
+
+    if (!confirmar) {
+      const { data: ria } = await (await createClient())
+        .from('remitos_internos').select('numero_ria').eq('id', saveResult.riaId).single();
+      resultados.push({ loteId: payload.loteId, loteNombre: payload.loteNombre, riaId: saveResult.riaId, numeroRia: ria?.numero_ria });
+      continue;
+    }
+
+    const confirmResult = await confirmarRia(saveResult.riaId);
+    if (confirmResult.error) {
+      resultados.push({ loteId: payload.loteId, loteNombre: payload.loteNombre, riaId: saveResult.riaId, error: confirmResult.error });
+      continue;
+    }
+    const { data: ria } = await (await createClient())
+      .from('remitos_internos').select('numero_ria').eq('id', saveResult.riaId).single();
+    resultados.push({ loteId: payload.loteId, loteNombre: payload.loteNombre, riaId: saveResult.riaId, numeroRia: ria?.numero_ria });
+  }
+
+  revalidatePath('/app/ria');
+  return { resultados };
+}
+
 export async function confirmarRia(riaId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
