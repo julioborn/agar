@@ -244,10 +244,42 @@ export interface ResultadoRiaLote {
 // para no duplicar la lógica de numeración, stock ni costeo — se llama en serie
 // (no en paralelo) porque el número correlativo de cada RIA se calcula por
 // consulta al momento de insertar, y en paralelo podría repetirse.
+//
+// Antes de crear nada se valida el stock total necesitado (sumando la cantidad
+// de cada insumo en TODOS los lotes elegidos) contra el stock disponible. Si no
+// alcanza, no se crea ningún RIA — todo o nada — para que una confirmación que
+// falla por falta de stock no deje una mezcla de RIA ya creados/confirmados y
+// otros no, que es lo que llevaba a duplicados si el usuario reintentaba.
 export async function guardarRiaMultiLote(
   payloads: (SaveRiaPayload & { loteNombre: string })[],
   confirmar: boolean,
-): Promise<{ resultados: ResultadoRiaLote[] }> {
+): Promise<{ resultados: ResultadoRiaLote[]; error?: string }> {
+  if (confirmar) {
+    const supabase = await createClient();
+    const necesario = new Map<string, number>();
+    for (const p of payloads) {
+      for (const i of p.insumos) {
+        const key = `${i.depositoId}::${i.productoId}`;
+        necesario.set(key, (necesario.get(key) ?? 0) + i.cantidad);
+      }
+    }
+    const faltantes: string[] = [];
+    for (const [key, cantidadTotal] of necesario) {
+      const [depositoId, productoId] = key.split('::');
+      const { data: stockRow } = await supabase
+        .from('stock').select('cantidad_actual')
+        .eq('deposito_id', depositoId).eq('producto_id', productoId).maybeSingle();
+      const disponible = stockRow?.cantidad_actual ?? 0;
+      if (disponible < cantidadTotal) {
+        const { data: prod } = await supabase.from('productos').select('nombre').eq('id', productoId).single();
+        faltantes.push(`${prod?.nombre ?? productoId}: necesita ${cantidadTotal.toFixed(2)}, disponible ${disponible.toFixed(2)}`);
+      }
+    }
+    if (faltantes.length > 0) {
+      return { resultados: [], error: `Stock insuficiente para confirmar todos los lotes juntos — ${faltantes.join(' · ')}. No se creó ningún RIA.` };
+    }
+  }
+
   const resultados: ResultadoRiaLote[] = [];
 
   for (const payload of payloads) {

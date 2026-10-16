@@ -927,10 +927,22 @@ export default function RiaForm({
     setErrorMsg(''); setResultadosMulti(null);
     confirmar ? setConfirmingMulti(true) : setSavingMulti(true);
 
-    const { resultados } = await guardarRiaMultiLote(buildPayloadsMulti(), confirmar);
+    const { resultados, error: errorGlobal } = await guardarRiaMultiLote(buildPayloadsMulti(), confirmar);
 
     setSavingMulti(false); setConfirmingMulti(false);
-    setResultadosMulti(resultados);
+    if (errorGlobal) { setErrorMsg(errorGlobal); return; }
+    // Acumular con resultados previos (por si esto es un reintento) en vez de
+    // pisarlos, para no perder de vista los lotes que ya habían salido bien.
+    setResultadosMulti((prev) => {
+      const porLote = new Map((prev ?? []).map((r) => [r.loteId, r]));
+      for (const r of resultados) porLote.set(r.loteId, r);
+      return [...porLote.values()];
+    });
+    // Sacar de la selección los lotes que ya se guardaron/confirmaron bien, para
+    // que si el usuario reintenta (por un error puntual en otro lote) no se
+    // vuelvan a crear RIA duplicados para los que ya funcionaron.
+    const loteIdsConError = new Set(resultados.filter((r) => r.error).map((r) => r.loteId));
+    setLoteIdsMulti((prev) => prev.filter((id) => loteIdsConError.has(id)));
     if (resultados.every((r) => !r.error)) {
       clearDraft();
       router.refresh();
