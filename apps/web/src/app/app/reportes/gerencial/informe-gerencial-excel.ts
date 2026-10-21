@@ -2,7 +2,6 @@ import type { InformeGerencialData } from './types';
 
 const GREEN_HEX = '006836';
 const LIGHT_HEX = 'F0F7F3';
-const ARS_FMT = '"$" #,##0';
 const NUM_FMT = '#,##0.00';
 const PCT_FMT = '0.0"%"';
 
@@ -94,12 +93,37 @@ function addDataSheet(
   return ws;
 }
 
-export async function exportInformeGerencialExcel(data: InformeGerencialData, filename: string): Promise<void> {
+export async function exportInformeGerencialExcel(
+  data: InformeGerencialData,
+  filename: string,
+  currency: 'ARS' | 'USD' = 'ARS',
+  usdRate: number | null = null,
+): Promise<void> {
   const ExcelJS = await import('exceljs');
   const logoBase64 = await loadCircularLogoBase64();
   const now = new Date();
   const dateStr = now.toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric' });
-  const subtitle = `${data.empresaNombre}  ·  Período: ${data.periodoLabel}  ·  Campaña: ${data.campaniaLabel}  ·  Generado: ${dateStr}`;
+
+  // Misma conversión que useCurrency().formatMoney — los montos exportados
+  // respetan el toggle ARS/USD elegido en el header de la app. Los valores
+  // monetarios se escriben ya convertidos (no solo formateados) para que
+  // sumen/filtren bien en Excel.
+  const usaUsd = currency === 'USD' && !!usdRate && usdRate > 0;
+  const divisor = usaUsd ? usdRate! : 1;
+  const ARS_FMT = usaUsd ? '"US$" #,##0.00' : '"$" #,##0';
+  const monedaLabel = usaUsd ? `Dólares (US$1 = $${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(usdRate!)})` : 'Pesos (ARS)';
+  const subtitle = `${data.empresaNombre}  ·  Período: ${data.periodoLabel}  ·  Campaña: ${data.campaniaLabel}  ·  Moneda: ${monedaLabel}  ·  Generado: ${dateStr}`;
+
+  function convertRows<T extends Record<string, any>>(rows: T[], keys: (keyof T)[]): T[] {
+    if (divisor === 1) return rows;
+    return rows.map((r) => {
+      const copy = { ...r } as T;
+      for (const k of keys) {
+        if (typeof copy[k] === 'number') (copy as any)[k] = (copy[k] as number) / divisor;
+      }
+      return copy;
+    });
+  }
 
   const wb = new ExcelJS.Workbook();
   wb.creator = 'AgroSistema';
@@ -125,12 +149,12 @@ export async function exportInformeGerencialExcel(data: InformeGerencialData, fi
     ['Hectáreas trabajadas', data.kpis.hectareas],
     ['Lotes distintos trabajados', data.kpis.lotesDistintos],
     ['Cultivos distintos', data.kpis.cultivosDistintos],
-    ['Costo insumos', data.kpis.costoInsumos],
-    ['Costo labores', data.kpis.costoLabores],
-    ['Costo total', data.kpis.costoTotal],
-    ['Costo por hectárea', data.kpis.costoPorHa ?? ''],
-    ['Ingreso bruto', data.kpis.ingresoBruto],
-    ['Margen', data.kpis.margen],
+    ['Costo insumos', data.kpis.costoInsumos / divisor],
+    ['Costo labores', data.kpis.costoLabores / divisor],
+    ['Costo total', data.kpis.costoTotal / divisor],
+    ['Costo por hectárea', data.kpis.costoPorHa != null ? data.kpis.costoPorHa / divisor : ''],
+    ['Ingreso bruto', data.kpis.ingresoBruto / divisor],
+    ['Margen', data.kpis.margen / divisor],
   ];
   for (const [label, value] of kpiRows) {
     const row = wsResumen.addRow([label, value]);
@@ -153,7 +177,7 @@ export async function exportInformeGerencialExcel(data: InformeGerencialData, fi
     { header: 'Costo / ha', key: 'costoPorHa', width: 16, numFmt: ARS_FMT, align: 'right' },
     { header: 'Ingreso bruto', key: 'ingresoBruto', width: 18, numFmt: ARS_FMT, align: 'right' },
     { header: 'Margen', key: 'margen', width: 18, numFmt: ARS_FMT, align: 'right' },
-  ], data.porCampania);
+  ], convertRows(data.porCampania, ['costoInsumos', 'costoLabores', 'costoTotal', 'costoPorHa', 'ingresoBruto', 'margen']));
 
   // ── Por Cultivo ──────────────────────────────────────────────────────────
   addDataSheet(wb, logoBase64, 'Por Cultivo', 'Por Cultivo', subtitle, [
@@ -166,7 +190,7 @@ export async function exportInformeGerencialExcel(data: InformeGerencialData, fi
     { header: 'Costo / ha', key: 'costoPorHa', width: 16, numFmt: ARS_FMT, align: 'right' },
     { header: 'Ingreso bruto', key: 'ingresoBruto', width: 18, numFmt: ARS_FMT, align: 'right' },
     { header: 'Margen', key: 'margen', width: 18, numFmt: ARS_FMT, align: 'right' },
-  ], data.porCultivo);
+  ], convertRows(data.porCultivo, ['costoInsumos', 'costoLabores', 'costoTotal', 'costoPorHa', 'ingresoBruto', 'margen']));
 
   // ── Por Lote ─────────────────────────────────────────────────────────────
   addDataSheet(wb, logoBase64, 'Por Lote', 'Por Lote', subtitle, [
@@ -181,7 +205,7 @@ export async function exportInformeGerencialExcel(data: InformeGerencialData, fi
     { header: 'Costo / ha', key: 'costoPorHa', width: 16, numFmt: ARS_FMT, align: 'right' },
     { header: 'Ingreso bruto', key: 'ingresoBruto', width: 18, numFmt: ARS_FMT, align: 'right' },
     { header: 'Margen', key: 'margen', width: 18, numFmt: ARS_FMT, align: 'right' },
-  ], data.porLote);
+  ], convertRows(data.porLote, ['costoInsumos', 'costoLabores', 'costoTotal', 'costoPorHa', 'ingresoBruto', 'margen']));
 
   // ── Insumos ──────────────────────────────────────────────────────────────
   addDataSheet(wb, logoBase64, 'Insumos', 'Insumos', subtitle, [
@@ -192,7 +216,7 @@ export async function exportInformeGerencialExcel(data: InformeGerencialData, fi
     { header: 'Costo total', key: 'costoTotal', width: 18, numFmt: ARS_FMT, align: 'right' },
     { header: '% del total', key: 'pctTotal', width: 12, numFmt: PCT_FMT, align: 'right' },
     { header: 'Lotes', key: 'lotesCount', width: 10, align: 'right' },
-  ], data.insumos);
+  ], convertRows(data.insumos, ['costoTotal']));
 
   // ── Labores ──────────────────────────────────────────────────────────────
   addDataSheet(wb, logoBase64, 'Labores', 'Labores', subtitle, [
@@ -203,7 +227,7 @@ export async function exportInformeGerencialExcel(data: InformeGerencialData, fi
     { header: '% del total', key: 'pctTotal', width: 12, numFmt: PCT_FMT, align: 'right' },
     { header: 'RIA', key: 'riasCount', width: 10, align: 'right' },
     { header: 'Tarifa promedio', key: 'tarifaPromedio', width: 16, numFmt: ARS_FMT, align: 'right' },
-  ], data.labores);
+  ], convertRows(data.labores, ['costoTotal', 'tarifaPromedio']));
 
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });

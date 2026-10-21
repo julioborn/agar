@@ -2,7 +2,8 @@ import type { InformeGerencialData } from './types';
 
 const GREEN_RGB: [number, number, number] = [0, 104, 54];
 const num = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
-const money = (v: number) => `$${num.format(Math.round(v))}`;
+const numArs = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 });
+const numUsd = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
 
 async function loadCircularLogoBase64(): Promise<string | null> {
   try {
@@ -35,10 +36,20 @@ function truncate(s: string, max = 34) {
   return s.length > max ? s.slice(0, max - 1) + '…' : s;
 }
 
-export async function generateInformeGerencialPdf(data: InformeGerencialData): Promise<void> {
+export async function generateInformeGerencialPdf(
+  data: InformeGerencialData,
+  currency: 'ARS' | 'USD' = 'ARS',
+  usdRate: number | null = null,
+): Promise<void> {
   const { default: jsPDF } = await import('jspdf');
   const autoTable = (await import('jspdf-autotable')).default;
   const logoBase64 = await loadCircularLogoBase64();
+
+  // Misma conversión que useCurrency().formatMoney — los montos exportados
+  // respetan el toggle ARS/USD elegido en el header de la app.
+  const usaUsd = currency === 'USD' && !!usdRate && usdRate > 0;
+  const money = (v: number) => usaUsd ? `U$S ${numUsd.format(v / usdRate!)}` : `$${numArs.format(Math.round(v))}`;
+  const monedaLabel = usaUsd ? `Dólares (US$1 = $${numArs.format(usdRate!)})` : 'Pesos (ARS)';
 
   const doc = new (jsPDF as any)({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
@@ -57,19 +68,13 @@ export async function generateInformeGerencialPdf(data: InformeGerencialData): P
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(190, 235, 210);
-  doc.text(`${data.empresaNombre}  ·  Período: ${data.periodoLabel}  ·  Campaña: ${data.campaniaLabel}`, textX, 21);
+  doc.text(`${data.empresaNombre}  ·  Período: ${data.periodoLabel}  ·  Campaña: ${data.campaniaLabel}  ·  Moneda: ${monedaLabel}`, textX, 21);
 
   const now = new Date();
   const dateStr = now.toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric' });
 
   // ── Banner de resumen ejecutivo (KPIs) ───────────────────────────────────
   let y = 36;
-  const bannerH = 24;
-  doc.setFillColor(240, 248, 244);
-  doc.setDrawColor(...GREEN_RGB);
-  doc.setLineWidth(0.3);
-  doc.rect(MARGIN, y, pageW - MARGIN * 2, bannerH, 'FD');
-
   const k = data.kpis;
   const kpiItems: [string, string][] = [
     ['RIA confirmados', num.format(k.riasCount)],
@@ -84,12 +89,26 @@ export async function generateInformeGerencialPdf(data: InformeGerencialData): P
     ['Margen', money(k.margen)],
   ];
   const cols = 5;
+  // Alto del banner calculado según la cantidad real de filas (antes era fijo
+  // en 24mm y con 2 filas de KPIs la segunda fila de etiquetas quedaba pisada
+  // por el borde inferior del recuadro).
+  const rowsCount = Math.ceil(kpiItems.length / cols);
+  const rowH = 13;
+  const topPad = 9;
+  const bottomPad = 6;
+  const bannerH = topPad + (rowsCount - 1) * rowH + 4.5 + bottomPad;
+
+  doc.setFillColor(240, 248, 244);
+  doc.setDrawColor(...GREEN_RGB);
+  doc.setLineWidth(0.3);
+  doc.rect(MARGIN, y, pageW - MARGIN * 2, bannerH, 'FD');
+
   const cellW = (pageW - MARGIN * 2) / cols;
   kpiItems.forEach(([label, value], i) => {
     const col = i % cols;
     const row = Math.floor(i / cols);
     const cx = MARGIN + col * cellW + cellW / 2;
-    const cy = y + 8 + row * 12;
+    const cy = y + topPad + row * rowH;
     doc.setTextColor(...GREEN_RGB);
     doc.setFontSize(10.5);
     doc.setFont('helvetica', 'bold');
@@ -152,6 +171,14 @@ export async function generateInformeGerencialPdf(data: InformeGerencialData): P
     body: (string | number)[][],
     foot?: (string | number)[],
   ) {
+    // Reservamos de antemano el espacio del título + gráfico (más un mínimo
+    // para el encabezado de la tabla) para que, si no entra completo, el
+    // salto de página ocurra ANTES del título — así título y gráfico no
+    // quedan separados en hojas distintas.
+    const chartH = chartItems.length > 0 ? chartItems.length * (5 + 2.2) + 4 : 0;
+    const reserved = 10 + chartH + 15;
+    if (y + reserved > pageH - 16) { doc.addPage(); y = 18; }
+
     y = sectionTitle(title, y);
     y = drawBarChart(y, chartItems, chartColor);
     autoTable(doc, {

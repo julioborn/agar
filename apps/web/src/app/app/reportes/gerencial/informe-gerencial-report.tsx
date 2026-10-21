@@ -141,7 +141,7 @@ function ChartCard({ title, data, dataKey, color, formatValue }: {
 }
 
 export default function InformeGerencialReport({ rias, insumos, labores, produccion, campanias, empresaNombre }: Props) {
-  const { formatMoney } = useCurrency();
+  const { formatMoney, currency, usdRate } = useCurrency();
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [campaniaFiltro, setCampaniaFiltro] = useState('');
@@ -315,7 +315,7 @@ export default function InformeGerencialReport({ rias, insumos, labores, producc
     setLoadingPdf(true);
     try {
       const { generateInformeGerencialPdf } = await import('./informe-gerencial-pdf');
-      await generateInformeGerencialPdf(data);
+      await generateInformeGerencialPdf(data, currency, usdRate);
     } finally {
       setLoadingPdf(false);
     }
@@ -324,7 +324,7 @@ export default function InformeGerencialReport({ rias, insumos, labores, producc
     setLoadingXlsx(true);
     try {
       const { exportInformeGerencialExcel } = await import('./informe-gerencial-excel');
-      await exportInformeGerencialExcel(data, `informe-gerencial-${slug}-${today}`);
+      await exportInformeGerencialExcel(data, `informe-gerencial-${slug}-${today}`, currency, usdRate);
     } finally {
       setLoadingXlsx(false);
     }
