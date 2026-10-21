@@ -11,7 +11,7 @@ import {
   Users, Menu, Wheat,
   Tractor, Wrench, Settings, Building, Landmark, BarChart3,
   FileText, TrendingUp, Scale, CalendarRange, Layers, Pin,
-  Beef, Fence, Rows3, Tag, ChevronDown, LogOut, X,
+  Beef, Fence, Rows3, Tag, ChevronDown, LogOut, X, Gauge,
 } from 'lucide-react';
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -105,6 +105,7 @@ const navSections: NavSection[] = [
     requiereAdmin: true,
     items: [
       { href: '/app/reportes',               label: 'Vista General',    icon: BarChart3, exact: true },
+      { href: '/app/reportes/gerencial',      label: 'Informe Gerencial',icon: Gauge },
       { href: '/app/reportes/margenes',       label: 'Márgenes',         icon: TrendingUp },
       { href: '/app/reportes/insumos-labores',label: 'Insumos y Labores',icon: Package },
       { href: '/app/reportes/produccion',     label: 'Producción',       icon: Sprout },

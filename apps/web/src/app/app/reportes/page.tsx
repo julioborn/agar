@@ -1,10 +1,19 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { BarChart3, Package, Sprout, FileText, TrendingDown, Layers, MapPin } from 'lucide-react';
+import { BarChart3, Package, Sprout, FileText, TrendingDown, Layers, MapPin, Gauge } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { getEmpresaActiva } from '@/lib/empresa-actual';
 
 const REPORTS = [
+  {
+    href: '/app/reportes/gerencial',
+    title: 'Informe Gerencial',
+    description: 'Vista consolidada para directores: evolución por campaña, cultivo, lote, insumos y labores. Filtro de fechas, PDF y Excel con gráficos.',
+    icon: Gauge,
+    iconColor: 'text-indigo-600',
+    iconBg: 'bg-indigo-100',
+    accent: 'group-hover:border-indigo-300',
+  },
   {
     href: '/app/reportes/margenes',
     title: 'Márgenes',
