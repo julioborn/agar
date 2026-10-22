@@ -73,52 +73,69 @@ export async function generateInformeGerencialPdf(
   const now = new Date();
   const dateStr = now.toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric' });
 
-  // ── Banner de resumen ejecutivo (KPIs) ───────────────────────────────────
+  // ── Portada: números clave para el dueño (hero) + resto (secundarios) ──────
   let y = 36;
   const k = data.kpis;
-  const kpiItems: [string, string][] = [
+
+  const heroItems: { label: string; value: string; color: [number, number, number] }[] = [
+    { label: 'INGRESO BRUTO', value: money(k.ingresoBruto), color: [37, 99, 235] },
+    { label: 'COSTO TOTAL', value: money(k.costoTotal), color: [217, 119, 6] },
+    { label: 'MARGEN', value: money(k.margen), color: k.margen >= 0 ? [5, 150, 90] : [200, 50, 50] },
+    { label: 'COSTO POR HECTÁREA', value: k.costoPorHa != null ? money(k.costoPorHa) : '—', color: [71, 85, 105] },
+  ];
+  const heroGap = 5;
+  const heroW = (pageW - MARGIN * 2 - heroGap * (heroItems.length - 1)) / heroItems.length;
+  const heroH = 25;
+  heroItems.forEach((item, i) => {
+    const x = MARGIN + i * (heroW + heroGap);
+    doc.setFillColor(...item.color);
+    doc.roundedRect(x, y, heroW, heroH, 2.5, 2.5, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(7.2);
+    doc.setFont('helvetica', 'bold');
+    doc.text(item.label, x + heroW / 2, y + 7, { align: 'center' });
+    doc.setFontSize(15);
+    doc.text(item.value, x + heroW / 2, y + 17.5, { align: 'center' });
+  });
+  y += heroH + 6;
+
+  // Resto de los KPIs, en una franja más chica y discreta debajo de los 4 destacados
+  const secItems: [string, string][] = [
     ['RIA confirmados', num.format(k.riasCount)],
     ['Hectáreas trabajadas', `${num.format(k.hectareas)} ha`],
     ['Lotes distintos', num.format(k.lotesDistintos)],
     ['Cultivos distintos', num.format(k.cultivosDistintos)],
     ['Costo insumos', money(k.costoInsumos)],
     ['Costo labores', money(k.costoLabores)],
-    ['Costo total', money(k.costoTotal)],
-    ['Costo / ha', k.costoPorHa != null ? money(k.costoPorHa) : '—'],
-    ['Ingreso bruto', money(k.ingresoBruto)],
-    ['Margen', money(k.margen)],
   ];
-  const cols = 5;
-  // Alto del banner calculado según la cantidad real de filas (antes era fijo
-  // en 24mm y con 2 filas de KPIs la segunda fila de etiquetas quedaba pisada
-  // por el borde inferior del recuadro).
-  const rowsCount = Math.ceil(kpiItems.length / cols);
-  const rowH = 13;
-  const topPad = 9;
-  const bottomPad = 6;
-  const bannerH = topPad + (rowsCount - 1) * rowH + 4.5 + bottomPad;
+  const secCols = 6;
+  const secRowsCount = Math.ceil(secItems.length / secCols);
+  const secRowH = 13;
+  const secTopPad = 8;
+  const secBottomPad = 5;
+  const secBannerH = secTopPad + (secRowsCount - 1) * secRowH + 4.2 + secBottomPad;
 
-  doc.setFillColor(240, 248, 244);
-  doc.setDrawColor(...GREEN_RGB);
-  doc.setLineWidth(0.3);
-  doc.rect(MARGIN, y, pageW - MARGIN * 2, bannerH, 'FD');
+  doc.setFillColor(248, 250, 249);
+  doc.setDrawColor(220, 230, 225);
+  doc.setLineWidth(0.25);
+  doc.rect(MARGIN, y, pageW - MARGIN * 2, secBannerH, 'FD');
 
-  const cellW = (pageW - MARGIN * 2) / cols;
-  kpiItems.forEach(([label, value], i) => {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    const cx = MARGIN + col * cellW + cellW / 2;
-    const cy = y + topPad + row * rowH;
-    doc.setTextColor(...GREEN_RGB);
-    doc.setFontSize(10.5);
+  const secCellW = (pageW - MARGIN * 2) / secCols;
+  secItems.forEach(([label, value], i) => {
+    const col = i % secCols;
+    const row = Math.floor(i / secCols);
+    const cx = MARGIN + col * secCellW + secCellW / 2;
+    const cy = y + secTopPad + row * secRowH;
+    doc.setTextColor(60, 70, 65);
+    doc.setFontSize(9.5);
     doc.setFont('helvetica', 'bold');
     doc.text(value, cx, cy, { align: 'center' });
-    doc.setTextColor(90, 100, 95);
-    doc.setFontSize(6.8);
+    doc.setTextColor(130, 140, 135);
+    doc.setFontSize(6.3);
     doc.setFont('helvetica', 'normal');
-    doc.text(label, cx, cy + 4.5, { align: 'center' });
+    doc.text(label, cx, cy + 4.2, { align: 'center' });
   });
-  y += bannerH + 8;
+  y += secBannerH + 8;
 
   const sectionTitle = (title: string, yPos: number) => {
     if (yPos > pageH - 40) { doc.addPage(); yPos = 18; }
@@ -132,23 +149,36 @@ export async function generateInformeGerencialPdf(
   };
 
   // Gráfico de barras horizontal simple, dibujado a mano (sin dependencias nuevas)
-  function drawBarChart(startY: number, items: { name: string; value: number }[], color: [number, number, number]): number {
+  function drawBarChart(
+    startY: number,
+    items: { name: string; value: number }[],
+    color: [number, number, number],
+    valueCaption?: string,
+  ): number {
     if (items.length === 0) return startY;
     const barH = 5, gap = 2.2;
-    const requiredH = items.length * (barH + gap) + 4;
+    const captionH = valueCaption ? 5.5 : 0;
+    const requiredH = captionH + items.length * (barH + gap) + 4;
     if (startY + requiredH > pageH - 16) { doc.addPage(); startY = 18; }
     const labelW = 62, valueW = 26;
     const barAreaX = MARGIN + labelW;
     const barAreaW = pageW - MARGIN * 2 - labelW - valueW;
-    const maxVal = Math.max(...items.map((it) => it.value), 1);
+    const maxVal = Math.max(...items.map((it) => Math.abs(it.value)), 1);
 
     let yy = startY;
+    if (valueCaption) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(...color);
+      doc.text(valueCaption, barAreaX + barAreaW + 2, yy, { align: 'left' });
+      yy += captionH;
+    }
     doc.setFontSize(7.5);
     for (const it of items) {
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(60, 60, 60);
       doc.text(truncate(it.name), MARGIN, yy + barH - 1, { align: 'left' });
-      const w = Math.max(0.5, (it.value / maxVal) * barAreaW);
+      const w = Math.max(0.5, (Math.abs(it.value) / maxVal) * barAreaW);
       doc.setFillColor(...color);
       doc.rect(barAreaX, yy, w, barH, 'F');
       doc.setTextColor(50, 50, 50);
@@ -170,17 +200,18 @@ export async function generateInformeGerencialPdf(
     head: string[],
     body: (string | number)[][],
     foot?: (string | number)[],
+    valueCaption?: string,
   ) {
     // Reservamos de antemano el espacio del título + gráfico (más un mínimo
     // para el encabezado de la tabla) para que, si no entra completo, el
     // salto de página ocurra ANTES del título — así título y gráfico no
     // quedan separados en hojas distintas.
-    const chartH = chartItems.length > 0 ? chartItems.length * (5 + 2.2) + 4 : 0;
+    const chartH = chartItems.length > 0 ? (valueCaption ? 5.5 : 0) + chartItems.length * (5 + 2.2) + 4 : 0;
     const reserved = 10 + chartH + 15;
     if (y + reserved > pageH - 16) { doc.addPage(); y = 18; }
 
     y = sectionTitle(title, y);
-    y = drawBarChart(y, chartItems, chartColor);
+    y = drawBarChart(y, chartItems, chartColor, valueCaption);
     autoTable(doc, {
       startY: y,
       head: [head],
@@ -216,7 +247,7 @@ export async function generateInformeGerencialPdf(
   // ── Por cultivo ────────────────────────────────────────────────────────────
   tableSection(
     'POR CULTIVO',
-    data.porCultivo.map((c) => ({ name: c.cultivo, value: c.costoPorHa ?? 0 })),
+    data.porCultivo.map((c) => ({ name: c.cultivo, value: c.hectareas > 0 ? c.margen / c.hectareas : 0 })),
     [5, 150, 105],
     ['Cultivo', 'Hectáreas', 'Lotes', 'Costo insumos', 'Costo labores', 'Costo total', 'Costo/ha', 'Ingreso bruto', 'Margen'],
     data.porCultivo.map((c) => [
@@ -226,12 +257,13 @@ export async function generateInformeGerencialPdf(
     ['TOTAL', num.format(sumNumCol(data.porCultivo, 'hectareas')), '', money(sumNumCol(data.porCultivo, 'costoInsumos')),
       money(sumNumCol(data.porCultivo, 'costoLabores')), money(sumNumCol(data.porCultivo, 'costoTotal')), '',
       money(sumNumCol(data.porCultivo, 'ingresoBruto')), money(sumNumCol(data.porCultivo, 'margen'))],
+    'Margen por hectárea',
   );
 
   // ── Por lote ───────────────────────────────────────────────────────────────
   tableSection(
     'POR LOTE',
-    data.porLote.slice(0, 10).map((l) => ({ name: `${l.campoNombre} › ${l.loteNombre}`, value: l.costoTotal })),
+    data.porLote.slice(0, 10).map((l) => ({ name: `${l.campoNombre} › ${l.loteNombre}`, value: l.margen })),
     [217, 119, 6],
     ['Campo', 'Lote', 'Hectáreas', 'Cultivo(s)', 'RIA', 'Costo insumos', 'Costo labores', 'Costo total', 'Costo/ha', 'Margen'],
     data.porLote.map((l) => [
@@ -241,6 +273,7 @@ export async function generateInformeGerencialPdf(
     ['TOTAL', '', num.format(sumNumCol(data.porLote, 'hectareas')), '', sumNumCol(data.porLote, 'riasCount'),
       money(sumNumCol(data.porLote, 'costoInsumos')), money(sumNumCol(data.porLote, 'costoLabores')),
       money(sumNumCol(data.porLote, 'costoTotal')), '', money(sumNumCol(data.porLote, 'margen'))],
+    'Margen por lote',
   );
 
   // ── Insumos ────────────────────────────────────────────────────────────────
