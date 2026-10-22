@@ -129,7 +129,7 @@ function ChartCard({ title, data, dataKey, color, formatValue }: {
       <ResponsiveContainer width="100%" height={Math.max(180, data.length * 32)}>
         <BarChart data={data} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
           <XAxis type="number" tickFormatter={(v) => formatValue ? formatValue(v) : `$${pesos.format(v)}`} tick={{ fontSize: 11 }} />
-          <YAxis type="category" dataKey="name" width={170} tick={<CustomYTick />} />
+          <YAxis type="category" dataKey="name" width={170} tick={<CustomYTick />} interval={0} />
           <Tooltip content={<ChartTooltip />} />
           <Bar dataKey={dataKey} name={title} fill={color} radius={[0, 4, 4, 0]} maxBarSize={22}>
             {data.map((_, i) => <Cell key={i} fill={color} opacity={1 - i * 0.06} />)}
